@@ -96,7 +96,7 @@ export default async function AnalyticsPage({
   return (
     <main className="min-h-[calc(100vh-3.5rem)] bg-zinc-100 p-3 text-zinc-900 sm:p-4">
       <div className="mx-auto flex max-w-[1600px] gap-0 overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
-        <LobSidebar active="analytics" />
+        <LobSidebar active="tools" />
         <div className="min-w-0 flex-1 overflow-x-auto bg-zinc-50 p-4 sm:p-6">
       <div className="mx-auto max-w-6xl">
         <h1 className="text-2xl font-bold sm:text-3xl">Lane rates &amp; trends</h1>
@@ -147,7 +147,7 @@ export default async function AnalyticsPage({
               placeholder="Destination state (ID)"
             />
           </div>
-          <button type="submit" className="mt-3 rounded bg-sky-700 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-800">
+          <button type="submit" className="mt-3 rounded-md bg-lob-navy px-4 py-2 text-sm font-semibold text-white hover:bg-lob-navy-hover">
             Update report
           </button>
         </form>

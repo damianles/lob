@@ -30,8 +30,8 @@ export default async function OnboardingPage() {
               verified by admin before booking.
             </p>
             {carrierAutoApprove && (
-              <p className="mt-2 rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-950">
-                <strong>Preview mode:</strong> this server has <code className="rounded bg-sky-100 px-1">LOB_AUTO_APPROVE_CARRIERS=true</code>{" "}
+              <p className="mt-2 rounded-md border border-lob-gold/40 bg-lob-paper px-3 py-2 text-sm text-lob-navy">
+                <strong>Preview mode:</strong> this server has <code className="rounded bg-white px-1 ring-1 ring-stone-200">LOB_AUTO_APPROVE_CARRIERS=true</code>{" "}
                 — new trucking companies are approved immediately so you can book without the admin queue.
               </p>
             )}

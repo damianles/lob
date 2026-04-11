@@ -28,7 +28,7 @@ export async function syncClerkUserToDatabase(): Promise<{
     return { user: null, error: "missing_email" };
   }
 
-  const user = await prisma.user.upsert({
+  let user = await prisma.user.upsert({
     where: { authProviderId: userId },
     update: { email, name },
     create: {
@@ -39,6 +39,16 @@ export async function syncClerkUserToDatabase(): Promise<{
     },
     select: { id: true, companyId: true, role: true },
   });
+
+  /** Preview / internal only: set LOB_AUTO_ADMIN_EMAIL to your Clerk email → always ADMIN on sign-in. Remove in production. */
+  const autoAdmin = process.env.LOB_AUTO_ADMIN_EMAIL?.trim().toLowerCase();
+  if (autoAdmin && email.toLowerCase() === autoAdmin) {
+    user = await prisma.user.update({
+      where: { id: user.id },
+      data: { role: UserRole.ADMIN, companyId: null },
+      select: { id: true, companyId: true, role: true },
+    });
+  }
 
   return { user, error: null };
 }

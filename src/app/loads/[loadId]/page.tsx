@@ -80,7 +80,7 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
           <p className="mt-2 text-sm text-zinc-600">
             Only the posting mill, the booked carrier, or approved carriers browsing open loads can view this page.
           </p>
-          <Link href="/" className="mt-4 inline-block text-sm font-medium text-sky-700 underline">
+          <Link href="/" className="mt-4 inline-block text-sm font-medium text-lob-navy underline">
             Back to load board
           </Link>
         </div>
@@ -103,7 +103,7 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
         <LobSidebar active="loads" stats={{ active, rush, delivered }} />
         <div className="min-w-0 flex-1 bg-zinc-50 p-4 sm:p-6">
           <div className="mx-auto max-w-3xl">
-            <Link href="/" className="text-sm font-medium text-sky-700 hover:underline">
+            <Link href="/" className="text-sm font-medium text-lob-navy hover:underline">
               ← Load board
             </Link>
             <h1 className="mt-3 text-2xl font-bold text-zinc-900">{load.referenceNumber}</h1>
@@ -176,7 +176,7 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
             {load.dispatchLink && (isShipperOwner || isBookedCarrier || isAdmin) && (
               <p className="mt-4 text-sm text-zinc-600">
                 Driver page:{" "}
-                <Link className="font-medium text-sky-700 underline" href={`/driver/${load.dispatchLink.token}`}>
+                <Link className="font-medium text-lob-navy underline" href={`/driver/${load.dispatchLink.token}`}>
                   Open driver link
                 </Link>
               </p>

@@ -98,7 +98,7 @@ export default async function Home() {
   const delivered = loads.filter((l) => l.status === LoadStatus.DELIVERED).length;
 
   return (
-    <main className="min-h-[calc(100vh-3.5rem)] bg-zinc-100 text-zinc-900">
+    <main className="min-h-[calc(100vh-3.5rem)] bg-lob-paper text-stone-900">
       <div className="px-3 py-3 sm:px-4">
         {dbError && (
           <section className="mb-4 rounded-lg border border-red-300 bg-red-50 p-4 text-red-950">
@@ -144,7 +144,7 @@ export default async function Home() {
             </section>
           )}
 
-        {userId && appUser && !appUser.companyId && (
+        {userId && appUser && !appUser.companyId && appUser.role !== "ADMIN" && (
           <section className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-4">
             <h2 className="font-semibold text-amber-900">One step left — link your company</h2>
             <p className="mt-1 text-sm text-amber-800">
@@ -158,6 +158,19 @@ export default async function Home() {
             >
               Go to account setup
             </Link>
+          </section>
+        )}
+
+        {userId && appUser?.role === "ADMIN" && (
+          <section className="mb-4 rounded-lg border border-stone-200 bg-white p-4 text-sm text-stone-700 shadow-sm">
+            <p className="font-medium text-stone-900">Signed in as admin</p>
+            <p className="mt-1">
+              Use <strong>Carriers</strong> and <strong>Companies</strong> in the top bar. To post loads yourself, complete{" "}
+              <Link className="font-medium text-lob-navy underline" href="/onboarding">
+                account setup
+              </Link>{" "}
+              as a mill or use a separate mill user.
+            </p>
           </section>
         )}
 
@@ -175,7 +188,7 @@ export default async function Home() {
         />
 
         <details className="mx-auto mt-6 max-w-[1600px] rounded border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-600">
-          <summary className="cursor-pointer font-medium text-zinc-900">Make Vercel / production work</summary>
+          <summary className="cursor-pointer font-medium text-zinc-900">Deploy, admin, and API (for builders)</summary>
           <ol className="mt-3 list-inside list-decimal space-y-2 text-zinc-700">
             <li>
               Set <code className="rounded bg-zinc-100 px-1">DATABASE_URL</code> to your Supabase{" "}
@@ -191,28 +204,20 @@ export default async function Home() {
               — signing in now <strong>auto-creates</strong> your DB user even if the webhook is not wired yet.
             </li>
             <li>
+              Admin role: set <code className="rounded bg-zinc-100 px-1">LOB_AUTO_ADMIN_EMAIL</code> to your Clerk email
+              (preview only) or run <code className="rounded bg-zinc-100 px-1">npm run set-admin -- you@email.com</code>{" "}
+              against the same database.
+            </li>
+            <li>
               To test booking without admin: set{" "}
               <code className="rounded bg-zinc-100 px-1">LOB_AUTO_APPROVE_CARRIERS=true</code> on the preview project
               (remove for real launches).
             </li>
             <li>
-              Explore: mill account → post load → second Clerk user as carrier (or incognito) → book → driver link →{" "}
-              <Link className="underline" href="/tools">
-                Tools
-              </Link>
-              .
+              API: <code>POST /api/loads</code>, <code>POST /api/loads/:id/book</code>,{" "}
+              <code>POST /api/loads/:id/dispatch</code>. More in <Link href="/tools">Help</Link>.
             </li>
           </ol>
-        </details>
-
-        <details className="mx-auto mt-3 max-w-[1600px] rounded border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-600">
-          <summary className="cursor-pointer font-medium text-zinc-900">API reference (integrations)</summary>
-          <ul className="mt-2 list-inside list-disc space-y-1">
-            <li>
-              <code>POST /api/loads</code> · <code>POST /api/loads/:id/book</code> ·{" "}
-              <code>POST /api/loads/:id/dispatch</code>
-            </li>
-          </ul>
         </details>
       </div>
     </main>

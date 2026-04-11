@@ -107,8 +107,7 @@ export function LoadBoardWorkspace({
 
   const [originQ, setOriginQ] = useState("");
   const [destQ, setDestQ] = useState("");
-  const [dhOrigin, setDhOrigin] = useState("150");
-  const [dhDest, setDhDest] = useState("150");
+  const [moreFilters, setMoreFilters] = useState(false);
   const [equipmentFilter, setEquipmentFilter] = useState("");
   const [weightMin, setWeightMin] = useState("");
   const [weightMax, setWeightMax] = useState("");
@@ -256,7 +255,7 @@ export function LoadBoardWorkspace({
   }
 
   return (
-    <div className="mx-auto flex max-w-[1600px] gap-0 rounded-lg border border-zinc-200 bg-white shadow-sm lg:gap-0">
+    <div className="mx-auto flex max-w-[1600px] gap-0 rounded-xl border border-stone-200 bg-white shadow-sm lg:gap-0">
       <LobSidebar active="loads" stats={stats} />
 
       <div className="min-w-0 flex-1">
@@ -266,87 +265,60 @@ export function LoadBoardWorkspace({
 
         {/* Search header */}
         <div className="border-b border-zinc-200 bg-zinc-50 px-4 py-4">
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            <span className="text-sm font-medium text-zinc-700">
-              {originQ || "Any origin"} → {destQ || "Any destination"}
-            </span>
-            <span className="text-xs text-zinc-500">
-              {summary.count} result{summary.count !== 1 ? "s" : ""}
-            </span>
+          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+            <p className="text-sm text-zinc-600">
+              <span className="font-medium text-zinc-800">{summary.count}</span> load
+              {summary.count !== 1 ? "s" : ""}
+              {originQ || destQ ? " match your search" : " on the board"}
+            </p>
+            <button
+              type="button"
+              onClick={() => setMoreFilters((v) => !v)}
+              className="text-xs font-medium text-lob-navy underline hover:no-underline"
+            >
+              {moreFilters ? "Hide extra filters" : "More filters (equipment, weight, dates)"}
+            </button>
           </div>
 
-          <div className="grid gap-3 lg:grid-cols-[1fr_auto_1fr] lg:items-end">
-            <div className="grid gap-2 sm:grid-cols-2">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="grid min-w-0 flex-1 gap-3 sm:grid-cols-2">
               <div>
-                <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
-                  Origin
-                </label>
+                <label className="mb-1 block text-xs font-medium text-zinc-600">From</label>
                 <input
                   value={originQ}
                   onChange={(e) => setOriginQ(e.target.value)}
-                  placeholder="City, ST or ZIP"
-                  className="w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm"
+                  placeholder="City, state, or ZIP"
+                  className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm"
                 />
-                <div className="mt-1 flex items-center gap-2">
-                  <span className="text-[10px] font-medium text-zinc-400">DH-O</span>
-                  <input
-                    value={dhOrigin}
-                    onChange={(e) => setDhOrigin(e.target.value)}
-                    className="w-16 rounded border border-zinc-200 px-2 py-0.5 text-xs"
-                    title="Deadhead origin (display only for now)"
-                  />
-                  <span className="text-[10px] text-zinc-400">mi</span>
-                </div>
               </div>
               <div>
-                <label className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-zinc-500">
-                  Destination
-                </label>
+                <label className="mb-1 block text-xs font-medium text-zinc-600">To</label>
                 <input
                   value={destQ}
                   onChange={(e) => setDestQ(e.target.value)}
-                  placeholder="City, ST or ZIP"
-                  className="w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm"
+                  placeholder="City, state, or ZIP"
+                  className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm"
                 />
-                <div className="mt-1 flex items-center gap-2">
-                  <span className="text-[10px] font-medium text-zinc-400">DH-D</span>
-                  <input
-                    value={dhDest}
-                    onChange={(e) => setDhDest(e.target.value)}
-                    className="w-16 rounded border border-zinc-200 px-2 py-0.5 text-xs"
-                    title="Deadhead destination (display only for now)"
-                  />
-                  <span className="text-[10px] text-zinc-400">mi</span>
-                </div>
               </div>
             </div>
+            <button
+              type="button"
+              onClick={swapOriginDest}
+              className="shrink-0 rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-700 hover:bg-zinc-100"
+              title="Swap from and to"
+            >
+              Swap
+            </button>
+          </div>
 
-            <div className="flex items-center justify-center py-2">
-              <button
-                type="button"
-                onClick={swapOriginDest}
-                className="rounded-full border border-zinc-300 bg-white p-2 text-zinc-600 shadow-sm hover:bg-zinc-100"
-                title="Swap origin and destination"
-                aria-label="Swap origin and destination"
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
-                  />
-                </svg>
-              </button>
-            </div>
-
-            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          {moreFilters && (
+            <div className="mt-4 grid gap-3 border-t border-zinc-200 pt-4 sm:grid-cols-2 lg:grid-cols-3">
               <div>
-                <label className="mb-1 block text-[10px] font-semibold uppercase text-zinc-500">Equipment</label>
+                <label className="mb-1 block text-xs font-medium text-zinc-600">Equipment</label>
                 <select
                   value={equipmentFilter}
                   onChange={(e) => setEquipmentFilter(e.target.value)}
-                  className="w-full rounded border border-zinc-300 bg-white px-2 py-2 text-sm"
+                  className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm"
                 >
                   <option value="">All types</option>
                   <option>Dry van</option>
@@ -357,65 +329,63 @@ export function LoadBoardWorkspace({
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-[10px] font-semibold uppercase text-zinc-500">Weight min (lbs)</label>
+                <label className="mb-1 block text-xs font-medium text-zinc-600">Weight min (lbs)</label>
                 <input
                   value={weightMin}
                   onChange={(e) => setWeightMin(e.target.value)}
-                  className="w-full rounded border border-zinc-300 px-2 py-2 text-sm"
+                  className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
                   placeholder="Any"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-[10px] font-semibold uppercase text-zinc-500">Weight max (lbs)</label>
+                <label className="mb-1 block text-xs font-medium text-zinc-600">Weight max (lbs)</label>
                 <input
                   value={weightMax}
                   onChange={(e) => setWeightMax(e.target.value)}
-                  className="w-full rounded border border-zinc-300 px-2 py-2 text-sm"
+                  className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
                   placeholder="Any"
                 />
               </div>
-              <div className="sm:col-span-2 lg:col-span-1">
-                <label className="mb-1 block text-[10px] font-semibold uppercase text-zinc-500">Posted from</label>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-zinc-600">Posted from</label>
                 <input
                   type="date"
                   value={dateFrom}
                   onChange={(e) => setDateFrom(e.target.value)}
-                  className="w-full rounded border border-zinc-300 px-2 py-2 text-sm"
+                  className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
                 />
               </div>
-              <div className="sm:col-span-2 lg:col-span-1">
-                <label className="mb-1 block text-[10px] font-semibold uppercase text-zinc-500">Posted to</label>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-zinc-600">Posted to</label>
                 <input
                   type="date"
                   value={dateTo}
                   onChange={(e) => setDateTo(e.target.value)}
-                  className="w-full rounded border border-zinc-300 px-2 py-2 text-sm"
+                  className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
                 />
               </div>
             </div>
-          </div>
+          )}
 
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <button
               type="button"
               onClick={() => router.refresh()}
-              className="rounded bg-sky-600 px-6 py-2.5 text-sm font-semibold text-white shadow hover:bg-sky-700"
+              className="rounded-lg bg-lob-navy px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-lob-navy-hover"
             >
-              SEARCH
+              Refresh list
             </button>
             {isShipper && (
               <button
                 type="button"
                 onClick={() => setPostOpen((v) => !v)}
-                className="rounded border border-emerald-600 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-100"
+                className="rounded-lg border border-emerald-600 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-800 hover:bg-emerald-100"
               >
-                {postOpen ? "Close post form" : "+ Post load"}
+                {postOpen ? "Close" : "Post a load"}
               </button>
             )}
             {isDispatcher && (
-              <span className="text-xs text-zinc-600">
-                Book an open load, then send the driver their link.
-              </span>
+              <span className="text-sm text-zinc-600">Book a load, then create the driver link.</span>
             )}
           </div>
         </div>
@@ -423,7 +393,7 @@ export function LoadBoardWorkspace({
         {/* Post form (shipper) */}
         {isShipper && postOpen && (
           <div className="border-b border-emerald-200 bg-emerald-50/80 px-4 py-4">
-            <h3 className="text-sm font-semibold text-emerald-900">Post a shipment</h3>
+            <h3 className="text-sm font-semibold text-emerald-900">Add a load</h3>
             <form className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3" onSubmit={postLoad}>
               <input
                 className="rounded border px-2 py-2 text-sm"
@@ -513,32 +483,27 @@ export function LoadBoardWorkspace({
         )}
 
         {/* Lane summary strip */}
-        <div className="flex flex-wrap items-center gap-6 border-b border-zinc-200 bg-white px-4 py-3 text-sm">
-          <div>
-            <span className="text-zinc-500">Lane avg (posted / booked)</span>{" "}
+        <div className="flex flex-wrap items-center gap-4 border-b border-zinc-200 bg-white px-4 py-2.5 text-sm">
+          <span className="text-zinc-600">
+            Avg rate (filtered):{" "}
             <span className="font-semibold text-zinc-900">
               {summary.avgPostedOrBooked != null ? fmtUsd(summary.avgPostedOrBooked) : "—"}
             </span>
-          </div>
-          <div className="h-4 w-px bg-zinc-200" />
-          <div>
-            <span className="text-zinc-500">Delivered (all)</span>{" "}
-            <span className="font-semibold">{stats.delivered}</span>
-          </div>
-          <div className="text-xs text-zinc-400">
-            Trip miles & deadhead search filters can tie to routing data in a later release.
-          </div>
+          </span>
+          <span className="text-zinc-400">·</span>
+          <span className="text-zinc-600">
+            Delivered all-time: <span className="font-semibold text-zinc-900">{stats.delivered}</span>
+          </span>
         </div>
 
         {/* Results table */}
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1100px] border-collapse text-left text-xs">
+          <table className="w-full min-w-[960px] border-collapse text-left text-xs">
             <thead>
               <tr className="border-b border-zinc-200 bg-zinc-100 text-[10px] font-bold uppercase tracking-wide text-zinc-600">
                 <th className="whitespace-nowrap px-2 py-2">Ref</th>
                 <th className="whitespace-nowrap px-2 py-2">Age</th>
                 <th className="whitespace-nowrap px-2 py-2">Rate</th>
-                <th className="whitespace-nowrap px-2 py-2">Trip</th>
                 <th className="whitespace-nowrap px-2 py-2">Origin</th>
                 <th className="whitespace-nowrap px-2 py-2">Dest</th>
                 <th className="whitespace-nowrap px-2 py-2">Posted</th>
@@ -559,12 +524,12 @@ export function LoadBoardWorkspace({
                 return (
                   <tr
                     key={load.id}
-                    className="border-b border-zinc-100 hover:bg-sky-50/40"
+                    className="border-b border-stone-100 hover:bg-lob-paper/80"
                   >
                     <td className="whitespace-nowrap px-2 py-2">
                       <Link
                         href={`/loads/${load.id}`}
-                        className="font-semibold text-sky-700 underline decoration-sky-300 hover:text-sky-900"
+                        className="font-semibold text-lob-navy underline decoration-lob-gold/50 hover:text-lob-navy-hover"
                       >
                         {load.referenceNumber}
                       </Link>
@@ -573,7 +538,6 @@ export function LoadBoardWorkspace({
                       {ageLabel(load.createdAt)}
                     </td>
                     <td className="whitespace-nowrap px-2 py-2 font-semibold">{fmtUsd(displayRate)}</td>
-                    <td className="whitespace-nowrap px-2 py-2 text-zinc-400">—</td>
                     <td className="px-2 py-2">
                       <div className="font-medium">
                         {load.originCity}, {load.originState}
@@ -608,7 +572,7 @@ export function LoadBoardWorkspace({
                       <span
                         className={
                           load.status === "POSTED"
-                            ? "rounded bg-sky-100 px-1.5 py-0.5 text-[10px] font-semibold text-sky-900"
+                            ? "rounded bg-lob-paper px-1.5 py-0.5 text-[10px] font-semibold text-lob-navy ring-1 ring-stone-200"
                             : load.status === "BOOKED"
                               ? "rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-900"
                               : "text-[10px] text-zinc-600"
@@ -634,7 +598,7 @@ export function LoadBoardWorkspace({
                             <button
                               type="button"
                               disabled={busyId === load.id}
-                              className="rounded bg-sky-600 px-2 py-0.5 font-semibold text-white disabled:opacity-50"
+                              className="rounded bg-lob-navy px-2 py-0.5 font-semibold text-white hover:bg-lob-navy-hover disabled:opacity-50"
                               onClick={() => bookLoad(load.id)}
                             >
                               Book
@@ -690,7 +654,7 @@ export function LoadBoardWorkspace({
                           <div>
                             <button
                               type="button"
-                              className="text-sky-700 underline"
+                              className="text-lob-navy underline"
                               onClick={() =>
                                 copyText(
                                   `${typeof window !== "undefined" ? window.location.origin : ""}/driver/${load.dispatchLink!.token}`,

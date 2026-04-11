@@ -58,7 +58,7 @@ export function LoadTimeline({ load, booking, dispatch }: Props) {
       detail: dispatch ? fmt(dispatch.createdAt) : booking ? "Create link from load board" : "—",
       stepDone: s3,
       extra: dispatch ? (
-        <Link href={`/driver/${dispatch.token}`} className="font-medium text-sky-700 underline">
+        <Link href={`/driver/${dispatch.token}`} className="font-medium text-lob-navy underline">
           Open driver page
         </Link>
       ) : null,
@@ -90,7 +90,11 @@ export function LoadTimeline({ load, booking, dispatch }: Props) {
           <li key={r.key} className="relative pb-6 pl-2 last:pb-0">
             <span
               className={`absolute -left-[21px] top-1 flex h-3 w-3 rounded-full border-2 border-white ${
-                complete ? "bg-emerald-500" : active ? "bg-sky-500 ring-2 ring-sky-200" : "bg-zinc-300"
+                complete
+                  ? "bg-emerald-600"
+                  : active
+                    ? "bg-lob-gold ring-2 ring-lob-gold/40"
+                    : "bg-stone-300"
               }`}
               aria-hidden
             />

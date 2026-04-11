@@ -19,7 +19,8 @@
     "db:down": "docker compose down",
     "db:logs": "docker compose logs -f postgres",
     "deploy:preview": "npx vercel",
-    "deploy:prod": "npx vercel --prod"
+    "deploy:prod": "npx vercel --prod",
+    "set-admin": "tsx scripts/set-admin.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

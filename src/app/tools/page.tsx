@@ -6,13 +6,13 @@ export const dynamic = "force-dynamic";
 
 export default function ToolsPage() {
   return (
-    <main className="min-h-[calc(100vh-3.5rem)] bg-zinc-100 text-zinc-900">
+    <main className="min-h-[calc(100vh-3.5rem)] bg-lob-paper text-stone-900">
       <div className="mx-auto flex max-w-[1600px] gap-0 rounded-lg border border-zinc-200 bg-white shadow-sm">
         <LobSidebar active="tools" />
         <div className="min-w-0 flex-1 p-6 lg:p-8">
-          <h1 className="text-2xl font-bold text-zinc-900">Tools</h1>
+          <h1 className="text-2xl font-bold text-zinc-900">Help & tools</h1>
           <p className="mt-2 max-w-2xl text-sm text-zinc-600">
-            Plain shortcuts for everyday work. No extra logins—everything here stays inside LOB.
+            Lane rates, paperwork, and how to deploy—everything stays inside LOB.
           </p>
 
           <section className="mt-8 rounded-lg border border-zinc-200 bg-white p-4">
@@ -39,7 +39,7 @@ export default function ToolsPage() {
                 </p>
                 <Link
                   href="/analytics"
-                  className="mt-4 inline-block text-sm font-semibold text-sky-700 hover:underline"
+                  className="mt-4 inline-block text-sm font-semibold text-lob-navy hover:underline"
                 >
                   Open lane rates →
                 </Link>
@@ -49,7 +49,7 @@ export default function ToolsPage() {
                 <p className="mt-2 text-sm text-zinc-600">
                   Back to the board: origin, destination, equipment, and weight filters.
                 </p>
-                <Link href="/" className="mt-4 inline-block text-sm font-semibold text-sky-700 hover:underline">
+                <Link href="/" className="mt-4 inline-block text-sm font-semibold text-lob-navy hover:underline">
                   Open load board →
                 </Link>
               </div>
@@ -60,7 +60,7 @@ export default function ToolsPage() {
                 </p>
                 <Link
                   href="/carrier/compliance"
-                  className="mt-4 inline-block text-sm font-semibold text-sky-700 hover:underline"
+                  className="mt-4 inline-block text-sm font-semibold text-lob-navy hover:underline"
                 >
                   Truck paperwork →
                 </Link>
