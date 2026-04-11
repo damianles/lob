@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { LUMBER_EQUIPMENT_CODES } from "@/lib/lumber-equipment";
+
 export const createLoadSchema = z.object({
   originCity: z.string().min(2),
   originState: z.string().min(2).max(2),
@@ -8,10 +10,16 @@ export const createLoadSchema = z.object({
   destinationState: z.string().min(2).max(2),
   destinationZip: z.string().min(5).max(10),
   weightLbs: z.number().int().positive(),
-  equipmentType: z.string().min(2),
+  equipmentType: z
+    .string()
+    .min(2)
+    .refine((s) => LUMBER_EQUIPMENT_CODES.has(s) || s.length >= 3, "Use a lumber equipment code (SB, Tri, MX, Tan, CW) or a legacy type."),
   isRush: z.boolean().default(false),
   isPrivate: z.boolean().default(false),
-  offeredRateUsd: z.number().positive().optional(),
+  /** ISO datetime or YYYY-MM-DD (stored as noon UTC). */
+  requestedPickupAt: z.string().min(8),
+  offeredRateUsd: z.number().positive(),
+  extendedPosting: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const createBookingSchema = z.object({
@@ -43,6 +51,7 @@ export const companyOnboardingSchema = z.object({
   mcNumber: z.string().min(2).optional(),
   carrierType: z.enum(["ASSET_BASED", "BROKER"]).optional(),
   role: z.enum(["SHIPPER", "DISPATCHER"]),
+  supplierKind: z.enum(["MILL", "WHOLESALER", "OTHER"]).optional(),
 });
 
 export const insuranceUploadSchema = z.object({

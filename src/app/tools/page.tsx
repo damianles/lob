@@ -44,6 +44,18 @@ export default function ToolsPage() {
                   Open lane rates →
                 </Link>
               </div>
+              <div className="rounded-lg border border-zinc-200 bg-zinc-50/80 p-4">
+                <h3 className="font-semibold text-zinc-900">Search truck capacity</h3>
+                <p className="mt-2 text-sm text-zinc-600">
+                  Anonymous lane posts from carriers (full match & fees coming next).
+                </p>
+                <Link
+                  href="/capacity"
+                  className="mt-4 inline-block text-sm font-semibold text-lob-navy hover:underline"
+                >
+                  Capacity board →
+                </Link>
+              </div>
               <div className="rounded-lg border border-zinc-200 bg-white p-4">
                 <h3 className="font-semibold text-zinc-900">Find a load</h3>
                 <p className="mt-2 text-sm text-zinc-600">

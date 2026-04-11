@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { LobSidebar, type LobSidebarStats } from "@/components/lob-sidebar";
+import { SupplierPostLoadForm } from "@/components/supplier-post-load-form";
+import { LUMBER_EQUIPMENT, equipmentShortTag } from "@/lib/lumber-equipment";
+import { milesBetweenZips } from "@/lib/zip-distance";
 
 export type SerializableLoad = {
   id: string;
@@ -24,6 +27,7 @@ export type SerializableLoad = {
   /** Mill / wholesaler name; null when hidden from this viewer until their carrier books. */
   shipperCompanyName: string | null;
   offeredRateUsd: number | null;
+  requestedPickupAt: string;
   createdAt: string;
   booking: null | {
     carrierCompanyId: string;
@@ -38,19 +42,6 @@ export type BoardActor = {
   companyId: string | null;
   role: string | null;
   carrierApproved: boolean;
-};
-
-const emptyCreate = {
-  originCity: "",
-  originState: "",
-  originZip: "",
-  destinationCity: "",
-  destinationState: "",
-  destinationZip: "",
-  weightLbs: "",
-  equipmentType: "Dry van",
-  isRush: false,
-  offeredRateUsd: "",
 };
 
 function fmtUsd(n: number | null | undefined) {
@@ -69,16 +60,6 @@ function ageLabel(iso: string) {
   if (h < 72) return `${h}h`;
   const d = Math.floor(h / 24);
   return `${d}d`;
-}
-
-function equipmentCode(eq: string) {
-  const e = eq.toLowerCase();
-  if (e.includes("flat")) return "FB";
-  if (e.includes("dry") || e.includes("van")) return "V";
-  if (e.includes("reef")) return "R";
-  if (e.includes("step")) return "SD";
-  if (e.includes("hot")) return "HS";
-  return eq.slice(0, 2).toUpperCase();
 }
 
 function postedDateLabel(iso: string) {
@@ -101,7 +82,6 @@ export function LoadBoardWorkspace({
   const [message, setMessage] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [postOpen, setPostOpen] = useState(false);
-  const [create, setCreate] = useState(emptyCreate);
   const [bookRate, setBookRate] = useState<Record<string, string>>({});
   const [dispatchForm, setDispatchForm] = useState<Record<string, { driverName: string; hours: string }>>({});
 
@@ -111,35 +91,92 @@ export function LoadBoardWorkspace({
   const [equipmentFilter, setEquipmentFilter] = useState("");
   const [weightMin, setWeightMin] = useState("");
   const [weightMax, setWeightMax] = useState("");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  const [postedFrom, setPostedFrom] = useState("");
+  const [postedTo, setPostedTo] = useState("");
+  const [pickupFrom, setPickupFrom] = useState("");
+  const [pickupTo, setPickupTo] = useState("");
+  const [sortBy, setSortBy] = useState<"postedDesc" | "pickupAsc" | "pickupDesc">("postedDesc");
+  const [emrZip, setEmrZip] = useState("");
+  const [emrOriginMi, setEmrOriginMi] = useState("");
+  const [emrDestMi, setEmrDestMi] = useState("");
 
   const isShipper = actor.role === "SHIPPER" && Boolean(actor.companyId);
   const isDispatcher = actor.role === "DISPATCHER" && Boolean(actor.companyId) && actor.carrierApproved;
 
   const filteredLoads = useMemo(() => {
-    return loads.filter((l) => {
+    const originMi = emrOriginMi.trim() ? Number(emrOriginMi) : null;
+    const destMi = emrDestMi.trim() ? Number(emrDestMi) : null;
+    const emrZipTrim = emrZip.trim();
+
+    const list = loads.filter((l) => {
       const o = `${l.originCity} ${l.originState} ${l.originZip}`.toLowerCase();
       const d = `${l.destinationCity} ${l.destinationState} ${l.destinationZip}`.toLowerCase();
       if (originQ.trim() && !o.includes(originQ.trim().toLowerCase())) return false;
       if (destQ.trim() && !d.includes(destQ.trim().toLowerCase())) return false;
-      if (equipmentFilter && l.equipmentType.toLowerCase() !== equipmentFilter.toLowerCase()) return false;
+      if (equipmentFilter && l.equipmentType !== equipmentFilter) return false;
       const min = Number(weightMin);
       if (weightMin.trim() && Number.isFinite(min) && l.weightLbs < min) return false;
       const max = Number(weightMax);
       if (weightMax.trim() && Number.isFinite(max) && l.weightLbs > max) return false;
-      const t = new Date(l.createdAt).getTime();
-      if (dateFrom) {
-        const start = new Date(dateFrom).setHours(0, 0, 0, 0);
-        if (t < start) return false;
+      const posted = new Date(l.createdAt).getTime();
+      if (postedFrom) {
+        const start = new Date(postedFrom).setHours(0, 0, 0, 0);
+        if (posted < start) return false;
       }
-      if (dateTo) {
-        const end = new Date(dateTo).setHours(23, 59, 59, 999);
-        if (t > end) return false;
+      if (postedTo) {
+        const end = new Date(postedTo).setHours(23, 59, 59, 999);
+        if (posted > end) return false;
       }
+      const pu = new Date(l.requestedPickupAt).getTime();
+      if (pickupFrom) {
+        const start = new Date(pickupFrom).setHours(0, 0, 0, 0);
+        if (pu < start) return false;
+      }
+      if (pickupTo) {
+        const end = new Date(pickupTo).setHours(23, 59, 59, 999);
+        if (pu > end) return false;
+      }
+
+      if (emrZipTrim && (originMi != null || destMi != null)) {
+        if (originMi != null && Number.isFinite(originMi)) {
+          const miles = milesBetweenZips(emrZipTrim, l.originZip);
+          if (miles == null || miles > originMi) return false;
+        }
+        if (destMi != null && Number.isFinite(destMi)) {
+          const miles = milesBetweenZips(emrZipTrim, l.destinationZip);
+          if (miles == null || miles > destMi) return false;
+        }
+      }
+
       return true;
     });
-  }, [loads, originQ, destQ, equipmentFilter, weightMin, weightMax, dateFrom, dateTo]);
+
+    const sorted = [...list];
+    sorted.sort((a, b) => {
+      if (sortBy === "postedDesc") {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+      const ap = new Date(a.requestedPickupAt).getTime();
+      const bp = new Date(b.requestedPickupAt).getTime();
+      return sortBy === "pickupAsc" ? ap - bp : bp - ap;
+    });
+    return sorted;
+  }, [
+    loads,
+    originQ,
+    destQ,
+    equipmentFilter,
+    weightMin,
+    weightMax,
+    postedFrom,
+    postedTo,
+    pickupFrom,
+    pickupTo,
+    sortBy,
+    emrZip,
+    emrOriginMi,
+    emrDestMi,
+  ]);
 
   const summary = useMemo(() => {
     const withRate = filteredLoads.filter((l) => l.offeredRateUsd != null || l.booking);
@@ -160,44 +197,6 @@ export function LoadBoardWorkspace({
   async function refresh(msg: string) {
     setMessage(msg);
     router.refresh();
-  }
-
-  async function postLoad(e: React.FormEvent) {
-    e.preventDefault();
-    setBusyId("create");
-    const w = Number(create.weightLbs);
-    if (!Number.isFinite(w) || w <= 0) {
-      setMessage("Weight must be a positive number.");
-      setBusyId(null);
-      return;
-    }
-    const body = {
-      originCity: create.originCity.trim(),
-      originState: create.originState.trim(),
-      originZip: create.originZip.trim(),
-      destinationCity: create.destinationCity.trim(),
-      destinationState: create.destinationState.trim(),
-      destinationZip: create.destinationZip.trim(),
-      weightLbs: w,
-      equipmentType: create.equipmentType.trim(),
-      isRush: create.isRush,
-      isPrivate: false,
-      ...(create.offeredRateUsd.trim() ? { offeredRateUsd: Number(create.offeredRateUsd) } : {}),
-    };
-    const res = await fetch("/api/loads", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    const data = await res.json().catch(() => ({}));
-    setBusyId(null);
-    if (!res.ok) {
-      setMessage(data.error ? JSON.stringify(data.error) : "Could not create load.");
-      return;
-    }
-    setCreate(emptyCreate);
-    setPostOpen(false);
-    await refresh(`Posted ${data.data?.referenceNumber ?? "load"}.`);
   }
 
   async function bookLoad(loadId: string) {
@@ -276,8 +275,23 @@ export function LoadBoardWorkspace({
               onClick={() => setMoreFilters((v) => !v)}
               className="text-xs font-medium text-lob-navy underline hover:no-underline"
             >
-              {moreFilters ? "Hide extra filters" : "More filters (equipment, weight, dates)"}
+              {moreFilters ? "Hide extra filters" : "More filters (sort, dates, EMR, equipment…)"}
             </button>
+          </div>
+
+          <div className="mb-3 flex flex-wrap items-end gap-3">
+            <label className="text-xs font-medium text-zinc-600">
+              Sort
+              <select
+                className="mt-1 block rounded-lg border border-zinc-300 bg-white px-2 py-2 text-sm"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+              >
+                <option value="postedDesc">Recently posted</option>
+                <option value="pickupAsc">Pickup date (soonest)</option>
+                <option value="pickupDesc">Pickup date (latest)</option>
+              </select>
+            </label>
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
@@ -312,57 +326,116 @@ export function LoadBoardWorkspace({
           </div>
 
           {moreFilters && (
-            <div className="mt-4 grid gap-3 border-t border-zinc-200 pt-4 sm:grid-cols-2 lg:grid-cols-3">
-              <div>
-                <label className="mb-1 block text-xs font-medium text-zinc-600">Equipment</label>
-                <select
-                  value={equipmentFilter}
-                  onChange={(e) => setEquipmentFilter(e.target.value)}
-                  className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm"
-                >
-                  <option value="">All types</option>
-                  <option>Dry van</option>
-                  <option>Flatbed</option>
-                  <option>Reefer</option>
-                  <option>Step deck</option>
-                  <option>Hotshot</option>
-                </select>
+            <div className="mt-4 space-y-4 border-t border-zinc-200 pt-4">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-zinc-600">Equipment</label>
+                  <select
+                    value={equipmentFilter}
+                    onChange={(e) => setEquipmentFilter(e.target.value)}
+                    className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm"
+                  >
+                    <option value="">All types</option>
+                    {LUMBER_EQUIPMENT.map((e) => (
+                      <option key={e.code} value={e.code}>
+                        {e.label} ({e.code})
+                      </option>
+                    ))}
+                    <option value="Dry van">Dry van (legacy)</option>
+                    <option value="Flatbed">Flatbed (legacy)</option>
+                    <option value="Reefer">Reefer (legacy)</option>
+                    <option value="Step deck">Step deck (legacy)</option>
+                    <option value="Hotshot">Hotshot (legacy)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-zinc-600">Weight min (lbs)</label>
+                  <input
+                    value={weightMin}
+                    onChange={(e) => setWeightMin(e.target.value)}
+                    className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
+                    placeholder="Any"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-zinc-600">Weight max (lbs)</label>
+                  <input
+                    value={weightMax}
+                    onChange={(e) => setWeightMax(e.target.value)}
+                    className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
+                    placeholder="Any"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-zinc-600">Posted from</label>
+                  <input
+                    type="date"
+                    value={postedFrom}
+                    onChange={(e) => setPostedFrom(e.target.value)}
+                    className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-zinc-600">Posted to</label>
+                  <input
+                    type="date"
+                    value={postedTo}
+                    onChange={(e) => setPostedTo(e.target.value)}
+                    className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-zinc-600">Requested pickup from</label>
+                  <input
+                    type="date"
+                    value={pickupFrom}
+                    onChange={(e) => setPickupFrom(e.target.value)}
+                    className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-zinc-600">Requested pickup to</label>
+                  <input
+                    type="date"
+                    value={pickupTo}
+                    onChange={(e) => setPickupTo(e.target.value)}
+                    className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-zinc-600">Weight min (lbs)</label>
-                <input
-                  value={weightMin}
-                  onChange={(e) => setWeightMin(e.target.value)}
-                  className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
-                  placeholder="Any"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-zinc-600">Weight max (lbs)</label>
-                <input
-                  value={weightMax}
-                  onChange={(e) => setWeightMax(e.target.value)}
-                  className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
-                  placeholder="Any"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-zinc-600">Posted from</label>
-                <input
-                  type="date"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-zinc-600">Posted to</label>
-                <input
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
-                />
+              <div className="rounded-lg border border-dashed border-zinc-300 bg-white px-3 py-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-zinc-600">EMR</span>
+                  <span
+                    className="cursor-help text-xs text-lob-navy underline decoration-dotted"
+                    title="Empty Mile Radius — enter your current US/CA postal code and how far you are willing to deadhead to the load origin and/or destination."
+                  >
+                    Empty Mile Radius
+                  </span>
+                </div>
+                <p className="mt-1 text-[11px] text-zinc-500">
+                  Uses straight-line miles between postal codes (US/Canada database). Refine with routing later.
+                </p>
+                <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                  <input
+                    className="rounded border border-zinc-300 px-2 py-2 text-sm"
+                    placeholder="Your postal / ZIP"
+                    value={emrZip}
+                    onChange={(e) => setEmrZip(e.target.value)}
+                  />
+                  <input
+                    className="rounded border border-zinc-300 px-2 py-2 text-sm"
+                    placeholder="Max miles to origin (optional)"
+                    value={emrOriginMi}
+                    onChange={(e) => setEmrOriginMi(e.target.value)}
+                  />
+                  <input
+                    className="rounded border border-zinc-300 px-2 py-2 text-sm"
+                    placeholder="Max miles to destination (optional)"
+                    value={emrDestMi}
+                    onChange={(e) => setEmrDestMi(e.target.value)}
+                  />
+                </div>
               </div>
             </div>
           )}
@@ -390,96 +463,14 @@ export function LoadBoardWorkspace({
           </div>
         </div>
 
-        {/* Post form (shipper) */}
         {isShipper && postOpen && (
-          <div className="border-b border-emerald-200 bg-emerald-50/80 px-4 py-4">
-            <h3 className="text-sm font-semibold text-emerald-900">Add a load</h3>
-            <form className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3" onSubmit={postLoad}>
-              <input
-                className="rounded border px-2 py-2 text-sm"
-                placeholder="Origin city"
-                value={create.originCity}
-                onChange={(e) => setCreate((c) => ({ ...c, originCity: e.target.value }))}
-                required
-              />
-              <input
-                className="rounded border px-2 py-2 text-sm"
-                placeholder="Origin ST"
-                maxLength={2}
-                value={create.originState}
-                onChange={(e) => setCreate((c) => ({ ...c, originState: e.target.value }))}
-                required
-              />
-              <input
-                className="rounded border px-2 py-2 text-sm"
-                placeholder="Origin ZIP"
-                value={create.originZip}
-                onChange={(e) => setCreate((c) => ({ ...c, originZip: e.target.value }))}
-                required
-              />
-              <input
-                className="rounded border px-2 py-2 text-sm"
-                placeholder="Destination city"
-                value={create.destinationCity}
-                onChange={(e) => setCreate((c) => ({ ...c, destinationCity: e.target.value }))}
-                required
-              />
-              <input
-                className="rounded border px-2 py-2 text-sm"
-                placeholder="Dest ST"
-                maxLength={2}
-                value={create.destinationState}
-                onChange={(e) => setCreate((c) => ({ ...c, destinationState: e.target.value }))}
-                required
-              />
-              <input
-                className="rounded border px-2 py-2 text-sm"
-                placeholder="Dest ZIP"
-                value={create.destinationZip}
-                onChange={(e) => setCreate((c) => ({ ...c, destinationZip: e.target.value }))}
-                required
-              />
-              <input
-                className="rounded border px-2 py-2 text-sm"
-                placeholder="Weight lbs"
-                value={create.weightLbs}
-                onChange={(e) => setCreate((c) => ({ ...c, weightLbs: e.target.value }))}
-                required
-              />
-              <select
-                className="rounded border px-2 py-2 text-sm"
-                value={create.equipmentType}
-                onChange={(e) => setCreate((c) => ({ ...c, equipmentType: e.target.value }))}
-              >
-                <option>Dry van</option>
-                <option>Flatbed</option>
-                <option>Reefer</option>
-                <option>Step deck</option>
-                <option>Hotshot</option>
-              </select>
-              <input
-                className="rounded border px-2 py-2 text-sm"
-                placeholder="Offered rate USD (optional)"
-                value={create.offeredRateUsd}
-                onChange={(e) => setCreate((c) => ({ ...c, offeredRateUsd: e.target.value }))}
-              />
-              <label className="flex items-center gap-2 text-sm sm:col-span-2 lg:col-span-3">
-                <input
-                  type="checkbox"
-                  checked={create.isRush}
-                  onChange={(e) => setCreate((c) => ({ ...c, isRush: e.target.checked }))}
-                />
-                Rush
-              </label>
-              <button
-                type="submit"
-                disabled={busyId === "create"}
-                className="rounded bg-emerald-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 sm:col-span-2 lg:col-span-3"
-              >
-                {busyId === "create" ? "Publishing…" : "Publish to board"}
-              </button>
-            </form>
-          </div>
+          <SupplierPostLoadForm
+            onCancel={() => setPostOpen(false)}
+            onPosted={async (msg) => {
+              setPostOpen(false);
+              await refresh(msg);
+            }}
+          />
         )}
 
         {/* Lane summary strip */}
@@ -498,7 +489,7 @@ export function LoadBoardWorkspace({
 
         {/* Results table */}
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[960px] border-collapse text-left text-xs">
+          <table className="w-full min-w-[1020px] border-collapse text-left text-xs">
             <thead>
               <tr className="border-b border-zinc-200 bg-zinc-100 text-[10px] font-bold uppercase tracking-wide text-zinc-600">
                 <th className="whitespace-nowrap px-2 py-2">Ref</th>
@@ -506,6 +497,7 @@ export function LoadBoardWorkspace({
                 <th className="whitespace-nowrap px-2 py-2">Rate</th>
                 <th className="whitespace-nowrap px-2 py-2">Origin</th>
                 <th className="whitespace-nowrap px-2 py-2">Dest</th>
+                <th className="whitespace-nowrap px-2 py-2">Req PU</th>
                 <th className="whitespace-nowrap px-2 py-2">Posted</th>
                 <th className="whitespace-nowrap px-2 py-2">EQ</th>
                 <th className="whitespace-nowrap px-2 py-2">Weight</th>
@@ -550,9 +542,10 @@ export function LoadBoardWorkspace({
                       </div>
                       <div className="text-[10px] text-zinc-500">{load.destinationZip}</div>
                     </td>
+                    <td className="whitespace-nowrap px-2 py-2">{postedDateLabel(load.requestedPickupAt)}</td>
                     <td className="whitespace-nowrap px-2 py-2">{postedDateLabel(load.createdAt)}</td>
                     <td className="whitespace-nowrap px-2 py-2" title={load.equipmentType}>
-                      {equipmentCode(load.equipmentType)}
+                      {equipmentShortTag(load.equipmentType)}
                     </td>
                     <td className="whitespace-nowrap px-2 py-2">{load.weightLbs.toLocaleString()}</td>
                     <td
@@ -677,7 +670,7 @@ export function LoadBoardWorkspace({
           </table>
           {filteredLoads.length === 0 && (
             <p className="p-8 text-center text-sm text-zinc-500">
-              No loads match these filters. Clear search or post a shipment as a shipper.
+              No loads match these filters. Clear search or post a load as a supplier.
             </p>
           )}
         </div>

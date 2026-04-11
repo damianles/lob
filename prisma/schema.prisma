@@ -24,6 +24,12 @@ enum CarrierType {
   BROKER
 }
 
+enum SupplierKind {
+  MILL
+  WHOLESALER
+  OTHER
+}
+
 enum VerificationStatus {
   PENDING
   APPROVED
@@ -61,6 +67,7 @@ model Company {
   reliabilityScore   Int                @default(100)
   factoringEligible  Boolean            @default(false)
   analyticsSubscriber Boolean           @default(false)
+  supplierKind       SupplierKind?
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
 
@@ -72,6 +79,7 @@ model Company {
   documents           Document[]
   reportedIncidents   Incident[]       @relation("IncidentReporter")
   incidentsAgainst    Incident[]       @relation("IncidentTarget")
+  capacityOffers      CapacityOffer[]
 }
 
 model User {
@@ -109,6 +117,8 @@ model Load {
   uniquePickupCode   String?
   shipperCompanyId   String
   createdByUserId    String
+  requestedPickupAt  DateTime
+  extendedPosting    Json?
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
 
@@ -201,4 +211,27 @@ model EmptyMileSetting {
   updatedAt            DateTime @updatedAt
 
   company              Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+}
+
+/** Carrier-posted lane capacity; shipper-facing listings omit carrier identity until a future match flow. */
+model CapacityOffer {
+  id                 String   @id @default(cuid())
+  carrierCompanyId   String
+  originZip          String
+  originCity         String?
+  originState        String?
+  destinationZip     String
+  destinationCity    String?
+  destinationState   String?
+  equipmentType      String
+  askingRateUsd      Decimal  @db.Decimal(10, 2)
+  notes              String?
+  status             String   @default("OPEN")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  carrier            Company  @relation(fields: [carrierCompanyId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([originZip, destinationZip])
 }

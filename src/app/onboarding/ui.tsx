@@ -12,6 +12,10 @@ type FormState = {
   carrierType: "ASSET_BASED" | "BROKER";
 };
 
+type ShipperFormState = FormState & {
+  supplierKind: "MILL" | "WHOLESALER" | "OTHER";
+};
+
 const emptyState: FormState = {
   legalName: "",
   userName: "",
@@ -21,9 +25,14 @@ const emptyState: FormState = {
   carrierType: "ASSET_BASED",
 };
 
+const emptyShipper: ShipperFormState = {
+  ...emptyState,
+  supplierKind: "MILL",
+};
+
 export function OnboardingForms() {
   const { isSignedIn } = useAuth();
-  const [shipper, setShipper] = useState<FormState>(emptyState);
+  const [shipper, setShipper] = useState<ShipperFormState>(emptyShipper);
   const [carrier, setCarrier] = useState<FormState>(emptyState);
   const [message, setMessage] = useState("");
 
@@ -49,15 +58,16 @@ export function OnboardingForms() {
         userName: shipper.userName,
         userEmail: shipper.userEmail,
         role: "SHIPPER",
+        supplierKind: shipper.supplierKind,
       }),
     });
     const data = await res.json();
     if (!res.ok) {
-      setMessage(data.error ? JSON.stringify(data.error) : "Could not create seller account.");
+      setMessage(data.error ? JSON.stringify(data.error) : "Could not create supplier account.");
       return;
     }
-    setMessage(`Seller account ready: ${data.data.legalName}`);
-    setShipper(emptyState);
+    setMessage(`Supplier account ready: ${data.data.legalName}`);
+    setShipper(emptyShipper);
   }
 
   async function submitCarrier() {
@@ -111,8 +121,23 @@ export function OnboardingForms() {
         create. Name/email fields are still shown for fallback local testing.
       </section>
       <section className="rounded-lg border bg-white p-4">
-        <h2 className="text-lg font-semibold">Mill / wholesaler (post loads)</h2>
+        <h2 className="text-lg font-semibold">Supplier — post loads</h2>
+        <p className="mt-1 text-xs text-zinc-600">Mills, wholesalers, and other lumber suppliers. Carriers never see your supplier type on the open board.</p>
         <div className="mt-3 space-y-2">
+          <label className="block text-xs font-medium text-zinc-600">
+            Supplier type
+            <select
+              className="mt-1 w-full rounded border px-3 py-2 text-sm"
+              value={shipper.supplierKind}
+              onChange={(e) =>
+                setShipper((s) => ({ ...s, supplierKind: e.target.value as ShipperFormState["supplierKind"] }))
+              }
+            >
+              <option value="MILL">Mill</option>
+              <option value="WHOLESALER">Wholesaler</option>
+              <option value="OTHER">Other lumber supplier</option>
+            </select>
+          </label>
           <input
             className="w-full rounded border px-3 py-2 text-sm"
             placeholder="Company name"
@@ -139,13 +164,14 @@ export function OnboardingForms() {
             type="button"
             onClick={submitShipper}
           >
-            Create seller account
+            Create supplier account
           </button>
         </div>
       </section>
 
       <section className="rounded-lg border bg-white p-4">
-        <h2 className="text-lg font-semibold">Trucking company (book loads)</h2>
+        <h2 className="text-lg font-semibold">Carrier — book loads</h2>
+        <p className="mt-1 text-xs text-zinc-600">Transportation company (asset or broker).</p>
         <div className="mt-3 space-y-2">
           <input
             className="w-full rounded border px-3 py-2 text-sm"

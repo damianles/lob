@@ -4,20 +4,53 @@
     "destinationState": "CA",
     "equipmentType": "Flatbed",
     "benchmarkAvgUsd": 3050,
-    "notes": "Replace or extend this file with rows exported from your spreadsheet (origin state, destination state, equipment, benchmark rate)."
+    "sampleCount": 12,
+    "windowDays": 60,
+    "notes": "Sample lane — replace with spreadsheet export."
   },
   {
     "originState": "WA",
     "destinationState": "ID",
     "equipmentType": "Dry van",
     "benchmarkAvgUsd": 2180,
-    "notes": "Sample lane — edit as needed."
+    "sampleCount": 3,
+    "windowDays": 60,
+    "notes": "Thin lane (<5 loads): ±50% band applies until more history exists."
   },
   {
     "originState": "TX",
     "destinationState": "OK",
     "equipmentType": "Flatbed",
     "benchmarkAvgUsd": 1850,
+    "sampleCount": 8,
+    "windowDays": 60,
     "notes": "Sample lane — edit as needed."
+  },
+  {
+    "originState": "OR",
+    "destinationState": "NV",
+    "equipmentType": "Reefer",
+    "benchmarkAvgUsd": 3200,
+    "sampleCount": 6,
+    "windowDays": 60,
+    "notes": "Sample lane — edit as needed."
+  },
+  {
+    "originState": "GA",
+    "destinationState": "TN",
+    "equipmentType": "Dry van",
+    "benchmarkAvgUsd": 1650,
+    "sampleCount": 15,
+    "windowDays": 60,
+    "notes": "Sample lane — edit as needed."
+  },
+  {
+    "originState": "WA",
+    "destinationState": "MT",
+    "equipmentType": "Flatbed",
+    "benchmarkAvgUsd": 2800,
+    "sampleCount": 4,
+    "windowDays": 60,
+    "notes": "Thin lane — wider posting band."
   }
 ]

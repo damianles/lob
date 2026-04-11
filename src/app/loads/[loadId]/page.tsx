@@ -6,7 +6,11 @@ import { notFound, redirect } from "next/navigation";
 import { LobSidebar } from "@/components/lob-sidebar";
 import { LoadTimeline } from "@/components/load-timeline";
 import { prisma } from "@/lib/prisma";
-import { shipperCompanyNameForViewer } from "@/lib/shipper-visibility";
+import {
+  shipperCompanyNameForViewer,
+  supplierKindForViewer,
+  supplierKindLabel,
+} from "@/lib/shipper-visibility";
 import { syncClerkUserToDatabase } from "@/lib/sync-clerk-user";
 
 export const dynamic = "force-dynamic";
@@ -38,7 +42,7 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
     include: {
       booking: { include: { carrierCompany: { select: { id: true, legalName: true } } } },
       dispatchLink: true,
-      shipperCompany: { select: { legalName: true } },
+      shipperCompany: { select: { legalName: true, supplierKind: true } },
     },
   });
 
@@ -90,6 +94,7 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
 
   const visibilityActor = { companyId: appUser.companyId, role: appUser.role };
   const millName = shipperCompanyNameForViewer(load.shipperCompany.legalName, load, visibilityActor);
+  const supplierKindVisible = supplierKindForViewer(load.shipperCompany.supplierKind, load, visibilityActor);
 
   const [active, rush, delivered] = await Promise.all([
     prisma.load.count({ where: { status: { not: LoadStatus.DELIVERED } } }),
@@ -117,6 +122,17 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
               {load.equipmentType}
               {load.isRush && <span className="ml-2 font-semibold text-amber-600">RUSH</span>}
             </p>
+            <p className="mt-1 text-sm text-zinc-600">
+              Requested pickup:{" "}
+              <span className="font-medium text-zinc-900">
+                {load.requestedPickupAt.toLocaleDateString("en-US", {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </span>
+            </p>
 
             <div className="mt-4 flex flex-wrap gap-4 rounded-lg border border-zinc-200 bg-white p-4 text-sm">
               <div>
@@ -130,10 +146,15 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
                 </p>
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase text-zinc-500">Mill / customer</p>
+                <p className="text-xs font-semibold uppercase text-zinc-500">Supplier / customer</p>
                 <p className="mt-1 text-zinc-900">
                   {millName ? millName : <span className="italic text-zinc-400">Private until booked</span>}
                 </p>
+                {supplierKindVisible && (
+                  <p className="mt-1 text-xs text-zinc-600">
+                    Supplier type: <span className="font-medium">{supplierKindLabel(supplierKindVisible)}</span>
+                  </p>
+                )}
               </div>
               {load.booking && (
                 <div>
@@ -142,6 +163,15 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
                 </div>
               )}
             </div>
+
+            {load.extendedPosting != null && (
+              <details className="mt-4 rounded-lg border border-zinc-200 bg-white p-4 text-sm">
+                <summary className="cursor-pointer font-medium text-zinc-900">Full post details (supplier)</summary>
+                <pre className="mt-2 max-h-80 overflow-auto whitespace-pre-wrap break-words text-xs text-zinc-700">
+                  {JSON.stringify(load.extendedPosting, null, 2)}
+                </pre>
+              </details>
+            )}
 
             <div className="mt-6">
               <h2 className="text-sm font-semibold text-zinc-900">Shipment progress</h2>

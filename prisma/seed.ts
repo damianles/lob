@@ -1,4 +1,4 @@
-import { CarrierType, LoadStatus, UserRole, VerificationStatus } from "@prisma/client";
+import { CarrierType, LoadStatus, SupplierKind, UserRole, VerificationStatus } from "@prisma/client";
 
 import { prisma } from "../src/lib/prisma";
 
@@ -7,11 +7,13 @@ async function main() {
     where: { legalName: "North Ridge Lumber" },
     update: {
       analyticsSubscriber: true,
+      supplierKind: SupplierKind.MILL,
     },
     create: {
       legalName: "North Ridge Lumber",
       verificationStatus: VerificationStatus.APPROVED,
       analyticsSubscriber: true,
+      supplierKind: SupplierKind.MILL,
     },
   });
 
@@ -63,6 +65,8 @@ async function main() {
     },
   });
 
+  const pu1 = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+
   await prisma.load.upsert({
     where: { referenceNumber: "LOB-SEED-0001" },
     update: {
@@ -80,6 +84,7 @@ async function main() {
       shipperCompanyId: shipperCompany.id,
       createdByUserId: shipperUser.id,
       uniquePickupCode: "AX74Q1",
+      requestedPickupAt: pu1,
     },
     create: {
       referenceNumber: "LOB-SEED-0001",
@@ -97,6 +102,7 @@ async function main() {
       shipperCompanyId: shipperCompany.id,
       createdByUserId: shipperUser.id,
       uniquePickupCode: "AX74Q1",
+      requestedPickupAt: pu1,
     },
   });
 
@@ -112,6 +118,7 @@ async function main() {
     equipmentType: string;
     isRush: boolean;
     offeredRateUsd: number;
+    pickupDaysFromNow: number;
   }> = [
     {
       ref: "LOB-SEED-0002",
@@ -125,6 +132,7 @@ async function main() {
       equipmentType: "Dry van",
       isRush: false,
       offeredRateUsd: 2250,
+      pickupDaysFromNow: 4,
     },
     {
       ref: "LOB-SEED-0003",
@@ -138,6 +146,7 @@ async function main() {
       equipmentType: "Flatbed",
       isRush: false,
       offeredRateUsd: 1900,
+      pickupDaysFromNow: 5,
     },
     {
       ref: "LOB-SEED-0004",
@@ -151,6 +160,7 @@ async function main() {
       equipmentType: "Reefer",
       isRush: true,
       offeredRateUsd: 3400,
+      pickupDaysFromNow: 6,
     },
     {
       ref: "LOB-SEED-0005",
@@ -164,6 +174,7 @@ async function main() {
       equipmentType: "Dry van",
       isRush: false,
       offeredRateUsd: 1650,
+      pickupDaysFromNow: 2,
     },
     {
       ref: "LOB-SEED-0006",
@@ -177,10 +188,12 @@ async function main() {
       equipmentType: "Flatbed",
       isRush: false,
       offeredRateUsd: 2800,
+      pickupDaysFromNow: 7,
     },
   ];
 
   for (const row of extraLoads) {
+    const requestedPickupAt = new Date(Date.now() + row.pickupDaysFromNow * 24 * 60 * 60 * 1000);
     await prisma.load.upsert({
       where: { referenceNumber: row.ref },
       update: {
@@ -197,6 +210,7 @@ async function main() {
         shipperCompanyId: shipperCompany.id,
         createdByUserId: shipperUser.id,
         status: LoadStatus.POSTED,
+        requestedPickupAt,
       },
       create: {
         referenceNumber: row.ref,
@@ -213,6 +227,7 @@ async function main() {
         shipperCompanyId: shipperCompany.id,
         createdByUserId: shipperUser.id,
         uniquePickupCode: row.ref.slice(-6).toUpperCase(),
+        requestedPickupAt,
       },
     });
   }

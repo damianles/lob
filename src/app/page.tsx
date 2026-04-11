@@ -39,6 +39,7 @@ function toSerializableLoads(loads: LoadRow[], actor: BoardActor): SerializableL
     shipperCompanyId: l.shipperCompanyId,
     shipperCompanyName: shipperCompanyNameForViewer(l.shipperCompany.legalName, l, visibilityActor),
     offeredRateUsd: l.offeredRateUsd != null ? Number(l.offeredRateUsd) : null,
+    requestedPickupAt: l.requestedPickupAt.toISOString(),
     createdAt: l.createdAt.toISOString(),
     booking: l.booking
       ? {
@@ -55,6 +56,7 @@ export default async function Home() {
   const { userId } = await auth();
 
   let loads: LoadRow[] = [];
+  let stalePostedLoads: { id: string; referenceNumber: string }[] = [];
   let dbError: string | null = null;
   let appUser: { id: string; companyId: string | null; role: string } | null = null;
   let carrierApproved = false;
@@ -75,11 +77,31 @@ export default async function Home() {
       carrierApproved = co?.verificationStatus === VerificationStatus.APPROVED;
     }
 
+    const pickupCutoff = new Date(Date.now() - 48 * 60 * 60 * 1000);
     loads = await prisma.load.findMany({
+      where: {
+        OR: [
+          { status: { not: LoadStatus.POSTED } },
+          { AND: [{ status: LoadStatus.POSTED }, { requestedPickupAt: { gte: pickupCutoff } }] },
+        ],
+      },
       orderBy: [{ isRush: "desc" }, { createdAt: "desc" }],
       include: loadBoardInclude,
       take: 50,
     });
+
+    if (appUser?.role === "SHIPPER" && appUser.companyId) {
+      stalePostedLoads = await prisma.load.findMany({
+        where: {
+          shipperCompanyId: appUser.companyId,
+          status: LoadStatus.POSTED,
+          requestedPickupAt: { lt: pickupCutoff },
+        },
+        select: { id: true, referenceNumber: true },
+        orderBy: { requestedPickupAt: "asc" },
+        take: 15,
+      });
+    }
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Database error";
     dbError = msg;
@@ -148,8 +170,8 @@ export default async function Home() {
           <section className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-4">
             <h2 className="font-semibold text-amber-900">One step left — link your company</h2>
             <p className="mt-1 text-sm text-amber-800">
-              Your sign-in is connected. Create a <strong>mill / wholesaler</strong> profile to post loads, or a{" "}
-              <strong>trucking company</strong> profile to book them (carriers may need admin approval unless preview
+              Your sign-in is connected. Create a <strong>supplier</strong> profile (mill, wholesaler, or other lumber
+              supplier) to post loads, or a <strong>carrier</strong> profile to book them (carriers may need admin approval unless preview
               auto-approve is on).
             </p>
             <Link
@@ -178,6 +200,25 @@ export default async function Home() {
           <section className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-950">
             <p className="font-semibold">Could not load your profile</p>
             <p className="mt-1">Check the database connection banner above, then refresh.</p>
+          </section>
+        )}
+
+        {userId && appUser?.role === "SHIPPER" && stalePostedLoads.length > 0 && (
+          <section className="mx-auto mb-4 max-w-[1600px] rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+            <p className="font-semibold">Loads past the pickup window</p>
+            <p className="mt-1 text-amber-900">
+              These are no longer on the public board (48 hours after the requested pickup date). Update the pickup date
+              and repost, or cancel in your TMS.
+            </p>
+            <ul className="mt-2 list-inside list-disc">
+              {stalePostedLoads.map((l) => (
+                <li key={l.id}>
+                  <Link className="font-medium underline" href={`/loads/${l.id}`}>
+                    {l.referenceNumber}
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </section>
         )}
 

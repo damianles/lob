@@ -48,6 +48,13 @@ export async function POST(req: Request) {
     }
   }
 
+  if (payload.role === "SHIPPER" && !payload.supplierKind) {
+    return NextResponse.json(
+      { error: "Supplier type is required (mill, wholesaler, or other lumber supplier)." },
+      { status: 400 },
+    );
+  }
+
   if (payload.role === "DISPATCHER") {
     if (!payload.carrierType) {
       return NextResponse.json(
@@ -71,6 +78,7 @@ export async function POST(req: Request) {
       dotNumber: payload.dotNumber,
       mcNumber: payload.mcNumber,
       carrierType: payload.carrierType,
+      supplierKind: payload.role === "SHIPPER" ? payload.supplierKind : undefined,
       verificationStatus:
         payload.role === "SHIPPER"
           ? VerificationStatus.APPROVED

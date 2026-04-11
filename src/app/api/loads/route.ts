@@ -1,6 +1,9 @@
 import { randomUUID } from "node:crypto";
+import { LoadStatus, Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 
+import { findLaneBenchmark, validateOfferedRateAgainstBenchmark } from "@/lib/market-rate-lane";
+import { parseRequestedPickupAt } from "@/lib/parse-pickup-date";
 import { prisma } from "@/lib/prisma";
 import { getActorContext } from "@/lib/request-context";
 import { shipperCompanyNameForViewer } from "@/lib/shipper-visibility";
@@ -21,8 +24,22 @@ export async function GET() {
     }
   }
 
+  const boardCutoff = new Date(Date.now() - 48 * 60 * 60 * 1000);
+
+  const clauses: Prisma.LoadWhereInput[] = [
+    {
+      OR: [
+        { status: { not: LoadStatus.POSTED } },
+        { AND: [{ status: LoadStatus.POSTED }, { requestedPickupAt: { gte: boardCutoff } }] },
+      ],
+    },
+  ];
+  if (hideRush) {
+    clauses.push({ isRush: false });
+  }
+
   const loads = await prisma.load.findMany({
-    where: hideRush ? { isRush: false } : undefined,
+    where: { AND: clauses },
     orderBy: [{ isRush: "desc" }, { createdAt: "desc" }],
     include: {
       shipperCompany: {
@@ -71,6 +88,10 @@ export async function POST(req: Request) {
     );
   }
 
+  if (actor.role !== "SHIPPER") {
+    return NextResponse.json({ error: "Only supplier accounts can post loads." }, { status: 403 });
+  }
+
   const body = await req.json();
   const parsed = createLoadSchema.safeParse(body);
   if (!parsed.success) {
@@ -78,6 +99,35 @@ export async function POST(req: Request) {
   }
 
   const payload = parsed.data;
+  const pickupAt = parseRequestedPickupAt(payload.requestedPickupAt);
+  if (!pickupAt) {
+    return NextResponse.json({ error: "Invalid requestedPickupAt (use YYYY-MM-DD or ISO datetime)." }, { status: 400 });
+  }
+
+  const rateCheck = validateOfferedRateAgainstBenchmark({
+    originState: payload.originState,
+    destinationState: payload.destinationState,
+    originZip: payload.originZip,
+    destinationZip: payload.destinationZip,
+    equipmentType: payload.equipmentType,
+    offeredRateUsd: payload.offeredRateUsd,
+  });
+
+  if (!rateCheck.ok) {
+    return NextResponse.json({ error: rateCheck.message }, { status: 400 });
+  }
+
+  const hit = findLaneBenchmark(
+    payload.originState,
+    payload.destinationState,
+    payload.originZip,
+    payload.destinationZip,
+    payload.equipmentType,
+  );
+
+  const marketRateUsd =
+    hit?.row.benchmarkAvgUsd != null ? new Prisma.Decimal(hit.row.benchmarkAvgUsd) : undefined;
+
   const load = await prisma.load.create({
     data: {
       referenceNumber: `LOB-${randomUUID().slice(0, 8).toUpperCase()}`,
@@ -92,12 +142,16 @@ export async function POST(req: Request) {
       isRush: payload.isRush,
       isPrivate: payload.isPrivate,
       offeredRateUsd: payload.offeredRateUsd,
+      marketRateUsd,
       shipperCompanyId: actor.companyId,
       createdByUserId: actor.userId,
       uniquePickupCode: randomUUID().slice(0, 6).toUpperCase(),
+      requestedPickupAt: pickupAt,
+      extendedPosting: payload.extendedPosting
+        ? (payload.extendedPosting as Prisma.InputJsonValue)
+        : undefined,
     },
   });
 
   return NextResponse.json({ data: load }, { status: 201 });
 }
-
