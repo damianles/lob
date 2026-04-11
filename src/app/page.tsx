@@ -245,9 +245,9 @@ export default async function Home() {
               — signing in now <strong>auto-creates</strong> your DB user even if the webhook is not wired yet.
             </li>
             <li>
-              Admin role: set <code className="rounded bg-zinc-100 px-1">LOB_AUTO_ADMIN_EMAIL</code> to your Clerk email
-              (preview only) or run <code className="rounded bg-zinc-100 px-1">npm run set-admin -- you@email.com</code>{" "}
-              against the same database.
+              Admin role: set <code className="rounded bg-zinc-100 px-1">LOB_AUTO_ADMIN_EMAILS</code> (comma-separated) or{" "}
+              <code className="rounded bg-zinc-100 px-1">LOB_AUTO_ADMIN_EMAIL</code> (preview only), or run{" "}
+              <code className="rounded bg-zinc-100 px-1">npm run set-admin -- a@x.com b@y.com</code> against the same database.
             </li>
             <li>
               To test booking without admin: set{" "}
