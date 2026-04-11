@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LOB brand — logo catalog (review)</title>
+    <style>
+      :root {
+        font-family: system-ui, sans-serif;
+        background: #f4f4f5;
+        color: #18181b;
+      }
+      body {
+        margin: 0;
+        padding: 1.5rem;
+        max-width: 1400px;
+        margin-inline: auto;
+      }
+      h1 {
+        font-size: 1.25rem;
+      }
+      p.note {
+        font-size: 0.875rem;
+        color: #52525b;
+        max-width: 65ch;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 1rem;
+        margin-top: 1.5rem;
+      }
+      figure {
+        margin: 0;
+        background: #fff;
+        border: 1px solid #e4e4e7;
+        border-radius: 8px;
+        padding: 0.75rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      figure.dark {
+        background: #18181b;
+      }
+      figure.dark figcaption {
+        color: #e4e4e7;
+      }
+      img {
+        width: 100%;
+        height: auto;
+        object-fit: contain;
+        max-height: 180px;
+        background: repeating-conic-gradient(#fafafa 0% 25%, #eee 0% 50%) 50% / 16px 16px;
+        border-radius: 4px;
+      }
+      figure.dark img {
+        background: #27272a;
+      }
+      figcaption {
+        font-size: 11px;
+        word-break: break-all;
+        line-height: 1.35;
+        color: #3f3f46;
+      }
+      code {
+        font-size: 0.8em;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Logo &amp; branding catalog</h1>
+    <p class="note">
+      Copied from your Hibernia project assets for review. Open this file while running the app at
+      <code>/brand/catalog/index.html</code>, or open the folder in Finder. Pick the files you want, then we will move
+      those into <code>public/brand/confirmed/</code> and wire the site to them.
+    </p>
+    <p class="note">
+      Files with dark or transparent backgrounds are shown on a dark tile so you can judge contrast.
+    </p>
+    <div class="grid" id="grid"></div>
+    <script>
+      const files = [
+        "Hibernia_Logo-3ebce49a-e88d-45ad-9a8b-47c24b529b9c.png",
+        "Hibernia_Logo-61a70132-1493-42a2-9e20-3acefb0bc879.png",
+        "IMG_5230-cbb50dd6-b1d9-48ea-a2d9-a9a662ecc81c.png",
+        "IMG_5380-b404d8ed-da8a-4ffe-aacd-f950663dcebd.png",
+        "Image_20260221_113735-fc83e1a0-7641-47b5-be10-42516e028fc6.png",
+        "image-100b5690-4e09-4566-a593-062a6a394d98.png",
+        "lob-1b-fix-a.png",
+        "lob-1b-fix-b.png",
+        "lob-1b-fix-c.png",
+        "lob-1b-fix-d.png",
+        "lob-app-icon.png",
+        "lob-combo-a.png",
+        "lob-combo-b.png",
+        "lob-combo-c.png",
+        "lob-dark-bg.png",
+        "lob-favicon.png",
+        "lob-final-a.png",
+        "lob-final-b.png",
+        "lob-final-c.png",
+        "lob-final-d.png",
+        "lob-iter3-a.png",
+        "lob-iter3-b.png",
+        "lob-iter3-c.png",
+        "lob-iter3-d.png",
+        "lob-log-cross-a.png",
+        "lob-log-cross-b.png",
+        "lob-log-cross-c.png",
+        "lob-log-cross-d.png",
+        "lob-nav-lockup.png",
+        "lob-og-share-card.png",
+        "lob-refined-a.png",
+        "lob-refined-b.png",
+        "lob-refined-c.png",
+        "lob-social-profile.png",
+        "lob-splash-screen.png",
+        "lob-v3a-icon-rings.png",
+        "lob-v3b-icon-hybrid.png",
+        "lob-v4a-1b-outlined.png",
+        "lob-v4b-1b-bold.png",
+        "lob-white-mono.png",
+        "lob-whitering-a.png",
+        "lob-whitering-b.png",
+        "lumber-one-board-logo.png",
+        "lumber-one-board-v2-minimal.png",
+        "lumber-one-board-v3-lob.png",
+        "lumber-one-board-v4-app-icon.png",
+        "lumber-one-board-v5-monogram.png",
+      ];
+      const darkBg = new Set([
+        "lob-dark-bg.png",
+        "lob-white-mono.png",
+        "lob-nav-lockup.png",
+        "lob-og-share-card.png",
+        "lob-social-profile.png",
+        "lob-splash-screen.png",
+      ]);
+      const grid = document.getElementById("grid");
+      for (const name of files) {
+        const fig = document.createElement("figure");
+        if (darkBg.has(name)) fig.classList.add("dark");
+        const img = document.createElement("img");
+        img.src = "./" + name;
+        img.alt = name;
+        img.loading = "lazy";
+        const cap = document.createElement("figcaption");
+        cap.textContent = name;
+        fig.append(img, cap);
+        grid.append(fig);
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,7 @@
+Original asset folder (on this machine):
+  /Users/damianles/.cursor/projects/Users-damianles-Hibernia/assets
+
+To refresh this catalog after new exports:
+  cp "/Users/damianles/.cursor/projects/Users-damianles-Hibernia/assets/"*.png "$(dirname "$0")/"
+
+Review UI (with dev server): http://localhost:3000/brand/catalog/index.html
