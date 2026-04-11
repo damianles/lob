@@ -1,36 +1,125 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# LOB Web App (MVP Foundation)
 
-## Getting Started
+This is the first runnable build of the Lumber One Board platform:
 
-First, run the development server:
+- Next.js app router frontend
+- Prisma + PostgreSQL data model
+- API lifecycle: load posting -> booking -> dispatch -> pickup confirmation -> POD upload
+
+## Prerequisites
+
+- Node.js 20+
+- PostgreSQL running locally or remotely
+
+## 1) Environment setup
+
+Copy `.env.example` to `.env` and set your database URL:
+
+```bash
+cp .env.example .env
+```
+
+## 2) Install and initialize DB
+
+```bash
+npm install
+npm run db:up
+npm run db:generate
+npm run db:migrate -- --name init
+npm run db:seed
+```
+
+## 3) Run the app
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## API quick test flow
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1) Create a load as shipper (replace IDs with seeded IDs from `npm run db:seed` output):
 
-## Learn More
+```bash
+curl -X POST http://localhost:3000/api/loads \
+  -H "Content-Type: application/json" \
+  -H "x-user-id: SHIPPER_USER_ID" \
+  -H "x-company-id: SHIPPER_COMPANY_ID" \
+  -d '{
+    "originCity":"Tacoma",
+    "originState":"WA",
+    "originZip":"98402",
+    "destinationCity":"Boise",
+    "destinationState":"ID",
+    "destinationZip":"83702",
+    "weightLbs":43000,
+    "equipmentType":"Flatbed",
+    "isRush":true,
+    "isPrivate":false,
+    "offeredRateUsd":3400
+  }'
+```
 
-To learn more about Next.js, take a look at the following resources:
+2) Book the load:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+curl -X POST http://localhost:3000/api/loads/LOAD_ID/book \
+  -H "Content-Type: application/json" \
+  -d '{
+    "carrierCompanyId":"CARRIER_COMPANY_ID",
+    "agreedRateUsd":3450
+  }'
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+3) Create dispatch link:
 
-## Deploy on Vercel
+```bash
+curl -X POST http://localhost:3000/api/loads/LOAD_ID/dispatch \
+  -H "Content-Type: application/json" \
+  -d '{
+    "assignedByUserId":"DISPATCHER_USER_ID",
+    "driverName":"Chris Driver",
+    "driverPhone":"+15551234567",
+    "expiresInHours":48
+  }'
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+4) Driver confirms pickup:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+curl -X POST http://localhost:3000/api/dispatch-links/TOKEN/pickup \
+  -H "Content-Type: application/json" \
+  -d '{
+    "pickupCode":"UNIQUE_PICKUP_CODE"
+  }'
+```
+
+5) Driver submits POD:
+
+```bash
+curl -X POST http://localhost:3000/api/dispatch-links/TOKEN/pod \
+  -H "Content-Type: application/json" \
+  -d '{
+    "fileUrl":"https://example.com/pod-image.jpg"
+  }'
+```
+
+## Notes
+
+- Auth is currently a temporary header-based shim for fast MVP testing.
+- Clerk is now integrated; set Clerk keys in `.env` to enable sign-in/sign-up.
+- Header fallback remains temporarily for local testing while user-role sync is finalized.
+- GPS, lane pricing analytics, and factoring automation are intentionally phase-gated.
+
+## Deploy
+
+See full deploy guide:
+
+- `../docs/13-vercel-deployment-and-partner-testing.md`
+
+## Brand assets delivered
+
+- Approved concept files and generated app icons: `public/brand/approved/`
+- Prior draft files retained in: `public/brand/final/`
+- App icon wired at: `src/app/icon.png`

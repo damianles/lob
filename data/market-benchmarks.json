@@ -1,0 +1,23 @@
+[
+  {
+    "originState": "OR",
+    "destinationState": "CA",
+    "equipmentType": "Flatbed",
+    "benchmarkAvgUsd": 3050,
+    "notes": "Replace or extend this file with rows exported from your spreadsheet (origin state, destination state, equipment, benchmark rate)."
+  },
+  {
+    "originState": "WA",
+    "destinationState": "ID",
+    "equipmentType": "Dry van",
+    "benchmarkAvgUsd": 2180,
+    "notes": "Sample lane — edit as needed."
+  },
+  {
+    "originState": "TX",
+    "destinationState": "OK",
+    "equipmentType": "Flatbed",
+    "benchmarkAvgUsd": 1850,
+    "notes": "Sample lane — edit as needed."
+  }
+]

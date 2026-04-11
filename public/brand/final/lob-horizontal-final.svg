@@ -1,0 +1,15 @@
+<svg width="1200" height="260" viewBox="0 0 1200 260" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="260" fill="white"/>
+  <g transform="translate(36,40)">
+    <text x="0" y="120" fill="#062361" font-family="Arial, Helvetica, sans-serif" font-size="132" font-weight="700">LOB</text>
+    <circle cx="146" cy="70" r="42" fill="#062361"/>
+    <circle cx="146" cy="70" r="36" stroke="#E0A53B" stroke-width="4" fill="#062361"/>
+    <rect x="119" y="60" width="54" height="18" rx="8" fill="#E0A53B"/>
+    <rect x="140" y="35" width="12" height="70" rx="6" fill="#E0A53B"/>
+    <line x1="365" y1="20" x2="365" y2="144" stroke="#B78A3A" stroke-width="4"/>
+    <text x="400" y="120" fill="#062361" font-family="Arial, Helvetica, sans-serif" font-size="72" font-weight="700">Lumber</text>
+    <text x="669" y="120" fill="#B78A3A" font-family="Arial, Helvetica, sans-serif" font-size="72" font-weight="700">One</text>
+    <text x="815" y="120" fill="#062361" font-family="Arial, Helvetica, sans-serif" font-size="72" font-weight="700">Board</text>
+  </g>
+</svg>
+

@@ -1,0 +1,204 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  SHIPPER
+  DISPATCHER
+  DRIVER
+  ADMIN
+}
+
+enum CarrierType {
+  ASSET_BASED
+  BROKER
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum LoadStatus {
+  POSTED
+  BOOKED
+  ASSIGNED
+  IN_TRANSIT
+  DELIVERED
+  CANCELLED
+}
+
+enum IncidentType {
+  DROPPED_LOAD
+  NO_PICKUP
+  NON_RESPONSIVE
+}
+
+enum DispatchLinkStatus {
+  ACTIVE
+  EXPIRED
+  COMPLETED
+}
+
+model Company {
+  id                 String             @id @default(cuid())
+  legalName          String             @unique
+  dotNumber          String?            @unique
+  mcNumber           String?            @unique
+  carrierType        CarrierType?
+  verificationStatus VerificationStatus @default(PENDING)
+  reliabilityScore   Int                @default(100)
+  factoringEligible  Boolean            @default(false)
+  analyticsSubscriber Boolean           @default(false)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  users               User[]
+  postedLoads         Load[]           @relation("ShipperLoads")
+  bookings            Booking[]
+  preferredLanes      PreferredLane[]
+  emptyMileSetting    EmptyMileSetting?
+  documents           Document[]
+  reportedIncidents   Incident[]       @relation("IncidentReporter")
+  incidentsAgainst    Incident[]       @relation("IncidentTarget")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  authProviderId String? @unique
+  email     String   @unique
+  name      String
+  role      UserRole
+  companyId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company             Company?          @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  createdLoads        Load[]            @relation("LoadCreator")
+  assignedDispatches  DispatchLink[]    @relation("DispatchAssignedBy")
+}
+
+model Load {
+  id                 String     @id @default(cuid())
+  referenceNumber    String     @unique
+  originCity         String
+  originState        String
+  originZip          String
+  destinationCity    String
+  destinationState   String
+  destinationZip     String
+  weightLbs          Int
+  equipmentType      String
+  isRush             Boolean    @default(false)
+  isPrivate          Boolean    @default(false)
+  status             LoadStatus @default(POSTED)
+  offeredRateUsd     Decimal?   @db.Decimal(10, 2)
+  marketRateUsd      Decimal?   @db.Decimal(10, 2)
+  finalCostUsd       Decimal?   @db.Decimal(10, 2)
+  uniquePickupCode   String?
+  shipperCompanyId   String
+  createdByUserId    String
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  shipperCompany     Company       @relation("ShipperLoads", fields: [shipperCompanyId], references: [id], onDelete: Restrict)
+  createdBy          User          @relation("LoadCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  booking            Booking?
+  dispatchLink       DispatchLink?
+  incidents          Incident[]
+}
+
+model Booking {
+  id                String   @id @default(cuid())
+  loadId            String   @unique
+  carrierCompanyId  String
+  agreedRateUsd     Decimal  @db.Decimal(10, 2)
+  bookedAt          DateTime @default(now())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  load              Load     @relation(fields: [loadId], references: [id], onDelete: Restrict)
+  carrierCompany    Company  @relation(fields: [carrierCompanyId], references: [id], onDelete: Restrict)
+}
+
+model DispatchLink {
+  id                 String             @id @default(cuid())
+  loadId             String             @unique
+  token              String             @unique
+  driverName         String
+  driverPhone        String?
+  driverEmail        String?
+  assignedByUserId   String
+  expiresAt          DateTime
+  status             DispatchLinkStatus @default(ACTIVE)
+  pickupConfirmedAt  DateTime?
+  deliveredAt        DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  load               Load       @relation(fields: [loadId], references: [id], onDelete: Restrict)
+  assignedBy         User       @relation("DispatchAssignedBy", fields: [assignedByUserId], references: [id], onDelete: Restrict)
+  podDocument        Document?
+}
+
+model Document {
+  id               String    @id @default(cuid())
+  companyId        String?
+  dispatchLinkId   String?   @unique
+  kind             String
+  fileUrl          String
+  expiresAt        DateTime?
+  createdAt        DateTime  @default(now())
+
+  company          Company?      @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  dispatchLink     DispatchLink? @relation(fields: [dispatchLinkId], references: [id], onDelete: SetNull)
+}
+
+model Incident {
+  id                 String       @id @default(cuid())
+  loadId             String
+  reportedByCompanyId String
+  targetCompanyId    String
+  type               IncidentType
+  note               String?
+  scoreDelta         Int          @default(-10)
+  createdAt          DateTime     @default(now())
+
+  load               Load         @relation(fields: [loadId], references: [id], onDelete: Restrict)
+  reportedByCompany  Company      @relation("IncidentReporter", fields: [reportedByCompanyId], references: [id], onDelete: Restrict)
+  targetCompany      Company      @relation("IncidentTarget", fields: [targetCompanyId], references: [id], onDelete: Restrict)
+}
+
+model PreferredLane {
+  id             String   @id @default(cuid())
+  companyId      String
+  originZip      String
+  destinationZip String
+  createdAt      DateTime @default(now())
+
+  company        Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, originZip, destinationZip])
+}
+
+model EmptyMileSetting {
+  id                   String   @id @default(cuid())
+  companyId            String   @unique
+  rateUsdPerMile       Decimal  @db.Decimal(8, 2)
+  maxEmptyMiles        Int      @default(150)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  company              Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+}

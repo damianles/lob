@@ -1,0 +1,11 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="48" y="48" width="928" height="928" rx="170" fill="#062361"/>
+  <text x="190" y="620" fill="#FFFFFF" font-family="Arial, Helvetica, sans-serif" font-size="320" font-weight="700">LOB</text>
+  <circle cx="510" cy="515" r="95" fill="#062361"/>
+  <circle cx="510" cy="515" r="82" stroke="#E0A53B" stroke-width="10" fill="#062361"/>
+  <rect x="453" y="493" width="114" height="36" rx="12" fill="#E0A53B"/>
+  <rect x="498" y="438" width="24" height="152" rx="10" fill="#E0A53B"/>
+  <rect x="466" y="450" width="88" height="18" rx="8" fill="#E0A53B"/>
+  <rect x="466" y="560" width="88" height="18" rx="8" fill="#E0A53B"/>
+</svg>
+
