@@ -17,11 +17,11 @@ export default async function OnboardingPage() {
         <div className="min-w-0 flex-1 bg-zinc-50 p-4 sm:p-6">
           <div className="mx-auto max-w-4xl">
             <Image
-              src="/brand/approved/lob-wordmark-approved.png"
-              alt="LOB Lumber One Board"
-              width={420}
-              height={150}
-              className="mb-4 rounded bg-white p-2"
+              src="/brand/final/lob-horizontal-final.svg"
+              alt="Lumber One Board"
+              width={560}
+              height={121}
+              className="mb-4 h-auto w-full max-w-lg"
               priority
             />
             <h1 className="text-2xl font-bold sm:text-3xl">Account setup</h1>

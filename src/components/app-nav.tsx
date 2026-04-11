@@ -43,24 +43,28 @@ export function AppNav() {
 
   return (
     <header className="border-b border-stone-200 bg-white shadow-sm">
-      <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-3 px-4 py-3">
-        <Link href="/" className="flex items-center gap-2 shrink-0">
-          <Image
-            src="/brand/final/lob-wordmark-final.svg"
-            alt="Lumber One Board"
-            width={100}
-            height={32}
-            className="h-7 w-auto"
-          />
-        </Link>
-        <nav className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-stone-700">
-          {links.map((l) => (
-            <Link key={l.href} href={l.href} className="font-medium hover:text-lob-navy hover:underline">
-              {l.label}
-            </Link>
-          ))}
-        </nav>
-        <div className="flex items-center gap-2">
+      <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-2.5 sm:min-h-[3.5rem]">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-5 gap-y-2">
+          <Link href="/" className="flex shrink-0 items-center" aria-label="Home — Lumber One Board">
+            <Image
+              src="/brand/final/lob-wordmark-final.svg"
+              alt=""
+              width={160}
+              height={48}
+              className="h-9 w-auto sm:h-10"
+              role="presentation"
+              priority
+            />
+          </Link>
+          <nav className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-stone-700" aria-label="Primary">
+            {links.map((l) => (
+              <Link key={l.href} href={l.href} className="font-medium hover:text-lob-navy hover:underline">
+                {l.label}
+              </Link>
+            ))}
+          </nav>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
           {isSignedIn ? (
             <UserButton />
           ) : (

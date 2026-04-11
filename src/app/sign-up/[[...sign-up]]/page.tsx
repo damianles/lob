@@ -6,11 +6,11 @@ export default function Page() {
     <main className="flex min-h-screen items-center justify-center bg-zinc-50 p-6">
       <div className="w-full max-w-md">
         <Image
-          src="/brand/approved/lob-dark-lockup-approved.png"
-          alt="LOB Lumber One Board"
-          width={420}
-          height={260}
-          className="mb-5 rounded-lg"
+          src="/brand/final/lob-horizontal-final.svg"
+          alt="Lumber One Board"
+          width={600}
+          height={130}
+          className="mb-6 h-auto w-full max-w-md"
           priority
         />
         <SignUp />

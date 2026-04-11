@@ -19,15 +19,15 @@ export function LobSidebar({
   stats?: LobSidebarStats;
 }) {
   return (
-    <aside className="hidden w-52 shrink-0 flex-col border-r border-stone-200 bg-lob-surface lg:flex">
-      <div className="border-b border-stone-200 px-3 py-4">
-        <Link href="/" className="block" title="Home">
+    <aside className="hidden w-56 shrink-0 flex-col border-r border-stone-200 bg-lob-surface lg:flex">
+      <div className="flex min-h-[4.25rem] items-center border-b border-stone-200 px-3 py-3">
+        <Link href="/" className="flex w-full items-center" title="Home">
           <Image
             src="/brand/final/lob-horizontal-final.svg"
             alt="Lumber One Board"
-            width={180}
-            height={50}
-            className="h-10 w-auto max-w-[180px]"
+            width={220}
+            height={48}
+            className="h-11 w-auto max-w-[208px] sm:h-12 sm:max-w-[220px]"
             priority
           />
         </Link>
