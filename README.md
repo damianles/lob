@@ -1,6 +1,12 @@
 # LOB Web App (MVP Foundation)
 
-This is the first runnable build of the Lumber One Board platform:
+## Deploy looks old on Vercel?
+
+**→ Open [`PUSH_AND_VERCEL.md`](./PUSH_AND_VERCEL.md)** — the full app was only committed locally until recently; you must **push to GitHub** and set Vercel **Root Directory empty**.
+
+---
+
+This is the Lumber One Board platform:
 
 - Next.js app router frontend
 - Prisma + PostgreSQL data model

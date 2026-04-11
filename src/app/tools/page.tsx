@@ -22,10 +22,10 @@ export default function ToolsPage() {
               changes. <strong>Supabase</strong> is only the database. <strong>Clerk</strong> is only sign-in.
             </p>
             <p className="mt-2 text-sm text-zinc-600">
-              In the project folder, open <code className="rounded bg-zinc-100 px-1">web/DEPLOY.md</code> for step-by-step
-              redeploy, env vars, and seeding. Set{" "}
-              <code className="rounded bg-zinc-100 px-1">NEXT_PUBLIC_LOB_DEMO_MODE=true</code> on Vercel for a clear
-              “preview” banner.
+              Stuck on an <strong>old</strong> site? See <code className="rounded bg-zinc-100 px-1">PUSH_AND_VERCEL.md</code>{" "}
+              in the repo (push to GitHub + empty Root Directory). Env vars and seeding:{" "}
+              <code className="rounded bg-zinc-100 px-1">DEPLOY.md</code>. Optional demo banner:{" "}
+              <code className="rounded bg-zinc-100 px-1">NEXT_PUBLIC_LOB_DEMO_MODE=true</code>.
             </p>
           </section>
 
