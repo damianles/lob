@@ -1,26 +1,30 @@
 import Image from "next/image";
 
-import {
-  LOB_BRAND_LOCKUP_HEIGHT,
-  LOB_BRAND_LOCKUP_SRC,
-  LOB_BRAND_LOCKUP_WIDTH,
-} from "@/lib/brand";
+import { LOB_BRAND_LOCKUP_SRC } from "@/lib/brand";
 
 type Props = {
+  /** Wrapper: include `relative`, height (`h-*`), and max width — required for `fill` image. */
   className?: string;
   priority?: boolean;
 };
 
-/** Full name under LOB — use at most once per page in the main content area. */
+/** Full “Lumber One Board” lockup — `fill` + `object-contain` prevents vertical cropping. */
 export function LobBrandLockup({ className, priority }: Props) {
   return (
-    <Image
-      src={LOB_BRAND_LOCKUP_SRC}
-      alt="Lumber One Board"
-      width={LOB_BRAND_LOCKUP_WIDTH}
-      height={LOB_BRAND_LOCKUP_HEIGHT}
-      className={className}
-      priority={priority}
-    />
+    <div
+      className={
+        className ??
+        "relative h-[4.5rem] w-full max-w-[min(100%,260px)] sm:h-[5rem]"
+      }
+    >
+      <Image
+        src={LOB_BRAND_LOCKUP_SRC}
+        alt="Lumber One Board"
+        fill
+        priority={priority}
+        sizes="(max-width: 640px) 240px, 320px"
+        className="object-contain object-left"
+      />
+    </div>
   );
 }

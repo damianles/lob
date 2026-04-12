@@ -23,7 +23,21 @@
 }
 
 body {
-  background: var(--lob-paper);
+  background-color: var(--lob-paper);
+  background-image: radial-gradient(1200px 600px at 10% -10%, rgba(181, 129, 53, 0.06), transparent 55%),
+    radial-gradient(900px 480px at 95% 0%, rgba(0, 18, 51, 0.04), transparent 50%),
+    linear-gradient(180deg, #faf8f5 0%, #f3f5f8 100%);
   color: var(--lob-ink);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--lob-gold) 35%, transparent);
+  color: var(--lob-navy);
+}
+
+a {
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
 }

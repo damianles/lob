@@ -1,10 +1,10 @@
 import { LobBrandLockup } from "@/components/lob-brand-lockup";
 
-/** One full wordmark per page — place under the app header in main content. */
+/** In-content wordmark — no boxed panel; blends with the workspace background. */
 export function LobBrandStrip() {
   return (
-    <div className="border-b border-stone-200 bg-white px-4 py-3">
-      <LobBrandLockup className="h-auto w-auto max-w-[min(100%,240px)]" />
+    <div className="px-4 pt-5 pb-2 sm:px-6 sm:pt-6">
+      <LobBrandLockup className="relative h-[4.75rem] w-full max-w-[min(100%,280px)] sm:h-[5.25rem]" />
     </div>
   );
 }

@@ -260,7 +260,7 @@ export function LoadBoardWorkspace({
   }
 
   return (
-    <div className="mx-auto flex max-w-[1600px] gap-0 rounded-xl border border-stone-200 bg-white shadow-sm lg:gap-0">
+    <div className="mx-auto flex max-w-[1600px] gap-0 overflow-hidden rounded-2xl border border-stone-200/70 bg-white/95 shadow-[0_8px_40px_-12px_rgba(0,18,51,0.1)] ring-1 ring-stone-900/[0.03] backdrop-blur-sm lg:gap-0">
       <LobSidebar active="loads" stats={stats} />
 
       <div className="min-w-0 flex-1">

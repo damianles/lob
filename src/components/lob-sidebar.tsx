@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { LobBrandMark } from "@/components/lob-brand-mark";
+import { BRAND_POSITIONING } from "@/lib/brand-marketing";
 
 export type LobNavId =
   | "loads"
@@ -39,7 +40,7 @@ const items: { id: LobNavId; href: string; label: string; hint: string }[] = [
     label: "Carrier profile",
     hint: "DOT/MC, insurance, fleet & equipment for shippers",
   },
-  { id: "onboarding", href: "/onboarding", label: "Your account", hint: "Link mill or transport company" },
+  { id: "onboarding", href: "/onboarding", label: "Account setup", hint: "Link supplier or carrier company" },
 ];
 
 export function LobSidebar({
@@ -50,13 +51,19 @@ export function LobSidebar({
   stats?: LobSidebarStats;
 }) {
   return (
-    <aside className="hidden w-56 shrink-0 flex-col border-r border-stone-200 bg-lob-surface lg:flex">
-      <div className="flex min-h-[4.25rem] items-center border-b border-stone-200 px-3 py-3">
-        <Link href="/" className="flex w-full items-center" title="Home">
-          <LobBrandMark className="h-11 w-auto max-w-[208px] sm:h-12 sm:max-w-[220px]" priority />
+    <aside className="hidden w-56 shrink-0 flex-col border-r border-stone-200/70 bg-gradient-to-b from-white to-lob-surface lg:flex">
+      <div className="flex flex-col gap-2 px-4 pb-4 pt-5">
+        <Link href="/" className="block w-full overflow-visible" title="Home">
+          <LobBrandMark className="relative h-11 w-[11.5rem] max-w-full shrink-0 sm:h-12 sm:w-[12.5rem]" priority />
         </Link>
+        <p className="text-[10px] font-semibold uppercase leading-tight tracking-[0.12em] text-lob-gold-muted">
+          {BRAND_POSITIONING}
+        </p>
       </div>
-      <nav className="flex max-h-[calc(100vh-10rem)] flex-col gap-1 overflow-y-auto p-3 text-sm" aria-label="Main">
+      <nav
+        className="flex max-h-[calc(100vh-10rem)] flex-col gap-0.5 overflow-y-auto px-3 pb-3 text-sm"
+        aria-label="Main"
+      >
         {items.map((item) => {
           const isActive = item.id === active;
           return (
@@ -65,8 +72,8 @@ export function LobSidebar({
               href={item.href}
               className={
                 isActive
-                  ? "rounded-md border border-lob-gold/50 bg-white px-3 py-2 font-semibold text-lob-navy shadow-sm"
-                  : "rounded-md px-3 py-2 text-stone-700 hover:bg-white/80 hover:text-lob-navy"
+                  ? "rounded-lg bg-lob-navy/[0.07] px-3 py-2 font-semibold text-lob-navy ring-1 ring-lob-navy/10"
+                  : "rounded-lg px-3 py-2 text-stone-600 transition hover:bg-white/90 hover:text-lob-navy"
               }
               title={item.hint}
             >
@@ -75,7 +82,7 @@ export function LobSidebar({
           );
         })}
       </nav>
-      <div className="mt-auto border-t border-stone-200 p-3 text-xs text-stone-500">
+      <div className="mt-auto border-t border-stone-200/60 p-3 text-xs text-stone-500">
         {stats ? (
           <>
             {stats.active} open · {stats.rush} rush · {stats.delivered} delivered
