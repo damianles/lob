@@ -23,12 +23,13 @@
 }
 
 body {
-  background-color: var(--lob-paper);
-  background-image: radial-gradient(1200px 600px at 10% -10%, rgba(181, 129, 53, 0.06), transparent 55%),
-    radial-gradient(900px 480px at 95% 0%, rgba(0, 18, 51, 0.04), transparent 50%),
-    linear-gradient(180deg, #faf8f5 0%, #f3f5f8 100%);
+  background-color: #f7f7f5;
+  background-image: radial-gradient(1000px 520px at 8% -8%, rgba(181, 129, 53, 0.045), transparent 58%),
+    radial-gradient(800px 420px at 96% 4%, rgba(0, 18, 51, 0.03), transparent 52%),
+    linear-gradient(180deg, #f9f9f7 0%, #f4f4f1 100%);
   color: var(--lob-ink);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
+  letter-spacing: -0.011em;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

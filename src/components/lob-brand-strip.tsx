@@ -1,10 +1,7 @@
-import { LobBrandLockup } from "@/components/lob-brand-lockup";
-
-/** In-content wordmark — no boxed panel; blends with the workspace background. */
+/**
+ * Top breathing room for app shells — full wordmark removed to reduce repeated branding
+ * (header uses the wood “O” home mark; marketing pages can still use LobBrandLockup where needed).
+ */
 export function LobBrandStrip() {
-  return (
-    <div className="px-4 pt-5 pb-2 sm:px-6 sm:pt-6">
-      <LobBrandLockup className="relative h-[4.75rem] w-full max-w-[min(100%,280px)] sm:h-[5.25rem]" />
-    </div>
-  );
+  return <div className="shrink-0 pt-6 sm:pt-8" aria-hidden />;
 }

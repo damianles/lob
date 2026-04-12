@@ -2,8 +2,8 @@ import Link from "next/link";
 
 import { auth } from "@clerk/nextjs/server";
 
-import { LobBrandLockup } from "@/components/lob-brand-lockup";
 import { LobSidebar } from "@/components/lob-sidebar";
+import { LobWoodOMark } from "@/components/lob-wood-o-mark";
 import { getDatabaseErrorGuidance } from "@/lib/db-connection-hints";
 import { isAdminPersonaSwitchEnabled } from "@/lib/admin-test-personas";
 import { syncClerkUserToDatabase } from "@/lib/sync-clerk-user";
@@ -33,17 +33,21 @@ export default async function OnboardingPage() {
   const personaSwitch = isAdminPersonaSwitchEnabled();
 
   return (
-    <main className="min-h-[calc(100vh-3.5rem)] p-3 text-zinc-900 sm:p-4">
-      <div className="mx-auto flex max-w-[1600px] gap-0 overflow-hidden rounded-2xl border border-stone-200/70 bg-white/95 shadow-[0_8px_40px_-12px_rgba(0,18,51,0.1)] ring-1 ring-stone-900/[0.03] backdrop-blur-sm">
+    <main className="min-h-[calc(100vh-3.5rem)] px-4 py-6 text-zinc-900 sm:px-6 sm:py-8">
+      <div className="mx-auto flex max-w-[1680px] gap-0 overflow-hidden rounded-[1.25rem] border border-stone-200/35 bg-white shadow-[0_2px_40px_-12px_rgba(0,18,51,0.07)]">
         <LobSidebar active="onboarding" />
-        <div className="min-w-0 flex-1 bg-zinc-50/80 p-4 sm:p-6">
+        <div className="min-w-0 flex-1 bg-stone-50/40 p-6 sm:p-10">
           <div className="mx-auto max-w-4xl">
-            <LobBrandLockup className="relative mb-5 h-36 w-full max-w-lg sm:h-40" priority />
-            <h1 className="text-2xl font-bold sm:text-3xl">Account setup</h1>
-            <p className="mt-2 text-sm text-zinc-600">
-              Register a mill / wholesaler to post loads, or a trucking company to book them. Carriers are usually
-              verified by admin before booking.
-            </p>
+            <div className="mb-10 flex flex-col gap-6 sm:flex-row sm:items-center sm:gap-8">
+              <LobWoodOMark className="h-16 w-16 shrink-0 sm:h-[4.5rem] sm:w-[4.5rem]" />
+              <div className="min-w-0">
+                <h1 className="text-3xl font-semibold tracking-tight text-lob-navy sm:text-4xl">Account setup</h1>
+                <p className="mt-3 max-w-xl text-base leading-relaxed text-stone-500">
+                  Register a mill or wholesaler to post loads, or a trucking company to book them. Carriers are usually
+                  verified by admin before booking.
+                </p>
+              </div>
+            </div>
             {profileSyncDbError && (
               <section className="mt-4 rounded-lg border border-red-300 bg-red-50 p-4 text-red-950">
                 <h2 className="text-lg font-semibold">Could not sync your account</h2>

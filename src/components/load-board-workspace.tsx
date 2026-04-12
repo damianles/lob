@@ -260,17 +260,19 @@ export function LoadBoardWorkspace({
   }
 
   return (
-    <div className="mx-auto flex max-w-[1600px] gap-0 overflow-hidden rounded-2xl border border-stone-200/70 bg-white/95 shadow-[0_8px_40px_-12px_rgba(0,18,51,0.1)] ring-1 ring-stone-900/[0.03] backdrop-blur-sm lg:gap-0">
+    <div className="mx-auto flex max-w-[1680px] gap-0 overflow-hidden rounded-[1.25rem] border border-stone-200/35 bg-white shadow-[0_2px_40px_-12px_rgba(0,18,51,0.07)] lg:gap-0">
       <LobSidebar active="loads" stats={stats} />
 
       <div className="min-w-0 flex-1">
         <LobBrandStrip />
         {message && (
-          <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-950">{message}</div>
+          <div className="border-b border-amber-200/80 bg-amber-50/90 px-6 py-3 text-sm text-amber-950 sm:px-8">
+            {message}
+          </div>
         )}
 
         {/* Search header */}
-        <div className="border-b border-zinc-200 bg-zinc-50 px-4 py-4">
+        <div className="border-b border-stone-100 bg-stone-50/50 px-6 py-6 sm:px-8 sm:py-8">
           <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
             <p className="text-sm text-zinc-600">
               <span className="font-medium text-zinc-800">{summary.count}</span> load
@@ -481,7 +483,7 @@ export function LoadBoardWorkspace({
         )}
 
         {/* Lane summary strip */}
-        <div className="flex flex-wrap items-center gap-4 border-b border-zinc-200 bg-white px-4 py-2.5 text-sm">
+        <div className="flex flex-wrap items-center gap-4 border-b border-stone-100 bg-white px-6 py-3.5 text-sm sm:px-8">
           <span className="text-zinc-600">
             Avg rate (filtered, ≈ USD):{" "}
             <span className="font-semibold text-zinc-900">
@@ -495,24 +497,24 @@ export function LoadBoardWorkspace({
         </div>
 
         {/* Results table */}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto px-2 sm:px-4">
           <table className="w-full min-w-[1020px] border-collapse text-left text-xs">
             <thead>
-              <tr className="border-b border-zinc-200 bg-zinc-100 text-[10px] font-bold uppercase tracking-wide text-zinc-600">
-                <th className="whitespace-nowrap px-2 py-2">Ref</th>
-                <th className="whitespace-nowrap px-2 py-2">Age</th>
-                <th className="whitespace-nowrap px-2 py-2">Rate</th>
-                <th className="whitespace-nowrap px-2 py-2">Origin</th>
-                <th className="whitespace-nowrap px-2 py-2">Dest</th>
-                <th className="whitespace-nowrap px-2 py-2">Req PU</th>
-                <th className="whitespace-nowrap px-2 py-2">Posted</th>
-                <th className="whitespace-nowrap px-2 py-2">EQ</th>
-                <th className="whitespace-nowrap px-2 py-2">Weight</th>
-                <th className="min-w-[120px] px-2 py-2" title="Hidden on the open board until your company books the load.">
+              <tr className="border-b border-stone-200 bg-stone-50/80 text-[10px] font-semibold uppercase tracking-[0.08em] text-stone-500">
+                <th className="whitespace-nowrap px-4 py-3">Ref</th>
+                <th className="whitespace-nowrap px-4 py-3">Age</th>
+                <th className="whitespace-nowrap px-4 py-3">Rate</th>
+                <th className="whitespace-nowrap px-4 py-3">Origin</th>
+                <th className="whitespace-nowrap px-4 py-3">Dest</th>
+                <th className="whitespace-nowrap px-4 py-3">Req PU</th>
+                <th className="whitespace-nowrap px-4 py-3">Posted</th>
+                <th className="whitespace-nowrap px-4 py-3">EQ</th>
+                <th className="whitespace-nowrap px-4 py-3">Weight</th>
+                <th className="min-w-[120px] px-4 py-3" title="Hidden on the open board until your company books the load.">
                   Mill / customer
                 </th>
-                <th className="whitespace-nowrap px-2 py-2">Status</th>
-                <th className="min-w-[200px] px-2 py-2">Carrier / actions</th>
+                <th className="whitespace-nowrap px-4 py-3">Status</th>
+                <th className="min-w-[200px] px-4 py-3">Carrier / actions</th>
               </tr>
             </thead>
             <tbody className="text-zinc-800">

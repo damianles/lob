@@ -4,8 +4,8 @@ import { UserButton, useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { startTransition, useEffect, useState } from "react";
 
-import { LobBrandMark } from "@/components/lob-brand-mark";
-import { BRAND_POSITIONING, BRAND_PRODUCT_NAME } from "@/lib/brand-marketing";
+import { LobWoodOMark } from "@/components/lob-wood-o-mark";
+import { BRAND_PRODUCT_NAME } from "@/lib/brand-marketing";
 
 const signedInLinks = [
   { href: "/", label: "Loads" },
@@ -54,44 +54,35 @@ export function AppNav() {
   ];
 
   return (
-    <header className="sticky top-0 z-50 overflow-visible border-b border-stone-200/60 bg-white/80 shadow-[0_1px_0_rgba(0,18,51,0.04)] backdrop-blur-md supports-[backdrop-filter]:bg-white/65">
-      <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-x-4 gap-y-3 overflow-visible px-4 py-3 sm:min-h-[3.75rem]">
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-6 gap-y-2 overflow-visible">
+    <header className="sticky top-0 z-50 border-b border-stone-200/50 bg-white/75 backdrop-blur-xl supports-[backdrop-filter]:bg-white/60">
+      <div className="mx-auto flex max-w-[1680px] items-center justify-between gap-6 px-5 py-3.5 sm:px-8 sm:py-4">
+        <div className="flex min-w-0 flex-1 items-center gap-8">
           <Link
             href="/"
-            className="group flex shrink-0 items-center gap-3 overflow-visible rounded-xl py-1 pr-2 transition-opacity hover:opacity-90"
-            aria-label={`Home — ${BRAND_PRODUCT_NAME}`}
+            className="group flex shrink-0 rounded-full p-2 ring-offset-2 transition hover:bg-stone-100/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lob-navy/25"
+            aria-label={`${BRAND_PRODUCT_NAME} — home`}
           >
-            <LobBrandMark className="relative h-[2.5rem] w-[9.25rem] shrink-0 sm:h-11 sm:w-[10.5rem]" priority />
-            <span className="hidden min-w-0 flex-col sm:flex">
-              <span className="truncate text-sm font-semibold leading-tight text-lob-navy">{BRAND_PRODUCT_NAME}</span>
-              <span className="truncate text-[11px] font-medium uppercase tracking-wide text-lob-gold-muted">
-                {BRAND_POSITIONING}
-              </span>
-            </span>
+            <LobWoodOMark className="h-9 w-9 sm:h-10 sm:w-10" />
           </Link>
-          <nav
-            className="flex flex-wrap items-center gap-x-0.5 gap-y-1 text-sm text-stone-600 sm:gap-x-1"
-            aria-label="Primary"
-          >
+          <nav className="flex min-w-0 flex-wrap items-center gap-x-1 gap-y-1.5" aria-label="Primary">
             {links.map((l) => (
               <Link
                 key={l.href}
                 href={l.href}
-                className="rounded-full px-3 py-1.5 font-medium text-stone-600 transition hover:bg-lob-navy/[0.06] hover:text-lob-navy"
+                className="rounded-full px-3.5 py-2 text-[13px] font-medium text-stone-600 transition hover:bg-stone-100 hover:text-lob-navy sm:px-4 sm:text-sm"
               >
                 {l.label}
               </Link>
             ))}
           </nav>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2 pl-2">
           {isSignedIn ? (
             <UserButton />
           ) : (
             <Link
               href="/sign-in"
-              className="rounded-full bg-lob-navy px-5 py-2 text-sm font-semibold text-white shadow-sm shadow-lob-navy/25 transition hover:bg-lob-navy-hover"
+              className="rounded-full bg-lob-navy px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-lob-navy-hover"
             >
               Sign in
             </Link>
