@@ -19,7 +19,7 @@ function connectionStringForPgPool(raw: string): string {
   if (isLocal || !relaxForSupabase) {
     return raw;
   }
-  let url = raw;
+  const url = raw;
   if (/\bsslmode=/i.test(url)) {
     return url.replace(/\bsslmode=(require|verify-full|verify-ca|prefer)\b/gi, "sslmode=no-verify");
   }

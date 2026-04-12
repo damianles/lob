@@ -2,7 +2,7 @@
 
 import { UserButton, useAuth } from "@clerk/nextjs";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 
 import { LobBrandMark } from "@/components/lob-brand-mark";
 import { BRAND_POSITIONING, BRAND_PRODUCT_NAME } from "@/lib/brand-marketing";
@@ -27,7 +27,7 @@ export function AppNav() {
 
   useEffect(() => {
     if (!isSignedIn) {
-      setIsAdmin(false);
+      startTransition(() => setIsAdmin(false));
       return;
     }
     let cancelled = false;
