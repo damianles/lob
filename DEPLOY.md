@@ -42,7 +42,9 @@ You do **not** need to log into Supabase or Clerk to “redeploy.” Redeploy is
 3. Go to the **Deployments** tab.
 4. Click **⋯** on the latest deployment → **Redeploy** (or push a new commit from GitHub to trigger a fresh build).
 
-That’s it. Vercel will run `npm install`, `prisma migrate deploy`, and `npm run build`, then serve the new version.
+That’s it. Vercel will run `npm install` (which runs `prisma generate`) and `npm run build`, then serve the new version.
+
+**Migrations are not run on Vercel** (pooler/direct URL issues caused too many failed builds). Apply schema changes **once from your laptop** with `npx prisma migrate deploy` using a **direct** Postgres URL — see **Database migrations (your Mac)** below.
 
 **If your partner still sees the old site:** hard refresh (Ctrl+Shift+R / Cmd+Shift+R) or open an incognito window.
 
@@ -54,7 +56,8 @@ Set these for **Production** (and **Preview** if you use preview URLs):
 
 | Variable | Where to get it | Why |
 |----------|-----------------|-----|
-| `DATABASE_URL` | Supabase → Project → **Connect** → use **Session pooler** URI | Database connection (required). |
+| `DATABASE_URL` | Supabase → **Connect** → **Session pooler** (or Shared pooler) URI for the **running app** on Vercel | Required for API routes / Prisma at runtime. |
+| `MIGRATE_DATABASE_URL` | *(Optional)* Only if you later add migrate back into CI. Not required for current Vercel build. | Direct `db.<ref>.supabase.co:5432` — use locally for `migrate deploy` instead. |
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk dashboard | Sign-in UI. |
 | `CLERK_SECRET_KEY` | Clerk dashboard | Server-side auth. |
 | `CLERK_WEBHOOK_SIGNING_SECRET` | Clerk → Webhooks (optional but good) | Auto-sync users; **sign-in still works without it** thanks to in-app sync. |
@@ -70,12 +73,26 @@ After changing env vars, **redeploy** so the new values apply.
 
 ---
 
-# One-time database setup (after first deploy or new database)
+# Database migrations (your Mac, against production or staging)
 
-The Vercel **build** already runs migrations (`prisma migrate deploy`). You still need **seed data** once (sample loads):
+After pulling new code that includes `prisma/migrations/…` changes:
+
+1. `cd` into your real `web` folder (example: `cd ~/LOB/web` — **not** `/path/to/...`).
+2. In `.env.local`, set **`DATABASE_URL`** to the **direct** connection string from Supabase **Connect** (host `db.<project>.supabase.co`, port **5432**, not the `:6543` pooler). Same user/password as the dashboard.
+3. Run:
+
+```bash
+npx prisma migrate deploy
+```
+
+Do this **after** deploys whenever new migration folders appear in the repo. Skip comment lines when pasting commands (`# …` is not a shell command).
+
+# One-time database setup (seed data)
+
+You still need **seed data** once (sample loads) if you want demo rows:
 
 1. On your computer, clone the repo and `cd web`.
-2. Copy `.env.example` → `.env.local` and set `DATABASE_URL` to the **same** Supabase pooler URL as Vercel.
+2. Copy `.env.example` → `.env.local` and set `DATABASE_URL` (pooler or direct is fine for seed).
 3. Run:
 
 ```bash
