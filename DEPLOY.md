@@ -56,7 +56,7 @@ Set these for **Production** (and **Preview** if you use preview URLs):
 
 | Variable | Where to get it | Why |
 |----------|-----------------|-----|
-| `DATABASE_URL` | Supabase → **Connect** → **Session pooler** (or Shared pooler) URI for the **running app** on Vercel | Required for API routes / Prisma at runtime. |
+| `DATABASE_URL` | Supabase → **Connect** → **Session pooler** URI. Host must include **`pooler.supabase.com`** — **never** `db.<project>.supabase.co` on Vercel (causes “Can’t reach database server”). | Required for Prisma at runtime. |
 | `MIGRATE_DATABASE_URL` | *(Optional)* Only if you later add migrate back into CI. Not required for current Vercel build. | Direct `db.<ref>.supabase.co:5432` — use locally for `migrate deploy` instead. |
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk dashboard | Sign-in UI. |
 | `CLERK_SECRET_KEY` | Clerk dashboard | Server-side auth. |

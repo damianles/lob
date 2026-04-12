@@ -7,6 +7,7 @@ import { LoadBoardWorkspace, type BoardActor, type SerializableLoad } from "@/co
 import { prisma } from "@/lib/prisma";
 import { carrierCompanyNameForViewer } from "@/lib/carrier-visibility";
 import { shipperCompanyNameForViewer } from "@/lib/shipper-visibility";
+import { getDatabaseErrorGuidance } from "@/lib/db-connection-hints";
 import { syncClerkUserToDatabase } from "@/lib/sync-clerk-user";
 
 export const dynamic = "force-dynamic";
@@ -145,16 +146,29 @@ export default async function Home() {
     <main className="min-h-[calc(100vh-3.5rem)] bg-lob-paper text-stone-900">
       <div className="px-3 py-3 sm:px-4">
         {dbError && (
-          <section className="mb-4 rounded-lg border border-red-300 bg-red-50 p-4 text-red-950">
-            <h2 className="text-lg font-semibold">Database connection failed</h2>
-            <p className="mt-2 text-sm">
-              On Vercel, set <code className="rounded bg-red-100 px-1">DATABASE_URL</code> to the Supabase{" "}
-              <strong>session pooler</strong> URL, then redeploy.{" "}
-              <Link className="font-medium underline" href="/api/health">
-                /api/health
-              </Link>
-            </p>
-            <p className="mt-2 font-mono text-xs opacity-80">{dbError}</p>
+          <section className="mb-4 rounded-2xl border border-red-200/80 bg-gradient-to-b from-red-50 to-white p-5 text-red-950 shadow-sm shadow-red-900/5">
+            {(() => {
+              const g = getDatabaseErrorGuidance(dbError);
+              return (
+                <>
+                  <h2 className="text-lg font-semibold tracking-tight">{g.title}</h2>
+                  <ul className="mt-3 list-inside list-disc space-y-2 text-sm leading-relaxed text-red-950/90">
+                    {g.body.map((line, i) => (
+                      <li key={i}>{line}</li>
+                    ))}
+                  </ul>
+                  <p className="mt-4 text-sm">
+                    <Link className="font-semibold text-red-900 underline decoration-red-300 underline-offset-2" href="/api/health">
+                      Check /api/health
+                    </Link>{" "}
+                    (hints only; no secrets exposed).
+                  </p>
+                  <p className="mt-3 rounded-lg bg-red-100/60 px-3 py-2 font-mono text-[11px] leading-snug text-red-900/80">
+                    {dbError}
+                  </p>
+                </>
+              );
+            })()}
           </section>
         )}
 
@@ -221,11 +235,17 @@ export default async function Home() {
           <section className="mb-4 rounded-lg border border-stone-200 bg-white p-4 text-sm text-stone-700 shadow-sm">
             <p className="font-medium text-stone-900">Signed in as admin</p>
             <p className="mt-1">
-              Use <strong>Carriers</strong> and <strong>Companies</strong> in the top bar. To post loads yourself, complete{" "}
+              Use <strong>Carriers</strong> and <strong>Companies</strong> in the top bar. To post loads or capacity as a
+              tester, open{" "}
+              <Link className="font-medium text-lob-navy underline" href="/admin/test-lab">
+                Test lab
+              </Link>{" "}
+              (enable <code className="rounded bg-stone-100 px-1">LOB_ALLOW_ADMIN_PERSONA_SWITCH</code> and seed the DB)
+              or complete{" "}
               <Link className="font-medium text-lob-navy underline" href="/onboarding">
                 account setup
               </Link>{" "}
-              as a mill or use a separate mill user.
+              as a supplier/carrier.
             </p>
           </section>
         )}

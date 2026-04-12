@@ -16,7 +16,7 @@ export function LobBrandPrimary({ className, priority }: Props) {
   return (
     <Image
       src={LOB_CONCEPT_PRIMARY_SRC}
-      alt="Lumber One Board"
+      alt="Lumber One Board — The #1 Lumber Load Board"
       width={LOB_CONCEPT_PRIMARY_WIDTH}
       height={LOB_CONCEPT_PRIMARY_HEIGHT}
       className={className}

@@ -1,6 +1,7 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { UserRole } from "@prisma/client";
 
+import { isAdminPersonaSwitchEnabled } from "@/lib/admin-test-personas";
 import { upsertUserFromClerk } from "@/lib/clerk-user-merge";
 import { prisma } from "@/lib/prisma";
 
@@ -48,8 +49,22 @@ export async function syncClerkUserToDatabase(): Promise<{
     defaultRole: UserRole.SHIPPER,
   });
 
-  /** Preview / internal only: LOB_AUTO_ADMIN_EMAILS or LOB_AUTO_ADMIN_EMAIL → ADMIN on every sign-in. Remove for production. */
+  /**
+   * Preview / internal only: LOB_AUTO_ADMIN_EMAILS or LOB_AUTO_ADMIN_EMAIL → ADMIN.
+   * When LOB_ALLOW_ADMIN_PERSONA_SWITCH=true, do not reset users who are testing as a shipper or carrier
+   * (they have a companyId). Fresh accounts (no company) still become ADMIN.
+   */
   if (parseAutoAdminEmails().has(email.toLowerCase())) {
+    const personaSwitch = isAdminPersonaSwitchEnabled();
+    if (personaSwitch) {
+      const row = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { companyId: true, role: true },
+      });
+      if (row?.companyId != null) {
+        return { user: { id: user.id, companyId: row.companyId, role: row.role }, error: null };
+      }
+    }
     user = await prisma.user.update({
       where: { id: user.id },
       data: { role: UserRole.ADMIN, companyId: null },
