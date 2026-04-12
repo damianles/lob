@@ -1,0 +1,199 @@
+{
+  "generatedAt": "2026-04-12T14:12:10.495Z",
+  "sourceFile": "/Users/damianles/Downloads/WholeSaler_Trucker_Lists.xlsx",
+  "sheetsUsed": [
+    "POSTED_LOADS_BY_BUYER",
+    "POSTED_LOADS_BY_MILL",
+    "POSTED_LOADS_BY_SHIPPERS"
+  ],
+  "rowsInSheets": 3135,
+  "rowsAfterOutlierFilter": 3111,
+  "uniqueCityLanes": 520,
+  "uniqueStateFallbackLanes": 43,
+  "cityLanesWithUnder5Samples": 417,
+  "cadToUsdRate": 0.73,
+  "usdFilter": {
+    "min": 150,
+    "max": 80000
+  },
+  "equipmentTag": "*",
+  "topCityLanes": [
+    {
+      "lane": "Fort McMurray, AB → Edmonton, AB",
+      "samples": 364,
+      "benchmarkAvgUsd": 553
+    },
+    {
+      "lane": "Fort McMurray, AB → Calgary, AB",
+      "samples": 249,
+      "benchmarkAvgUsd": 808
+    },
+    {
+      "lane": "Cochrane, AB → Surrey, BC",
+      "samples": 139,
+      "benchmarkAvgUsd": 1303
+    },
+    {
+      "lane": "Slave Lake, AB → Surrey, BC",
+      "samples": 89,
+      "benchmarkAvgUsd": 1908
+    },
+    {
+      "lane": "Slave Lake, AB → Edmonton, AB",
+      "samples": 85,
+      "benchmarkAvgUsd": 548
+    },
+    {
+      "lane": "Prince George, BC → Calgary, AB",
+      "samples": 64,
+      "benchmarkAvgUsd": 1528
+    },
+    {
+      "lane": "Fort McMurray, AB → Richmond, BC",
+      "samples": 61,
+      "benchmarkAvgUsd": 2170
+    },
+    {
+      "lane": "Lac La Biche, AB → Calgary, AB",
+      "samples": 50,
+      "benchmarkAvgUsd": 814
+    },
+    {
+      "lane": "Fort McMurray, AB → Winnipeg, MB",
+      "samples": 50,
+      "benchmarkAvgUsd": 2345
+    },
+    {
+      "lane": "Slave Lake, AB → Calgary, AB",
+      "samples": 49,
+      "benchmarkAvgUsd": 917
+    },
+    {
+      "lane": "Hixon, BC → Calgary, AB",
+      "samples": 44,
+      "benchmarkAvgUsd": 1483
+    },
+    {
+      "lane": "Lac La Biche, AB → Edmonton, AB",
+      "samples": 41,
+      "benchmarkAvgUsd": 550
+    },
+    {
+      "lane": "Fort McMurray, AB → Grande Prairie, AB",
+      "samples": 37,
+      "benchmarkAvgUsd": 992
+    },
+    {
+      "lane": "Slave Lake, AB → Balzac, AB",
+      "samples": 36,
+      "benchmarkAvgUsd": 860
+    },
+    {
+      "lane": "Slave Lake, AB → Davidson, SK",
+      "samples": 35,
+      "benchmarkAvgUsd": 1139
+    },
+    {
+      "lane": "Creston, BC → Edmonton, AB",
+      "samples": 35,
+      "benchmarkAvgUsd": 1462
+    },
+    {
+      "lane": "Fort McMurray, AB → Seven Persons, AB",
+      "samples": 32,
+      "benchmarkAvgUsd": 1329
+    },
+    {
+      "lane": "Slave Lake, AB → Warman, SK",
+      "samples": 31,
+      "benchmarkAvgUsd": 1091
+    },
+    {
+      "lane": "Slave Lake, AB → Winnipeg, MB",
+      "samples": 28,
+      "benchmarkAvgUsd": 2095
+    },
+    {
+      "lane": "Creston, BC → Fort Saskatchewan, AB",
+      "samples": 28,
+      "benchmarkAvgUsd": 1880
+    }
+  ],
+  "topStateLanes": [
+    {
+      "lane": "AB→AB",
+      "samples": 1487,
+      "benchmarkAvgUsd": 739
+    },
+    {
+      "lane": "AB→BC",
+      "samples": 431,
+      "benchmarkAvgUsd": 1709
+    },
+    {
+      "lane": "BC→AB",
+      "samples": 253,
+      "benchmarkAvgUsd": 1615
+    },
+    {
+      "lane": "AB→SK",
+      "samples": 220,
+      "benchmarkAvgUsd": 1256
+    },
+    {
+      "lane": "AB→MB",
+      "samples": 185,
+      "benchmarkAvgUsd": 2154
+    },
+    {
+      "lane": "SK→AB",
+      "samples": 77,
+      "benchmarkAvgUsd": 1296
+    },
+    {
+      "lane": "SK→BC",
+      "samples": 68,
+      "benchmarkAvgUsd": 1966
+    },
+    {
+      "lane": "SK→TX",
+      "samples": 39,
+      "benchmarkAvgUsd": 2959
+    },
+    {
+      "lane": "SK→ON",
+      "samples": 37,
+      "benchmarkAvgUsd": 3832
+    },
+    {
+      "lane": "BC→BC",
+      "samples": 37,
+      "benchmarkAvgUsd": 1424
+    },
+    {
+      "lane": "BC→MB",
+      "samples": 34,
+      "benchmarkAvgUsd": 2750
+    },
+    {
+      "lane": "CA→AB",
+      "samples": 33,
+      "benchmarkAvgUsd": 639
+    },
+    {
+      "lane": "BC→SK",
+      "samples": 24,
+      "benchmarkAvgUsd": 2394
+    },
+    {
+      "lane": "SK→MB",
+      "samples": 22,
+      "benchmarkAvgUsd": 1651
+    },
+    {
+      "lane": "MB→QC",
+      "samples": 21,
+      "benchmarkAvgUsd": 3549
+    }
+  ]
+}

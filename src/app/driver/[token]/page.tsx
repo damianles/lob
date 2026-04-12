@@ -1,5 +1,7 @@
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 
+import { DispatchQrPanel } from "@/components/dispatch-qr-panel";
 import { prisma } from "@/lib/prisma";
 import { DriverActions } from "./driver-actions";
 
@@ -26,6 +28,11 @@ export default async function DriverPage({
 
   const expired = dispatch.expiresAt < new Date();
 
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
+  const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+  const baseUrl = `${proto}://${host}`;
+
   return (
     <main className="mx-auto max-w-2xl p-6">
       <h1 className="text-2xl font-bold">Driver Dispatch</h1>
@@ -50,10 +57,16 @@ export default async function DriverPage({
         <p className="text-sm">Link expired: {expired ? "Yes" : "No"}</p>
       </section>
 
+      <DispatchQrPanel
+        pickupUrl={`${baseUrl}/facility/pickup/${dispatch.token}`}
+        deliveryUrl={`${baseUrl}/facility/delivery/${dispatch.token}`}
+        driverUrl={`${baseUrl}/driver/${dispatch.token}`}
+      />
+
       <DriverActions
         token={dispatch.token}
         canConfirmPickup={!expired && !dispatch.pickupConfirmedAt}
-        canUploadPod={!expired && !dispatch.podDocument}
+        canUploadPod={!expired && !dispatch.podDocument && !dispatch.deliveredAt}
       />
     </main>
   );

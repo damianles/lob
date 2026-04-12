@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { parseDateInputToUtc, validateCapacityAvailabilityWindow } from "@/lib/capacity-window";
 import { prisma } from "@/lib/prisma";
 import { getActorContext } from "@/lib/request-context";
 
@@ -14,11 +15,18 @@ const createSchema = z.object({
   equipmentType: z.string().min(1),
   askingRateUsd: z.number().positive(),
   notes: z.string().max(500).optional(),
+  /** YYYY-MM-DD (UTC calendar day). */
+  availableFrom: z.string().min(10).max(10),
+  availableUntil: z.string().min(10).max(10),
 });
+
+function startOfTodayUtc(): Date {
+  const n = new Date();
+  return new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate(), 0, 0, 0, 0));
+}
 
 /**
  * Anonymous capacity board for suppliers. Carrier identity is never returned here.
- * Mutual match, counter-offers, and $35/side holds: planned — see /capacity page copy.
  */
 export async function GET(req: Request) {
   const actor = await getActorContext();
@@ -30,16 +38,19 @@ export async function GET(req: Request) {
   const originZip = searchParams.get("originZip")?.trim();
   const destinationZip = searchParams.get("destinationZip")?.trim();
 
+  const today = startOfTodayUtc();
+
   const rows = await prisma.capacityOffer.findMany({
     where: {
       status: "OPEN",
+      availableUntil: { gte: today },
       ...(originZip ? { originZip: { startsWith: originZip.replace(/\D/g, "").slice(0, 5) } } : {}),
       ...(destinationZip
         ? { destinationZip: { startsWith: destinationZip.replace(/\D/g, "").slice(0, 5) } }
         : {}),
     },
-    orderBy: { createdAt: "desc" },
-    take: 50,
+    orderBy: { updatedAt: "desc" },
+    take: 80,
     select: {
       id: true,
       originZip: true,
@@ -51,6 +62,8 @@ export async function GET(req: Request) {
       equipmentType: true,
       askingRateUsd: true,
       notes: true,
+      availableFrom: true,
+      availableUntil: true,
       createdAt: true,
     },
   });
@@ -58,6 +71,9 @@ export async function GET(req: Request) {
   const data = rows.map((r) => ({
     ...r,
     askingRateUsd: Number(r.askingRateUsd),
+    availableFrom: r.availableFrom.toISOString(),
+    availableUntil: r.availableUntil.toISOString(),
+    createdAt: r.createdAt.toISOString(),
   }));
 
   return NextResponse.json({ data });
@@ -78,6 +94,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
+  const availableFrom = parseDateInputToUtc(parsed.data.availableFrom, false);
+  const availableUntil = parseDateInputToUtc(parsed.data.availableUntil, true);
+  if (!availableFrom || !availableUntil) {
+    return NextResponse.json({ error: "Use YYYY-MM-DD for availability dates." }, { status: 400 });
+  }
+
+  const windowErr = validateCapacityAvailabilityWindow(availableFrom, availableUntil);
+  if (windowErr) {
+    return NextResponse.json({ error: windowErr }, { status: 400 });
+  }
+
   const row = await prisma.capacityOffer.create({
     data: {
       carrierCompanyId: actor.companyId,
@@ -90,6 +117,8 @@ export async function POST(req: Request) {
       equipmentType: parsed.data.equipmentType,
       askingRateUsd: parsed.data.askingRateUsd,
       notes: parsed.data.notes,
+      availableFrom,
+      availableUntil,
     },
   });
 

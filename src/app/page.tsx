@@ -2,8 +2,10 @@ import { auth } from "@clerk/nextjs/server";
 import { LoadStatus, VerificationStatus, type Prisma } from "@prisma/client";
 import Link from "next/link";
 
+import { LandingEntry } from "@/components/landing-entry";
 import { LoadBoardWorkspace, type BoardActor, type SerializableLoad } from "@/components/load-board-workspace";
 import { prisma } from "@/lib/prisma";
+import { carrierCompanyNameForViewer } from "@/lib/carrier-visibility";
 import { shipperCompanyNameForViewer } from "@/lib/shipper-visibility";
 import { syncClerkUserToDatabase } from "@/lib/sync-clerk-user";
 
@@ -38,6 +40,7 @@ function toSerializableLoads(loads: LoadRow[], actor: BoardActor): SerializableL
     uniquePickupCode: l.uniquePickupCode,
     shipperCompanyId: l.shipperCompanyId,
     shipperCompanyName: shipperCompanyNameForViewer(l.shipperCompany.legalName, l, visibilityActor),
+    offerCurrency: l.offerCurrency,
     offeredRateUsd: l.offeredRateUsd != null ? Number(l.offeredRateUsd) : null,
     requestedPickupAt: l.requestedPickupAt.toISOString(),
     createdAt: l.createdAt.toISOString(),
@@ -45,7 +48,11 @@ function toSerializableLoads(loads: LoadRow[], actor: BoardActor): SerializableL
       ? {
           carrierCompanyId: l.booking.carrierCompanyId,
           agreedRateUsd: Number(l.booking.agreedRateUsd),
-          carrierCompany: { legalName: l.booking.carrierCompany.legalName },
+          agreedCurrency: l.booking.agreedCurrency,
+          carrierCompany: {
+            legalName:
+              carrierCompanyNameForViewer(l.booking.carrierCompany.legalName, l, visibilityActor) ?? "",
+          },
         }
       : null,
     dispatchLink: l.dispatchLink,
@@ -58,6 +65,7 @@ export default async function Home() {
   let loads: LoadRow[] = [];
   let stalePostedLoads: { id: string; referenceNumber: string }[] = [];
   let dbError: string | null = null;
+  let profileSyncDbError: string | null = null;
   let appUser: { id: string; companyId: string | null; role: string } | null = null;
   let carrierApproved = false;
   let clerkSyncError: "missing_email" | null = null;
@@ -68,7 +76,13 @@ export default async function Home() {
       clerkSyncError = synced.error;
       appUser = synced.user;
     }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Database error";
+    profileSyncDbError = msg;
+    console.error("[home] profile sync error:", e);
+  }
 
+  try {
     if (appUser?.role === "DISPATCHER" && appUser.companyId) {
       const co = await prisma.company.findUnique({
         where: { id: appUser.companyId },
@@ -119,6 +133,14 @@ export default async function Home() {
   const rush = loads.filter((l) => l.isRush).length;
   const delivered = loads.filter((l) => l.status === LoadStatus.DELIVERED).length;
 
+  if (!userId) {
+    return (
+      <main className="min-h-[calc(100vh-3.5rem)] bg-lob-paper text-stone-900">
+        <LandingEntry />
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-[calc(100vh-3.5rem)] bg-lob-paper text-stone-900">
       <div className="px-3 py-3 sm:px-4">
@@ -133,6 +155,18 @@ export default async function Home() {
               </Link>
             </p>
             <p className="mt-2 font-mono text-xs opacity-80">{dbError}</p>
+          </section>
+        )}
+
+        {profileSyncDbError && !dbError && (
+          <section className="mb-4 rounded-lg border border-red-300 bg-red-50 p-4 text-red-950">
+            <h2 className="text-lg font-semibold">Could not sync your account</h2>
+            <p className="mt-2 text-sm">
+              The database rejected the profile update (often duplicate email rows). Run{" "}
+              <code className="rounded bg-red-100 px-1">npm run admin:setup -- your@email.com</code> against production,
+              or merge duplicate <code className="rounded bg-red-100 px-1">User</code> rows in Supabase, then refresh.
+            </p>
+            <p className="mt-2 font-mono text-xs opacity-80">{profileSyncDbError}</p>
           </section>
         )}
 
@@ -196,10 +230,13 @@ export default async function Home() {
           </section>
         )}
 
-        {userId && !appUser && clerkSyncError !== "missing_email" && (
+        {userId &&
+          !appUser &&
+          clerkSyncError !== "missing_email" &&
+          !profileSyncDbError && (
           <section className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-950">
             <p className="font-semibold">Could not load your profile</p>
-            <p className="mt-1">Check the database connection banner above, then refresh.</p>
+            <p className="mt-1">Check the banners above, then refresh.</p>
           </section>
         )}
 
@@ -256,7 +293,7 @@ export default async function Home() {
             </li>
             <li>
               API: <code>POST /api/loads</code>, <code>POST /api/loads/:id/book</code>,{" "}
-              <code>POST /api/loads/:id/dispatch</code>. More in <Link href="/tools">Help</Link>.
+              <code>POST /api/loads/:id/dispatch</code>. More in <Link href="/insights">Insights</Link>.
             </li>
           </ol>
         </details>

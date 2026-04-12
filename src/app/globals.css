@@ -1,21 +1,21 @@
 @import "tailwindcss";
 
-/* LOB brand — from approved wordmark (navy #062361, gold #E0A53B / #B78A3A) */
+/* LOB brand — aligned to primary logo (navy field, white type, honey-oak accent) */
 :root {
-  --lob-navy: #062361;
-  --lob-navy-hover: #041a45;
-  --lob-gold: #e0a53b;
-  --lob-gold-muted: #b78a3a;
+  --lob-navy: #001233;
+  --lob-navy-hover: #000a1f;
+  --lob-gold: #b58135;
+  --lob-gold-muted: #8f6629;
   --lob-paper: #faf8f5;
   --lob-surface: #f8fafc;
   --lob-ink: #1c1917;
 }
 
 @theme inline {
-  --color-lob-navy: #062361;
-  --color-lob-navy-hover: #041a45;
-  --color-lob-gold: #e0a53b;
-  --color-lob-gold-muted: #b78a3a;
+  --color-lob-navy: #001233;
+  --color-lob-navy-hover: #000a1f;
+  --color-lob-gold: #b58135;
+  --color-lob-gold-muted: #8f6629;
   --color-lob-paper: #faf8f5;
   --color-lob-surface: #f8fafc;
   --font-sans: var(--font-geist-sans);

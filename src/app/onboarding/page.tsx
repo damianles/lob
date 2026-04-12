@@ -1,5 +1,4 @@
-import Image from "next/image";
-
+import { LobBrandLockup } from "@/components/lob-brand-lockup";
 import { LobSidebar } from "@/components/lob-sidebar";
 import { syncClerkUserToDatabase } from "@/lib/sync-clerk-user";
 
@@ -16,14 +15,7 @@ export default async function OnboardingPage() {
         <LobSidebar active="onboarding" />
         <div className="min-w-0 flex-1 bg-zinc-50 p-4 sm:p-6">
           <div className="mx-auto max-w-4xl">
-            <Image
-              src="/brand/final/lob-horizontal-final.svg"
-              alt="Lumber One Board"
-              width={560}
-              height={121}
-              className="mb-4 h-auto w-full max-w-lg"
-              priority
-            />
+            <LobBrandLockup className="mb-4 h-auto w-full max-w-lg" priority />
             <h1 className="text-2xl font-bold sm:text-3xl">Account setup</h1>
             <p className="mt-2 text-sm text-zinc-600">
               Register a mill / wholesaler to post loads, or a trucking company to book them. Carriers are usually

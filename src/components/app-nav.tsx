@@ -1,13 +1,16 @@
 "use client";
 
 import { UserButton, useAuth } from "@clerk/nextjs";
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-const coreLinks = [
+import { LobBrandMark } from "@/components/lob-brand-mark";
+
+const signedInLinks = [
   { href: "/", label: "Loads" },
-  { href: "/tools", label: "Help" },
+  { href: "/capacity", label: "Capacity" },
+  { href: "/insights", label: "Insights" },
+  { href: "/booked", label: "Booked" },
   { href: "/onboarding", label: "Account" },
 ];
 
@@ -39,22 +42,21 @@ export function AppNav() {
     };
   }, [isSignedIn]);
 
-  const links = [...coreLinks, ...(isAdmin ? adminLinks : [])];
+  const guestLinks = [
+    { href: "/", label: "Loads" },
+    { href: "/insights", label: "Insights" },
+  ];
+  const links = [
+    ...(isSignedIn ? signedInLinks : guestLinks),
+    ...(isSignedIn && isAdmin ? adminLinks : []),
+  ];
 
   return (
     <header className="border-b border-stone-200 bg-white shadow-sm">
       <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-2.5 sm:min-h-[3.5rem]">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-5 gap-y-2">
           <Link href="/" className="flex shrink-0 items-center" aria-label="Home — Lumber One Board">
-            <Image
-              src="/brand/final/lob-wordmark-final.svg"
-              alt=""
-              width={160}
-              height={48}
-              className="h-9 w-auto sm:h-10"
-              role="presentation"
-              priority
-            />
+            <LobBrandMark className="h-9 w-auto max-w-[10rem] sm:h-10 sm:max-w-[11rem]" priority />
           </Link>
           <nav className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-stone-700" aria-label="Primary">
             {links.map((l) => (

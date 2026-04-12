@@ -1,3 +1,4 @@
+import { LobBrandStrip } from "@/components/lob-brand-strip";
 import { prisma } from "@/lib/prisma";
 
 import { AnalyticsToggle } from "./analytics-toggle";
@@ -21,7 +22,8 @@ export default async function AdminCompaniesPage() {
   return (
     <main className="min-h-screen bg-zinc-50 p-6 text-zinc-900">
       <div className="mx-auto max-w-6xl">
-        <h1 className="text-3xl font-bold">Company Subscriptions</h1>
+        <LobBrandStrip />
+        <h1 className="mt-4 text-3xl font-bold">Company Subscriptions</h1>
         <p className="mt-2 text-sm text-zinc-600">
           Enable or disable analytics subscription access for shippers and carriers.
         </p>

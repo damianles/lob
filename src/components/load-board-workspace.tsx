@@ -4,10 +4,15 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
+import { LobBrandStrip } from "@/components/lob-brand-strip";
 import { LobSidebar, type LobSidebarStats } from "@/components/lob-sidebar";
 import { SupplierPostLoadForm } from "@/components/supplier-post-load-form";
 import { LUMBER_EQUIPMENT, equipmentShortTag } from "@/lib/lumber-equipment";
+import { formatMoney } from "@/lib/money";
 import { milesBetweenZips } from "@/lib/zip-distance";
+
+/** Client-side summary only; server uses LOB_CAD_TO_USD_RATE for validation. */
+const CAD_TO_USD_SUMMARY = 0.73;
 
 export type SerializableLoad = {
   id: string;
@@ -26,12 +31,14 @@ export type SerializableLoad = {
   shipperCompanyId: string;
   /** Mill / wholesaler name; null when hidden from this viewer until their carrier books. */
   shipperCompanyName: string | null;
+  offerCurrency: "USD" | "CAD";
   offeredRateUsd: number | null;
   requestedPickupAt: string;
   createdAt: string;
   booking: null | {
     carrierCompanyId: string;
     agreedRateUsd: number;
+    agreedCurrency: "USD" | "CAD";
     carrierCompany: { legalName: string };
   };
   dispatchLink: null | { token: string; status: string };
@@ -44,13 +51,13 @@ export type BoardActor = {
   carrierApproved: boolean;
 };
 
-function fmtUsd(n: number | null | undefined) {
-  if (n == null || !Number.isFinite(n)) return "—";
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(n);
+function toUsdEquivalentForSummary(l: SerializableLoad): number {
+  if (l.booking) {
+    const r = l.booking.agreedRateUsd;
+    return l.booking.agreedCurrency === "CAD" ? r * CAD_TO_USD_SUMMARY : r;
+  }
+  const o = l.offeredRateUsd ?? 0;
+  return l.offerCurrency === "CAD" ? o * CAD_TO_USD_SUMMARY : o;
 }
 
 function ageLabel(iso: string) {
@@ -180,10 +187,7 @@ export function LoadBoardWorkspace({
 
   const summary = useMemo(() => {
     const withRate = filteredLoads.filter((l) => l.offeredRateUsd != null || l.booking);
-    const sum = withRate.reduce((acc, l) => {
-      const r = l.booking ? l.booking.agreedRateUsd : (l.offeredRateUsd ?? 0);
-      return acc + r;
-    }, 0);
+    const sum = withRate.reduce((acc, l) => acc + toUsdEquivalentForSummary(l), 0);
     const avg = withRate.length ? sum / withRate.length : null;
     return { count: filteredLoads.length, avgPostedOrBooked: avg };
   }, [filteredLoads]);
@@ -202,14 +206,16 @@ export function LoadBoardWorkspace({
   async function bookLoad(loadId: string) {
     const rate = Number(bookRate[loadId] ?? "");
     if (!Number.isFinite(rate) || rate <= 0) {
-      setMessage("Enter a valid agreed rate (USD).");
+      setMessage("Enter a valid agreed rate.");
       return;
     }
+    const load = loads.find((x) => x.id === loadId);
+    const agreedCurrency = load?.offerCurrency ?? "USD";
     setBusyId(loadId);
     const res = await fetch(`/api/loads/${loadId}/book`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ agreedRateUsd: rate }),
+      body: JSON.stringify({ agreedRateUsd: rate, agreedCurrency }),
     });
     const data = await res.json().catch(() => ({}));
     setBusyId(null);
@@ -258,6 +264,7 @@ export function LoadBoardWorkspace({
       <LobSidebar active="loads" stats={stats} />
 
       <div className="min-w-0 flex-1">
+        <LobBrandStrip />
         {message && (
           <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-950">{message}</div>
         )}
@@ -301,7 +308,7 @@ export function LoadBoardWorkspace({
                 <input
                   value={originQ}
                   onChange={(e) => setOriginQ(e.target.value)}
-                  placeholder="City, state, or ZIP"
+                  placeholder="City, state/province, postal or ZIP"
                   className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm"
                 />
               </div>
@@ -310,7 +317,7 @@ export function LoadBoardWorkspace({
                 <input
                   value={destQ}
                   onChange={(e) => setDestQ(e.target.value)}
-                  placeholder="City, state, or ZIP"
+                  placeholder="City, state/province, postal or ZIP"
                   className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm"
                 />
               </div>
@@ -414,12 +421,12 @@ export function LoadBoardWorkspace({
                   </span>
                 </div>
                 <p className="mt-1 text-[11px] text-zinc-500">
-                  Uses straight-line miles between postal codes (US/Canada database). Refine with routing later.
+                  Straight-line miles between US ZIP or Canadian postal codes (FSA). Refine with routing later.
                 </p>
                 <div className="mt-2 grid gap-2 sm:grid-cols-3">
                   <input
                     className="rounded border border-zinc-300 px-2 py-2 text-sm"
-                    placeholder="Your postal / ZIP"
+                    placeholder="Your ZIP or postal code"
                     value={emrZip}
                     onChange={(e) => setEmrZip(e.target.value)}
                   />
@@ -476,9 +483,9 @@ export function LoadBoardWorkspace({
         {/* Lane summary strip */}
         <div className="flex flex-wrap items-center gap-4 border-b border-zinc-200 bg-white px-4 py-2.5 text-sm">
           <span className="text-zinc-600">
-            Avg rate (filtered):{" "}
+            Avg rate (filtered, ≈ USD):{" "}
             <span className="font-semibold text-zinc-900">
-              {summary.avgPostedOrBooked != null ? fmtUsd(summary.avgPostedOrBooked) : "—"}
+              {summary.avgPostedOrBooked != null ? formatMoney(summary.avgPostedOrBooked, "USD") : "—"}
             </span>
           </span>
           <span className="text-zinc-400">·</span>
@@ -513,6 +520,7 @@ export function LoadBoardWorkspace({
                 const displayRate = load.booking
                   ? load.booking.agreedRateUsd
                   : (load.offeredRateUsd ?? null);
+                const rateCurrency = load.booking ? load.booking.agreedCurrency : load.offerCurrency;
                 return (
                   <tr
                     key={load.id}
@@ -529,7 +537,9 @@ export function LoadBoardWorkspace({
                     <td className="whitespace-nowrap px-2 py-2 font-medium text-zinc-600">
                       {ageLabel(load.createdAt)}
                     </td>
-                    <td className="whitespace-nowrap px-2 py-2 font-semibold">{fmtUsd(displayRate)}</td>
+                    <td className="whitespace-nowrap px-2 py-2 font-semibold">
+                      {formatMoney(displayRate, rateCurrency)}
+                    </td>
                     <td className="px-2 py-2">
                       <div className="font-medium">
                         {load.originCity}, {load.originState}
@@ -579,9 +589,20 @@ export function LoadBoardWorkspace({
                     </td>
                     <td className="px-2 py-2 align-top">
                       <div className="space-y-2 text-[11px]">
-                        <div className="text-zinc-600">{load.booking?.carrierCompany.legalName ?? "—"}</div>
+                        <div className="text-zinc-600">
+                          {load.booking ? (
+                            load.booking.carrierCompany.legalName ? (
+                              <span>{load.booking.carrierCompany.legalName}</span>
+                            ) : (
+                              <span className="italic text-zinc-500">Booked</span>
+                            )
+                          ) : (
+                            "—"
+                          )}
+                        </div>
                         {load.status === "POSTED" && isDispatcher && (
                           <div className="flex flex-wrap items-center gap-1">
+                            <span className="text-[10px] text-zinc-500">{load.offerCurrency}</span>
                             <input
                               className="w-20 rounded border px-1 py-0.5"
                               placeholder="$"

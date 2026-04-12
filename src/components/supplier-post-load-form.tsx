@@ -141,15 +141,17 @@ export function SupplierPostLoadForm({
     }
     const r = Number(rateUsd);
     if (!Number.isFinite(r) || r <= 0) {
-      setErr("Posted rate (USD) is required and must be within the fair-market band for this lane.");
+      setErr(
+        `Posted rate (${currency}) is required and must be within the fair-market band for this lane (USD-equivalent check).`,
+      );
       return;
     }
     if (!originCity.trim() || !originState.trim() || !originZip.trim()) {
-      setErr("Origin city, state, and ZIP are required (lane search).");
+      setErr("Origin city, state or province, and postal or ZIP code are required (lane search).");
       return;
     }
     if (!destinationCity.trim() || !destinationState.trim() || !destinationZip.trim()) {
-      setErr("Destination city, state, and ZIP are required.");
+      setErr("Destination city, state or province, and postal or ZIP code are required.");
       return;
     }
     if (!pickups[0]?.address.trim()) {
@@ -241,6 +243,7 @@ export function SupplierPostLoadForm({
         isRush,
         isPrivate: false,
         requestedPickupAt: requestedPickupDate,
+        offerCurrency: currency,
         offeredRateUsd: r,
         extendedPosting,
       }),
@@ -299,11 +302,37 @@ export function SupplierPostLoadForm({
           <p className="mt-1 text-xs text-zinc-500">Used for the board and fair-rate check; can match pickup 1.</p>
           <div className="mt-2 grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
             <input className="rounded border px-2 py-2 text-sm" placeholder="Origin city *" value={originCity} onChange={(e) => setOriginCity(e.target.value)} required />
-            <input className="rounded border px-2 py-2 text-sm" placeholder="ST *" maxLength={2} value={originState} onChange={(e) => setOriginState(e.target.value)} required />
-            <input className="rounded border px-2 py-2 text-sm" placeholder="Origin ZIP *" value={originZip} onChange={(e) => setOriginZip(e.target.value)} required />
+            <input
+              className="rounded border px-2 py-2 text-sm"
+              placeholder="State / prov *"
+              maxLength={2}
+              value={originState}
+              onChange={(e) => setOriginState(e.target.value)}
+              required
+            />
+            <input
+              className="rounded border px-2 py-2 text-sm"
+              placeholder="Origin postal / ZIP *"
+              value={originZip}
+              onChange={(e) => setOriginZip(e.target.value)}
+              required
+            />
             <input className="rounded border px-2 py-2 text-sm" placeholder="Dest city *" value={destinationCity} onChange={(e) => setDestinationCity(e.target.value)} required />
-            <input className="rounded border px-2 py-2 text-sm" placeholder="ST *" maxLength={2} value={destinationState} onChange={(e) => setDestinationState(e.target.value)} required />
-            <input className="rounded border px-2 py-2 text-sm" placeholder="Dest ZIP *" value={destinationZip} onChange={(e) => setDestinationZip(e.target.value)} required />
+            <input
+              className="rounded border px-2 py-2 text-sm"
+              placeholder="State / prov *"
+              maxLength={2}
+              value={destinationState}
+              onChange={(e) => setDestinationState(e.target.value)}
+              required
+            />
+            <input
+              className="rounded border px-2 py-2 text-sm"
+              placeholder="Dest postal / ZIP *"
+              value={destinationZip}
+              onChange={(e) => setDestinationZip(e.target.value)}
+              required
+            />
           </div>
         </section>
 
@@ -332,7 +361,7 @@ export function SupplierPostLoadForm({
             <div key={i} className="mt-3 grid gap-2 border-t border-emerald-100 pt-3 sm:grid-cols-2 lg:grid-cols-3">
               <p className="text-xs font-semibold text-zinc-700 sm:col-span-2 lg:col-span-3">Pickup {i + 1}</p>
               <input className="rounded border px-2 py-2 text-sm sm:col-span-2" placeholder="Address *" value={p.address} onChange={(e) => syncPickup(i, { address: e.target.value })} required={i === 0} />
-              <input className="rounded border px-2 py-2 text-sm" placeholder="Postal" value={p.postal} onChange={(e) => syncPickup(i, { postal: e.target.value })} />
+              <input className="rounded border px-2 py-2 text-sm" placeholder="Postal / ZIP" value={p.postal} onChange={(e) => syncPickup(i, { postal: e.target.value })} />
               <input className="rounded border px-2 py-2 text-sm" placeholder="Phone" value={p.phone} onChange={(e) => syncPickup(i, { phone: e.target.value })} />
               <input className="rounded border px-2 py-2 text-sm" type="date" placeholder="Date" value={p.date} onChange={(e) => syncPickup(i, { date: e.target.value })} />
               <input className="rounded border px-2 py-2 text-sm" placeholder="Time / notes" value={p.time} onChange={(e) => syncPickup(i, { time: e.target.value })} />
@@ -367,7 +396,7 @@ export function SupplierPostLoadForm({
             <div key={i} className="mt-3 grid gap-2 border-t border-emerald-100 pt-3 sm:grid-cols-2 lg:grid-cols-3">
               <p className="text-xs font-semibold text-zinc-700 sm:col-span-2 lg:col-span-3">Delivery {i + 1}</p>
               <input className="rounded border px-2 py-2 text-sm sm:col-span-2" placeholder="Address *" value={d.address} onChange={(e) => syncDelivery(i, { address: e.target.value })} required={i === 0} />
-              <input className="rounded border px-2 py-2 text-sm" placeholder="Postal" value={d.postal} onChange={(e) => syncDelivery(i, { postal: e.target.value })} />
+              <input className="rounded border px-2 py-2 text-sm" placeholder="Postal / ZIP" value={d.postal} onChange={(e) => syncDelivery(i, { postal: e.target.value })} />
               <input className="rounded border px-2 py-2 text-sm" placeholder="Phone" value={d.phone} onChange={(e) => syncDelivery(i, { phone: e.target.value })} />
               <input className="rounded border px-2 py-2 text-sm" type="date" value={d.date} onChange={(e) => syncDelivery(i, { date: e.target.value })} required={i === 0} />
               <input className="rounded border px-2 py-2 text-sm" placeholder="Time" value={d.time} onChange={(e) => syncDelivery(i, { time: e.target.value })} />
@@ -542,7 +571,13 @@ export function SupplierPostLoadForm({
         <section className="rounded border border-emerald-200 bg-white/90 p-3">
           <h4 className="text-xs font-bold uppercase tracking-wide text-emerald-900">Rate</h4>
           <div className="mt-2 flex flex-wrap gap-3">
-            <input className="w-36 rounded border px-2 py-2 text-sm" placeholder="Rate * (USD)" value={rateUsd} onChange={(e) => setRateUsd(e.target.value)} required />
+            <input
+              className="w-36 rounded border px-2 py-2 text-sm"
+              placeholder={`Rate * (${currency})`}
+              value={rateUsd}
+              onChange={(e) => setRateUsd(e.target.value)}
+              required
+            />
             <label className="text-xs text-zinc-600">
               Display currency
               <select className="ml-1 rounded border px-2 py-2 text-sm" value={currency} onChange={(e) => setCurrency(e.target.value as "USD" | "CAD")}>

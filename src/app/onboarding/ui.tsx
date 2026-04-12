@@ -1,7 +1,9 @@
 "use client";
 
 import { useAuth } from "@clerk/nextjs";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+import { LOB_ONBOARDING_INTENT_KEY } from "@/lib/onboarding-intent";
 
 type FormState = {
   legalName: string;
@@ -35,6 +37,15 @@ export function OnboardingForms() {
   const [shipper, setShipper] = useState<ShipperFormState>(emptyShipper);
   const [carrier, setCarrier] = useState<FormState>(emptyState);
   const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    const intent = sessionStorage.getItem(LOB_ONBOARDING_INTENT_KEY);
+    if (intent === "carrier") {
+      document.getElementById("onboarding-carrier")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else if (intent === "shipper") {
+      document.getElementById("onboarding-shipper")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, []);
 
   async function submitShipper() {
     if (!shipper.legalName.trim()) {
@@ -120,7 +131,7 @@ export function OnboardingForms() {
         If you are already signed in with Clerk, this form links your signed-in user to the company you
         create. Name/email fields are still shown for fallback local testing.
       </section>
-      <section className="rounded-lg border bg-white p-4">
+      <section id="onboarding-shipper" className="scroll-mt-24 rounded-lg border bg-white p-4">
         <h2 className="text-lg font-semibold">Supplier — post loads</h2>
         <p className="mt-1 text-xs text-zinc-600">Mills, wholesalers, and other lumber suppliers. Carriers never see your supplier type on the open board.</p>
         <div className="mt-3 space-y-2">
@@ -169,7 +180,7 @@ export function OnboardingForms() {
         </div>
       </section>
 
-      <section className="rounded-lg border bg-white p-4">
+      <section id="onboarding-carrier" className="scroll-mt-24 rounded-lg border bg-white p-4">
         <h2 className="text-lg font-semibold">Carrier — book loads</h2>
         <p className="mt-1 text-xs text-zinc-600">Transportation company (asset or broker).</p>
         <div className="mt-3 space-y-2">

@@ -57,6 +57,16 @@ enum DispatchLinkStatus {
   COMPLETED
 }
 
+enum OfferCurrency {
+  USD
+  CAD
+}
+
+enum RateObservationSource {
+  APP
+  IMPORT
+}
+
 model Company {
   id                 String             @id @default(cuid())
   legalName          String             @unique
@@ -68,6 +78,15 @@ model Company {
   factoringEligible  Boolean            @default(false)
   analyticsSubscriber Boolean           @default(false)
   supplierKind       SupplierKind?
+  /** Fleet & capabilities — shown to shippers after a load is booked. */
+  fleetTruckCount       Int?
+  fleetTrailerCount     Int?
+  /** JSON string array of equipment codes or labels, e.g. ["SB","Tri"]. */
+  trailerEquipmentTypes String?
+  /** Short narrative for shippers (service area, lanes, certifications). */
+  carrierProfileBlurb   String?
+  /** Single-truck operators; admin verification still uses verificationStatus. */
+  isOwnerOperator       Boolean            @default(false)
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
 
@@ -111,6 +130,7 @@ model Load {
   isRush             Boolean    @default(false)
   isPrivate          Boolean    @default(false)
   status             LoadStatus @default(POSTED)
+  offerCurrency      OfferCurrency @default(USD)
   offeredRateUsd     Decimal?   @db.Decimal(10, 2)
   marketRateUsd      Decimal?   @db.Decimal(10, 2)
   finalCostUsd       Decimal?   @db.Decimal(10, 2)
@@ -124,15 +144,38 @@ model Load {
 
   shipperCompany     Company       @relation("ShipperLoads", fields: [shipperCompanyId], references: [id], onDelete: Restrict)
   createdBy          User          @relation("LoadCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
-  booking            Booking?
-  dispatchLink       DispatchLink?
-  incidents          Incident[]
+  booking               Booking?
+  dispatchLink          DispatchLink?
+  incidents             Incident[]
+  laneRateObservation   LaneRateObservation?
+}
+
+model LaneRateObservation {
+  id              String                 @id @default(cuid())
+  observedAt      DateTime
+  originState     String
+  destState       String
+  originCityCanon String
+  destCityCanon   String
+  originZip5      String                 @default("")
+  destZip5        String                 @default("")
+  equipmentNorm   String
+  rateUsd         Decimal                @db.Decimal(12, 2)
+  offerCurrency   OfferCurrency          @default(USD)
+  source          RateObservationSource  @default(APP)
+  loadId          String?                @unique
+  load            Load?                  @relation(fields: [loadId], references: [id], onDelete: Cascade)
+
+  @@index([observedAt])
+  @@index([originState, destState])
+  @@index([originState, destState, originCityCanon, destCityCanon])
 }
 
 model Booking {
   id                String   @id @default(cuid())
   loadId            String   @unique
   carrierCompanyId  String
+  agreedCurrency    OfferCurrency @default(USD)
   agreedRateUsd     Decimal  @db.Decimal(10, 2)
   bookedAt          DateTime @default(now())
   createdAt         DateTime @default(now())
@@ -227,6 +270,10 @@ model CapacityOffer {
   askingRateUsd      Decimal  @db.Decimal(10, 2)
   notes              String?
   status             String   @default("OPEN")
+  /** First day this capacity is offered (inclusive). */
+  availableFrom      DateTime @default(now())
+  /** Last day offered (inclusive); max span vs availableFrom is 5 days (enforced in API). */
+  availableUntil     DateTime
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
@@ -234,4 +281,5 @@ model CapacityOffer {
 
   @@index([status])
   @@index([originZip, destinationZip])
+  @@index([availableUntil])
 }

@@ -1,11 +1,19 @@
 import { randomUUID } from "node:crypto";
-import { LoadStatus, Prisma } from "@prisma/client";
+import { LoadStatus, Prisma, RateObservationSource } from "@prisma/client";
 import { NextResponse } from "next/server";
 
-import { findLaneBenchmark, validateOfferedRateAgainstBenchmark } from "@/lib/market-rate-lane";
+import { canonicalCityKey } from "@/lib/city-canonical";
+import {
+  findLaneBenchmark,
+  offeredAmountUsdEquivalent,
+  validateOfferedRateAgainstBenchmark,
+  zip5ForBenchmark,
+  normalizeEquipmentForBenchmark,
+} from "@/lib/market-rate-lane";
 import { parseRequestedPickupAt } from "@/lib/parse-pickup-date";
 import { prisma } from "@/lib/prisma";
 import { getActorContext } from "@/lib/request-context";
+import { carrierCompanyNameForViewer } from "@/lib/carrier-visibility";
 import { shipperCompanyNameForViewer } from "@/lib/shipper-visibility";
 import { reliabilityPolicy } from "@/lib/policies";
 import { createLoadSchema } from "@/lib/validation";
@@ -66,13 +74,24 @@ export async function GET() {
 
   const visibilityActor = { companyId: actor.companyId, role: actor.role };
   const data = loads.map((row) => {
-    const visible = shipperCompanyNameForViewer(row.shipperCompany.legalName, row, visibilityActor);
+    const visibleShipper = shipperCompanyNameForViewer(row.shipperCompany.legalName, row, visibilityActor);
+    const bookingMasked = row.booking
+      ? {
+          ...row.booking,
+          carrierCompany: {
+            ...row.booking.carrierCompany,
+            legalName:
+              carrierCompanyNameForViewer(row.booking.carrierCompany.legalName, row, visibilityActor) ?? "",
+          },
+        }
+      : null;
     return {
       ...row,
       shipperCompany: {
         ...row.shipperCompany,
-        legalName: visible ?? "",
+        legalName: visibleShipper ?? "",
       },
+      booking: bookingMasked,
     };
   });
 
@@ -104,29 +123,36 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid requestedPickupAt (use YYYY-MM-DD or ISO datetime)." }, { status: 400 });
   }
 
-  const rateCheck = validateOfferedRateAgainstBenchmark({
+  const rateCheck = await validateOfferedRateAgainstBenchmark({
     originState: payload.originState,
     destinationState: payload.destinationState,
     originZip: payload.originZip,
     destinationZip: payload.destinationZip,
+    originCity: payload.originCity,
+    destinationCity: payload.destinationCity,
     equipmentType: payload.equipmentType,
     offeredRateUsd: payload.offeredRateUsd,
+    offerCurrency: payload.offerCurrency,
   });
 
   if (!rateCheck.ok) {
     return NextResponse.json({ error: rateCheck.message }, { status: 400 });
   }
 
-  const hit = findLaneBenchmark(
+  const hit = await findLaneBenchmark(
     payload.originState,
     payload.destinationState,
     payload.originZip,
     payload.destinationZip,
     payload.equipmentType,
+    payload.originCity,
+    payload.destinationCity,
   );
 
   const marketRateUsd =
     hit?.row.benchmarkAvgUsd != null ? new Prisma.Decimal(hit.row.benchmarkAvgUsd) : undefined;
+
+  const rateUsdEq = offeredAmountUsdEquivalent(payload.offeredRateUsd, payload.offerCurrency);
 
   const load = await prisma.load.create({
     data: {
@@ -141,6 +167,7 @@ export async function POST(req: Request) {
       equipmentType: payload.equipmentType,
       isRush: payload.isRush,
       isPrivate: payload.isPrivate,
+      offerCurrency: payload.offerCurrency,
       offeredRateUsd: payload.offeredRateUsd,
       marketRateUsd,
       shipperCompanyId: actor.companyId,
@@ -150,6 +177,21 @@ export async function POST(req: Request) {
       extendedPosting: payload.extendedPosting
         ? (payload.extendedPosting as Prisma.InputJsonValue)
         : undefined,
+      laneRateObservation: {
+        create: {
+          observedAt: new Date(),
+          originState: payload.originState.toUpperCase().slice(0, 2),
+          destState: payload.destinationState.toUpperCase().slice(0, 2),
+          originCityCanon: canonicalCityKey(payload.originCity),
+          destCityCanon: canonicalCityKey(payload.destinationCity),
+          originZip5: zip5ForBenchmark(payload.originZip),
+          destZip5: zip5ForBenchmark(payload.destinationZip),
+          equipmentNorm: normalizeEquipmentForBenchmark(payload.equipmentType),
+          rateUsd: new Prisma.Decimal(rateUsdEq.toFixed(2)),
+          offerCurrency: payload.offerCurrency,
+          source: RateObservationSource.APP,
+        },
+      },
     },
   });
 

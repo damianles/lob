@@ -24,15 +24,37 @@ export async function POST(
     return NextResponse.json({ error: "Dispatch link is invalid or inactive." }, { status: 404 });
   }
 
+  if (!dispatchLink.pickupConfirmedAt) {
+    return NextResponse.json({ error: "Pickup must be confirmed before delivery." }, { status: 409 });
+  }
+
+  if (dispatchLink.expiresAt < new Date()) {
+    await prisma.dispatchLink.update({
+      where: { id: dispatchLink.id },
+      data: { status: DispatchLinkStatus.EXPIRED },
+    });
+    return NextResponse.json({ error: "Dispatch link has expired." }, { status: 410 });
+  }
+
   const now = new Date();
   const updated = await prisma.$transaction(async (tx) => {
-    await tx.document.create({
-      data: {
-        dispatchLinkId: dispatchLink.id,
-        kind: "POD",
-        fileUrl: parsed.data.fileUrl,
-      },
-    });
+    if (parsed.data.fileUrl) {
+      await tx.document.create({
+        data: {
+          dispatchLinkId: dispatchLink.id,
+          kind: "POD",
+          fileUrl: parsed.data.fileUrl,
+        },
+      });
+    } else if (parsed.data.receiverAcknowledged) {
+      await tx.document.create({
+        data: {
+          dispatchLinkId: dispatchLink.id,
+          kind: "RECEIVER_ACK",
+          fileUrl: "https://lumberoneboard.com/internal/receiver-acknowledged",
+        },
+      });
+    }
 
     await tx.dispatchLink.update({
       where: { id: dispatchLink.id },

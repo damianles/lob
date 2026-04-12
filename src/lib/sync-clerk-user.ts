@@ -1,6 +1,7 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { UserRole } from "@prisma/client";
 
+import { upsertUserFromClerk } from "@/lib/clerk-user-merge";
 import { prisma } from "@/lib/prisma";
 
 /** Comma- or semicolon-separated list; also honors legacy LOB_AUTO_ADMIN_EMAIL. Preview/staging only. */
@@ -40,16 +41,11 @@ export async function syncClerkUserToDatabase(): Promise<{
     return { user: null, error: "missing_email" };
   }
 
-  let user = await prisma.user.upsert({
-    where: { authProviderId: userId },
-    update: { email, name },
-    create: {
-      authProviderId: userId,
-      email,
-      name,
-      role: UserRole.SHIPPER,
-    },
-    select: { id: true, companyId: true, role: true },
+  let user = await upsertUserFromClerk({
+    clerkUserId: userId,
+    email,
+    name,
+    defaultRole: UserRole.SHIPPER,
   });
 
   /** Preview / internal only: LOB_AUTO_ADMIN_EMAILS or LOB_AUTO_ADMIN_EMAIL → ADMIN on every sign-in. Remove for production. */

@@ -1,5 +1,6 @@
 import { VerificationStatus } from "@prisma/client";
 
+import { LobBrandStrip } from "@/components/lob-brand-strip";
 import { prisma } from "@/lib/prisma";
 import { CarrierReviewActions } from "./review-actions";
 
@@ -29,7 +30,8 @@ export default async function AdminCarriersPage() {
   return (
     <main className="min-h-screen bg-zinc-50 p-6 text-zinc-900">
       <div className="mx-auto max-w-5xl">
-        <h1 className="text-3xl font-bold">Carrier Verification Queue</h1>
+        <LobBrandStrip />
+        <h1 className="mt-4 text-3xl font-bold">Carrier Verification Queue</h1>
         <p className="mt-2 text-sm text-zinc-600">
           Use this page as admin workflow for approving or rejecting carrier applications.
         </p>

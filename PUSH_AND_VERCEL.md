@@ -51,7 +51,7 @@ git push -u origin main
 
 1. Vercel → your project → **Settings → General**
 2. **Root Directory** → **leave completely empty** → Save
-3. **Settings → Git** → make sure the repo is the **same** GitHub repo you just pushed to, branch **`main`**
+3. **Settings → Git** → make sure the repo is the **same** GitHub repo you just pushed to, branch `**main`**
 4. **Deployments** → **Redeploy** the latest (or push any small commit to trigger a build)
 
 ### Option B — Fresh Vercel project (clean slate)

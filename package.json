@@ -21,7 +21,12 @@
     "deploy:preview": "npx vercel",
     "deploy:prod": "npx vercel --prod",
     "set-admin": "tsx scripts/set-admin.ts",
-    "report-thin-lanes": "tsx scripts/report-thin-lanes.ts"
+    "admin:setup": "tsx scripts/setup-admins.ts",
+    "report-thin-lanes": "tsx scripts/report-thin-lanes.ts",
+    "brand:icons": "node scripts/build-brand-icons.cjs",
+    "brand:extract": "node scripts/extract-brand-assets.cjs",
+    "benchmarks:build": "tsx scripts/build-benchmarks-from-posted-xlsx.ts",
+    "benchmarks:import": "tsx scripts/import-posted-xlsx-observations.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -33,6 +38,7 @@
     "next": "16.1.6",
     "pg": "^8.20.0",
     "prisma": "^7.4.2",
+    "qrcode.react": "^4.2.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "svix": "^1.86.0",
@@ -47,8 +53,10 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "sharp": "^0.34.5",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "xlsx": "^0.18.5"
   }
 }

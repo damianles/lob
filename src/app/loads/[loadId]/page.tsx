@@ -1,11 +1,17 @@
 import { auth } from "@clerk/nextjs/server";
 import { LoadStatus, VerificationStatus } from "@prisma/client";
 import Link from "next/link";
+import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
+import { DispatchQrPanel } from "@/components/dispatch-qr-panel";
+import { LobBrandStrip } from "@/components/lob-brand-strip";
 import { LobSidebar } from "@/components/lob-sidebar";
 import { LoadTimeline } from "@/components/load-timeline";
 import { prisma } from "@/lib/prisma";
+import { carrierCompanyNameForViewer } from "@/lib/carrier-visibility";
+import { equipmentLabel } from "@/lib/lumber-equipment";
+import { formatMoney } from "@/lib/money";
 import {
   shipperCompanyNameForViewer,
   supplierKindForViewer,
@@ -15,8 +21,14 @@ import { syncClerkUserToDatabase } from "@/lib/sync-clerk-user";
 
 export const dynamic = "force-dynamic";
 
-function fmtUsd(n: number) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
+function parseTrailerJson(raw: string | null): string[] {
+  if (!raw) return [];
+  try {
+    const v = JSON.parse(raw) as unknown;
+    return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
 }
 
 export default async function LoadDetailPage({ params }: { params: Promise<{ loadId: string }> }) {
@@ -40,7 +52,25 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
   const load = await prisma.load.findUnique({
     where: { id: loadId },
     include: {
-      booking: { include: { carrierCompany: { select: { id: true, legalName: true } } } },
+      booking: {
+        include: {
+          carrierCompany: {
+            select: {
+              id: true,
+              legalName: true,
+              dotNumber: true,
+              mcNumber: true,
+              fleetTruckCount: true,
+              fleetTrailerCount: true,
+              trailerEquipmentTypes: true,
+              carrierProfileBlurb: true,
+              factoringEligible: true,
+              isOwnerOperator: true,
+              verificationStatus: true,
+            },
+          },
+        },
+      },
       dispatchLink: true,
       shipperCompany: { select: { legalName: true, supplierKind: true } },
     },
@@ -76,6 +106,16 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
 
   const canView = isAdmin || isShipperOwner || isBookedCarrier || canBrowsePosted;
 
+  const carrierDocs =
+    load.booking && (isShipperOwner || isAdmin)
+      ? await prisma.document.findMany({
+          where: { companyId: load.booking.carrierCompanyId, dispatchLinkId: null },
+          orderBy: { createdAt: "desc" },
+          take: 20,
+          select: { kind: true, expiresAt: true },
+        })
+      : [];
+
   if (!canView) {
     return (
       <main className="min-h-[calc(100vh-3.5rem)] bg-zinc-100 p-6">
@@ -95,6 +135,9 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
   const visibilityActor = { companyId: appUser.companyId, role: appUser.role };
   const millName = shipperCompanyNameForViewer(load.shipperCompany.legalName, load, visibilityActor);
   const supplierKindVisible = supplierKindForViewer(load.shipperCompany.supplierKind, load, visibilityActor);
+  const carrierNameVisible = load.booking
+    ? carrierCompanyNameForViewer(load.booking.carrierCompany.legalName, load, visibilityActor)
+    : null;
 
   const [active, rush, delivered] = await Promise.all([
     prisma.load.count({ where: { status: { not: LoadStatus.DELIVERED } } }),
@@ -102,11 +145,18 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
     prisma.load.count({ where: { status: LoadStatus.DELIVERED } }),
   ]);
 
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
+  const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+  const baseUrl = `${proto}://${host}`;
+
   return (
     <main className="min-h-[calc(100vh-3.5rem)] bg-zinc-100 p-3 text-zinc-900 sm:p-4">
       <div className="mx-auto flex max-w-[1600px] gap-0 overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
         <LobSidebar active="loads" stats={{ active, rush, delivered }} />
-        <div className="min-w-0 flex-1 bg-zinc-50 p-4 sm:p-6">
+        <div className="min-w-0 flex-1 bg-zinc-50">
+          <LobBrandStrip />
+          <div className="p-4 sm:p-6">
           <div className="mx-auto max-w-3xl">
             <Link href="/" className="text-sm font-medium text-lob-navy hover:underline">
               ← Load board
@@ -142,7 +192,11 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
               <div>
                 <p className="text-xs font-semibold uppercase text-zinc-500">Offered / booked</p>
                 <p className="mt-1 font-semibold text-zinc-900">
-                  {load.booking ? fmtUsd(Number(load.booking.agreedRateUsd)) : load.offeredRateUsd != null ? fmtUsd(Number(load.offeredRateUsd)) : "—"}
+                  {load.booking
+                    ? formatMoney(Number(load.booking.agreedRateUsd), load.booking.agreedCurrency)
+                    : load.offeredRateUsd != null
+                      ? formatMoney(Number(load.offeredRateUsd), load.offerCurrency)
+                      : "—"}
                 </p>
               </div>
               <div>
@@ -159,10 +213,84 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
               {load.booking && (
                 <div>
                   <p className="text-xs font-semibold uppercase text-zinc-500">Carrier</p>
-                  <p className="mt-1 text-zinc-900">{load.booking.carrierCompany.legalName}</p>
+                  <p className="mt-1 text-zinc-900">
+                    {carrierNameVisible ? (
+                      carrierNameVisible
+                    ) : (
+                      <span className="italic text-zinc-500">Booked</span>
+                    )}
+                  </p>
                 </div>
               )}
             </div>
+
+            {load.booking && (isShipperOwner || isAdmin) && (
+              <section className="mt-6 rounded-lg border border-zinc-200 bg-white p-4 text-sm">
+                <h2 className="text-base font-semibold text-zinc-900">Carrier profile (post-booking)</h2>
+                <p className="mt-1 text-xs text-zinc-500">
+                  Review the transport company before the truck arrives. Data comes from their LOB carrier profile.
+                </p>
+                <dl className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <dt className="text-xs font-semibold uppercase text-zinc-500">Legal name</dt>
+                    <dd className="font-medium text-zinc-900">{load.booking.carrierCompany.legalName}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase text-zinc-500">Verification</dt>
+                    <dd className="text-zinc-800">{load.booking.carrierCompany.verificationStatus}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase text-zinc-500">DOT</dt>
+                    <dd>{load.booking.carrierCompany.dotNumber ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase text-zinc-500">MC</dt>
+                    <dd>{load.booking.carrierCompany.mcNumber ?? "—"}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase text-zinc-500">Fleet</dt>
+                    <dd>
+                      {load.booking.carrierCompany.fleetTruckCount ?? "—"} trucks ·{" "}
+                      {load.booking.carrierCompany.fleetTrailerCount ?? "—"} trailers
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase text-zinc-500">Equipment</dt>
+                    <dd>
+                      {parseTrailerJson(load.booking.carrierCompany.trailerEquipmentTypes)
+                        .map((c) => equipmentLabel(c))
+                        .join(", ") || "—"}
+                    </dd>
+                  </div>
+                </dl>
+                {load.booking.carrierCompany.carrierProfileBlurb && (
+                  <p className="mt-4 whitespace-pre-wrap text-zinc-700">{load.booking.carrierCompany.carrierProfileBlurb}</p>
+                )}
+                {load.booking.carrierCompany.isOwnerOperator && (
+                  <p className="mt-3 text-xs font-medium text-amber-800">Owner-operator / small fleet</p>
+                )}
+                {load.booking.carrierCompany.factoringEligible && (
+                  <p className="mt-2 text-xs text-emerald-800">
+                    Factoring-eligible carrier — may use quick-pay programs.
+                  </p>
+                )}
+                {carrierDocs.length > 0 && (
+                  <div className="mt-4 border-t border-zinc-100 pt-3">
+                    <p className="text-xs font-semibold uppercase text-zinc-500">Documents on file</p>
+                    <ul className="mt-2 space-y-1 text-xs text-zinc-700">
+                      {carrierDocs.map((d, i) => (
+                        <li key={`${d.kind}-${i}-${d.expiresAt?.toISOString() ?? ""}`}>
+                          {d.kind}
+                          {d.expiresAt
+                            ? ` · expires ${d.expiresAt.toLocaleDateString()}`
+                            : ""}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </section>
+            )}
 
             {load.extendedPosting != null && (
               <details className="mt-4 rounded-lg border border-zinc-200 bg-white p-4 text-sm">
@@ -204,13 +332,21 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
             </div>
 
             {load.dispatchLink && (isShipperOwner || isBookedCarrier || isAdmin) && (
-              <p className="mt-4 text-sm text-zinc-600">
-                Driver page:{" "}
-                <Link className="font-medium text-lob-navy underline" href={`/driver/${load.dispatchLink.token}`}>
-                  Open driver link
-                </Link>
-              </p>
+              <div className="mt-6 space-y-3">
+                <p className="text-sm text-zinc-600">
+                  Driver page:{" "}
+                  <Link className="font-medium text-lob-navy underline" href={`/driver/${load.dispatchLink.token}`}>
+                    Open driver link
+                  </Link>
+                </p>
+                <DispatchQrPanel
+                  pickupUrl={`${baseUrl}/facility/pickup/${load.dispatchLink.token}`}
+                  deliveryUrl={`${baseUrl}/facility/delivery/${load.dispatchLink.token}`}
+                  driverUrl={`${baseUrl}/driver/${load.dispatchLink.token}`}
+                />
+              </div>
             )}
+          </div>
           </div>
         </div>
       </div>

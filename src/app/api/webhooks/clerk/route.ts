@@ -3,7 +3,7 @@ import { UserRole } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { Webhook } from "svix";
 
-import { prisma } from "@/lib/prisma";
+import { upsertUserFromClerk } from "@/lib/clerk-user-merge";
 
 export async function POST(req: Request) {
   const secret = process.env.CLERK_WEBHOOK_SIGNING_SECRET;
@@ -45,18 +45,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, ignored: "No primary email." });
     }
 
-    await prisma.user.upsert({
-      where: { authProviderId: evt.data.id },
-      update: {
-        email: primaryEmail,
-        name: `${evt.data.first_name ?? ""} ${evt.data.last_name ?? ""}`.trim() || "LOB User",
-      },
-      create: {
-        authProviderId: evt.data.id,
-        email: primaryEmail,
-        name: `${evt.data.first_name ?? ""} ${evt.data.last_name ?? ""}`.trim() || "LOB User",
-        role: UserRole.SHIPPER,
-      },
+    const name =
+      `${evt.data.first_name ?? ""} ${evt.data.last_name ?? ""}`.trim() || "LOB User";
+    await upsertUserFromClerk({
+      clerkUserId: evt.data.id,
+      email: primaryEmail,
+      name,
+      defaultRole: UserRole.SHIPPER,
     });
   }
 

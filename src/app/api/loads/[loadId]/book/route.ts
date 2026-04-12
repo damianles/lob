@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { LoadStatus, VerificationStatus } from "@prisma/client";
+import { LoadStatus, OfferCurrency, VerificationStatus } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 import { getActorContext } from "@/lib/request-context";
@@ -46,11 +46,15 @@ export async function POST(
     return NextResponse.json({ error: "Only posted loads can be booked." }, { status: 409 });
   }
 
+  const agreedCurrency: OfferCurrency =
+    parsed.data.agreedCurrency ?? load.offerCurrency ?? OfferCurrency.USD;
+
   const booking = await prisma.$transaction(async (tx) => {
     const newBooking = await tx.booking.create({
       data: {
         loadId,
         carrierCompanyId,
+        agreedCurrency,
         agreedRateUsd: parsed.data.agreedRateUsd,
       },
     });
