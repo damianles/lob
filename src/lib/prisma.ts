@@ -26,32 +26,50 @@ function connectionStringForPgPool(raw: string): string {
   return url + (url.includes("?") ? "&" : "?") + "sslmode=no-verify";
 }
 
-/** Next sets this while running `next build` (route modules load; no DB is contacted until queries run). */
-function isNextProductionBuild(): boolean {
-  return process.env.NEXT_PHASE === "phase-production-build";
-}
-
-function poolOptions(): PoolConfig {
-  let connectionString = process.env.DATABASE_URL?.trim();
-  if (!connectionString) {
-    if (isNextProductionBuild()) {
-      // Valid shape for `pg` + Prisma adapter; no connection is opened during `next build` for this app.
-      connectionString = "postgresql://build_placeholder:build_placeholder@127.0.0.1:5432/build_placeholder?schema=public";
-    } else {
-      throw new Error("DATABASE_URL is not set");
-    }
-  }
+function poolOptionsFromUrl(connectionString: string): PoolConfig {
   return { connectionString: connectionStringForPgPool(connectionString) };
 }
 
-export const prisma =
-  global.prismaGlobal ??
-  new PrismaClient({
-    adapter: new PrismaPg(new Pool(poolOptions())),
+function createPrismaClient(): PrismaClient {
+  const connectionString = process.env.DATABASE_URL?.trim();
+  if (!connectionString) {
+    throw new Error(
+      "DATABASE_URL is not set. In Vercel: Project → Settings → Environment Variables → add DATABASE_URL for this environment (Production and/or Preview), then redeploy.",
+    );
+  }
+  if (/\[YOUR[-_]?PASSWORD\]/i.test(connectionString) || connectionString.includes("[YOUR_PASSWORD]")) {
+    throw new Error(
+      "DATABASE_URL still contains a placeholder ([YOUR-PASSWORD]). Replace it with your real database password (URL-encoded if it has special characters).",
+    );
+  }
+  return new PrismaClient({
+    adapter: new PrismaPg(new Pool(poolOptionsFromUrl(connectionString))),
     log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
   });
-
-if (process.env.NODE_ENV !== "production") {
-  global.prismaGlobal = prisma;
 }
 
+function getPrismaClient(): PrismaClient {
+  if (global.prismaGlobal) {
+    return global.prismaGlobal;
+  }
+  const client = createPrismaClient();
+  global.prismaGlobal = client;
+  return client;
+}
+
+/**
+ * Lazy singleton: importing this module does not connect to Postgres. That way `next build` can
+ * load route/page modules even when DATABASE_URL is only injected at runtime on Vercel.
+ *
+ * The first real query (or `$connect`) throws a clear error if DATABASE_URL is missing or invalid.
+ */
+export const prisma = new Proxy({} as PrismaClient, {
+  get(_target, prop: string | symbol) {
+    const client = getPrismaClient();
+    const value = Reflect.get(client as object, prop, client);
+    if (typeof value === "function") {
+      return value.bind(client);
+    }
+    return value;
+  },
+});
