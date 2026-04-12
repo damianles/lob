@@ -26,10 +26,20 @@ function connectionStringForPgPool(raw: string): string {
   return url + (url.includes("?") ? "&" : "?") + "sslmode=no-verify";
 }
 
+/** Next sets this while running `next build` (route modules load; no DB is contacted until queries run). */
+function isNextProductionBuild(): boolean {
+  return process.env.NEXT_PHASE === "phase-production-build";
+}
+
 function poolOptions(): PoolConfig {
-  const connectionString = process.env.DATABASE_URL;
+  let connectionString = process.env.DATABASE_URL?.trim();
   if (!connectionString) {
-    throw new Error("DATABASE_URL is not set");
+    if (isNextProductionBuild()) {
+      // Valid shape for `pg` + Prisma adapter; no connection is opened during `next build` for this app.
+      connectionString = "postgresql://build_placeholder:build_placeholder@127.0.0.1:5432/build_placeholder?schema=public";
+    } else {
+      throw new Error("DATABASE_URL is not set");
+    }
   }
   return { connectionString: connectionStringForPgPool(connectionString) };
 }
