@@ -232,9 +232,9 @@ export default async function Home() {
         )}
 
         {userId && appUser?.role === "ADMIN" && (
-          <section className="mb-4 rounded-lg border border-stone-200 bg-white p-4 text-sm text-stone-700 shadow-sm">
+          <section className="mb-4 min-w-0 max-w-full rounded-lg border border-stone-200 bg-white p-4 text-sm text-stone-700 shadow-sm">
             <p className="font-medium text-stone-900">Signed in as admin</p>
-            <p className="mt-1">
+            <p className="mt-1 break-words leading-relaxed">
               Use <strong>Carriers</strong> and <strong>Companies</strong> in the top bar. To post loads or capacity as a
               tester, open{" "}
               <Link className="font-medium text-lob-navy underline" href="/admin/test-lab">

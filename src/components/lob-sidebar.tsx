@@ -1,5 +1,8 @@
 import Link from "next/link";
 
+import { LobWoodOIcon } from "@/components/lob-wood-o-icon";
+import { BRAND_POSITIONING, BRAND_PRODUCT_NAME } from "@/lib/brand-marketing";
+
 export type LobNavId =
   | "loads"
   | "capacity"
@@ -56,7 +59,22 @@ export function LobSidebar({
 }) {
   return (
     <aside className="hidden w-[15.5rem] shrink-0 flex-col border-r border-stone-200/50 bg-stone-50/30 lg:flex">
-      <div className="px-5 pb-2 pt-8">
+      <div className="border-b border-stone-200/50 px-4 pb-4 pt-6">
+        <Link
+          href="/"
+          className="flex min-w-0 items-start gap-2.5 rounded-xl p-1.5 transition hover:bg-white/70"
+          aria-label={`${BRAND_PRODUCT_NAME} — home`}
+        >
+          <LobWoodOIcon className="h-10 w-10 shrink-0 drop-shadow-sm" decorative />
+          <div className="min-w-0 flex-1 pt-0.5">
+            <p className="text-[13px] font-semibold leading-tight tracking-tight text-lob-navy">{BRAND_PRODUCT_NAME}</p>
+            <p className="mt-1 text-[9px] font-bold uppercase leading-snug tracking-[0.12em] text-lob-gold-muted">
+              {BRAND_POSITIONING}
+            </p>
+          </div>
+        </Link>
+      </div>
+      <div className="px-5 pb-2 pt-4">
         <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-stone-400">Navigate</p>
       </div>
       <nav

@@ -4,7 +4,8 @@ import { UserButton, useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { startTransition, useEffect, useState } from "react";
 
-import { LobAppIconMark, lobAppIconAlt } from "@/components/lob-app-icon-mark";
+import { LobWoodOIcon } from "@/components/lob-wood-o-icon";
+import { lobAppIconAlt } from "@/components/lob-app-icon-mark";
 import { useDistanceUnitPreference } from "@/components/providers/app-providers";
 import { RadioChoice } from "@/components/ui/radio-choice";
 
@@ -61,10 +62,10 @@ export function AppNav() {
         <div className="flex min-w-0 flex-1 items-center gap-8">
           <Link
             href="/"
-            className="group flex shrink-0 rounded-full p-2 ring-offset-2 transition hover:bg-stone-100/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lob-navy/25"
+            className="group flex shrink-0 rounded-xl p-1.5 ring-offset-2 transition hover:bg-stone-100/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lob-navy/25"
             aria-label={lobAppIconAlt()}
           >
-            <LobAppIconMark className="h-9 w-9 rounded-full object-cover ring-1 ring-stone-200/80 sm:h-10 sm:w-10" priority />
+            <LobWoodOIcon className="h-9 w-9 shrink-0 drop-shadow-sm sm:h-10 sm:w-10" decorative />
           </Link>
           <nav className="flex min-w-0 flex-wrap items-center gap-x-1 gap-y-1.5" aria-label="Primary">
             {links.map((l) => (

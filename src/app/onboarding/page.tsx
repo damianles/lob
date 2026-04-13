@@ -3,7 +3,7 @@ import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
 
 import { LobSidebar } from "@/components/lob-sidebar";
-import { LobAppIconMark } from "@/components/lob-app-icon-mark";
+import { LobWoodOIcon } from "@/components/lob-wood-o-icon";
 import { getDatabaseErrorGuidance } from "@/lib/db-connection-hints";
 import { isAdminPersonaSwitchEnabled } from "@/lib/admin-test-personas";
 import { syncClerkUserToDatabase } from "@/lib/sync-clerk-user";
@@ -39,7 +39,7 @@ export default async function OnboardingPage() {
         <div className="min-w-0 flex-1 bg-stone-50/40 p-6 sm:p-10">
           <div className="mx-auto max-w-4xl">
             <div className="mb-10 flex flex-col gap-6 sm:flex-row sm:items-center sm:gap-8">
-              <LobAppIconMark className="h-16 w-16 shrink-0 rounded-2xl object-cover shadow-sm ring-1 ring-stone-200/80 sm:h-[4.5rem] sm:w-[4.5rem]" />
+              <LobWoodOIcon className="h-16 w-16 shrink-0 drop-shadow-md sm:h-[4.5rem] sm:w-[4.5rem]" />
               <div className="min-w-0">
                 <h1 className="text-3xl font-semibold tracking-tight text-lob-navy sm:text-4xl">Account setup</h1>
                 <p className="mt-3 max-w-xl text-base leading-relaxed text-stone-500">
