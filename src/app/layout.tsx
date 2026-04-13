@@ -3,8 +3,10 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import { AppNav } from "@/components/app-nav";
+import { LobBrandMasthead } from "@/components/lob-brand-masthead";
 import { DemoBanner } from "@/components/demo-banner";
 import { DeployFingerprint } from "@/components/deploy-fingerprint";
+import { AppProviders } from "@/components/providers/app-providers";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -34,10 +36,13 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ClerkProvider>
-          <DemoBanner />
-          <DeployFingerprint />
-          <AppNav />
-          {children}
+          <AppProviders>
+            <DemoBanner />
+            <DeployFingerprint />
+            <LobBrandMasthead />
+            <AppNav />
+            {children}
+          </AppProviders>
         </ClerkProvider>
       </body>
     </html>

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { LoadStatus, Prisma, RateObservationSource } from "@prisma/client";
+import { LoadCarrierVisibilityMode, LoadStatus, Prisma, RateObservationSource, VerificationStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 
 import { canonicalCityKey } from "@/lib/city-canonical";
@@ -16,6 +16,7 @@ import { getActorContext } from "@/lib/request-context";
 import { carrierCompanyNameForViewer } from "@/lib/carrier-visibility";
 import { shipperCompanyNameForViewer } from "@/lib/shipper-visibility";
 import { reliabilityPolicy } from "@/lib/policies";
+import { fetchPostedLoadVisibilityContext, postedLoadVisibleToCarrier } from "@/lib/carrier-load-access";
 import { createLoadSchema } from "@/lib/validation";
 
 export async function GET() {
@@ -72,8 +73,27 @@ export async function GET() {
     take: 100,
   });
 
+  let filtered = loads;
+  if ((actor.role === "DISPATCHER" || actor.role === "DRIVER") && actor.companyId) {
+    const posted = loads.filter((l) => l.status === LoadStatus.POSTED);
+    if (posted.length) {
+      const ctx = await fetchPostedLoadVisibilityContext(prisma, actor.companyId, posted);
+      filtered = loads.filter((row) => {
+        if (row.status !== LoadStatus.POSTED) return true;
+        return postedLoadVisibleToCarrier(
+          {
+            id: row.id,
+            shipperCompanyId: row.shipperCompanyId,
+            carrierVisibilityMode: row.carrierVisibilityMode,
+          },
+          ctx,
+        );
+      });
+    }
+  }
+
   const visibilityActor = { companyId: actor.companyId, role: actor.role };
-  const data = loads.map((row) => {
+  const data = filtered.map((row) => {
     const visibleShipper = shipperCompanyNameForViewer(row.shipperCompany.legalName, row, visibilityActor);
     const bookingMasked = row.booking
       ? {
@@ -154,45 +174,119 @@ export async function POST(req: Request) {
 
   const rateUsdEq = offeredAmountUsdEquivalent(payload.offeredRateUsd, payload.offerCurrency);
 
-  const load = await prisma.load.create({
-    data: {
-      referenceNumber: `LOB-${randomUUID().slice(0, 8).toUpperCase()}`,
-      originCity: payload.originCity,
-      originState: payload.originState.toUpperCase(),
-      originZip: payload.originZip,
-      destinationCity: payload.destinationCity,
-      destinationState: payload.destinationState.toUpperCase(),
-      destinationZip: payload.destinationZip,
-      weightLbs: payload.weightLbs,
-      equipmentType: payload.equipmentType,
-      isRush: payload.isRush,
-      isPrivate: payload.isPrivate,
-      offerCurrency: payload.offerCurrency,
-      offeredRateUsd: payload.offeredRateUsd,
-      marketRateUsd,
-      shipperCompanyId: actor.companyId,
-      createdByUserId: actor.userId,
-      uniquePickupCode: randomUUID().slice(0, 6).toUpperCase(),
-      requestedPickupAt: pickupAt,
-      extendedPosting: payload.extendedPosting
-        ? (payload.extendedPosting as Prisma.InputJsonValue)
-        : undefined,
-      laneRateObservation: {
-        create: {
-          observedAt: new Date(),
-          originState: payload.originState.toUpperCase().slice(0, 2),
-          destState: payload.destinationState.toUpperCase().slice(0, 2),
-          originCityCanon: canonicalCityKey(payload.originCity),
-          destCityCanon: canonicalCityKey(payload.destinationCity),
-          originZip5: zip5ForBenchmark(payload.originZip),
-          destZip5: zip5ForBenchmark(payload.destinationZip),
-          equipmentNorm: normalizeEquipmentForBenchmark(payload.equipmentType),
-          rateUsd: new Prisma.Decimal(rateUsdEq.toFixed(2)),
-          offerCurrency: payload.offerCurrency,
-          source: RateObservationSource.APP,
+  const visibilityMode =
+    payload.carrierVisibilityMode === "TIER_ASSIGNED"
+      ? LoadCarrierVisibilityMode.TIER_ASSIGNED
+      : LoadCarrierVisibilityMode.OPEN;
+
+  const tierCarrierIds = [...new Set(payload.tierAssignments.map((t) => t.carrierCompanyId))];
+  const excludeIds = [...new Set(payload.perLoadExcludedCarrierIds)];
+
+  const referencedIds = [...new Set([...tierCarrierIds, ...excludeIds])];
+  if (referencedIds.length) {
+    const okCompanies = await prisma.company.findMany({
+      where: {
+        id: { in: referencedIds },
+        verificationStatus: VerificationStatus.APPROVED,
+        carrierType: { not: null },
+      },
+      select: { id: true },
+    });
+    const ok = new Set(okCompanies.map((c) => c.id));
+    const bad = referencedIds.filter((id) => !ok.has(id));
+    if (bad.length) {
+      return NextResponse.json(
+        { error: `Invalid carrier id(s) for visibility rules: ${bad.slice(0, 5).join(", ")}` },
+        { status: 400 },
+      );
+    }
+  }
+
+  if (tierCarrierIds.length) {
+    const blockedOverlap = await prisma.shipperCarrierExclusion.findMany({
+      where: {
+        shipperCompanyId: actor.companyId!,
+        carrierCompanyId: { in: tierCarrierIds },
+      },
+      select: { carrierCompanyId: true },
+    });
+    if (blockedOverlap.length) {
+      return NextResponse.json(
+        {
+          error:
+            "Cannot assign carriers you have blocked globally (Carrier preferences). Remove them from tiers or unblock first.",
+        },
+        { status: 400 },
+      );
+    }
+  }
+
+  const shipperCompanyId = actor.companyId;
+  const createdByUserId = actor.userId;
+
+  const load = await prisma.$transaction(async (tx) => {
+    const row = await tx.load.create({
+      data: {
+        referenceNumber: `LOB-${randomUUID().slice(0, 8).toUpperCase()}`,
+        originCity: payload.originCity,
+        originState: payload.originState.toUpperCase(),
+        originZip: payload.originZip,
+        destinationCity: payload.destinationCity,
+        destinationState: payload.destinationState.toUpperCase(),
+        destinationZip: payload.destinationZip,
+        weightLbs: payload.weightLbs,
+        equipmentType: payload.equipmentType,
+        isRush: payload.isRush,
+        isPrivate: payload.isPrivate,
+        offerCurrency: payload.offerCurrency,
+        offeredRateUsd: payload.offeredRateUsd,
+        marketRateUsd,
+        shipperCompanyId,
+        createdByUserId,
+        uniquePickupCode: randomUUID().slice(0, 6).toUpperCase(),
+        requestedPickupAt: pickupAt,
+        carrierVisibilityMode: visibilityMode,
+        extendedPosting: payload.extendedPosting
+          ? (payload.extendedPosting as Prisma.InputJsonValue)
+          : undefined,
+        laneRateObservation: {
+          create: {
+            observedAt: new Date(),
+            originState: payload.originState.toUpperCase().slice(0, 2),
+            destState: payload.destinationState.toUpperCase().slice(0, 2),
+            originCityCanon: canonicalCityKey(payload.originCity),
+            destCityCanon: canonicalCityKey(payload.destinationCity),
+            originZip5: zip5ForBenchmark(payload.originZip),
+            destZip5: zip5ForBenchmark(payload.destinationZip),
+            equipmentNorm: normalizeEquipmentForBenchmark(payload.equipmentType),
+            rateUsd: new Prisma.Decimal(rateUsdEq.toFixed(2)),
+            offerCurrency: payload.offerCurrency,
+            source: RateObservationSource.APP,
+          },
         },
       },
-    },
+    });
+
+    if (visibilityMode === LoadCarrierVisibilityMode.TIER_ASSIGNED && payload.tierAssignments.length) {
+      await tx.loadCarrierTier.createMany({
+        data: payload.tierAssignments.map((t) => ({
+          loadId: row.id,
+          carrierCompanyId: t.carrierCompanyId,
+          tier: t.tier,
+        })),
+      });
+    }
+
+    if (excludeIds.length) {
+      await tx.loadCarrierExclusion.createMany({
+        data: excludeIds.map((carrierCompanyId) => ({
+          loadId: row.id,
+          carrierCompanyId,
+        })),
+      });
+    }
+
+    return row;
   });
 
   return NextResponse.json({ data: load }, { status: 201 });

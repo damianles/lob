@@ -17,6 +17,7 @@ import {
   supplierKindForViewer,
   supplierKindLabel,
 } from "@/lib/shipper-visibility";
+import { carrierMayViewPostedLoad } from "@/lib/carrier-load-access";
 import { syncClerkUserToDatabase } from "@/lib/sync-clerk-user";
 
 export const dynamic = "force-dynamic";
@@ -98,11 +99,23 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
     load.booking.carrierCompanyId === appUser.companyId &&
     (appUser.role === "DISPATCHER" || appUser.role === "ADMIN");
 
-  const canBrowsePosted =
+  let canBrowsePosted = false;
+  if (
     appUser.role === "DISPATCHER" &&
     appUser.companyId &&
     carrierApproved &&
-    load.status === LoadStatus.POSTED;
+    load.status === LoadStatus.POSTED
+  ) {
+    canBrowsePosted = await carrierMayViewPostedLoad(
+      prisma,
+      {
+        id: load.id,
+        shipperCompanyId: load.shipperCompanyId,
+        carrierVisibilityMode: load.carrierVisibilityMode,
+      },
+      appUser.companyId,
+    );
+  }
 
   const canView = isAdmin || isShipperOwner || isBookedCarrier || canBrowsePosted;
 

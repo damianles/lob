@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getActorContext } from "@/lib/request-context";
 
 import { FuelLaneForm } from "./fuel-lane-form";
+import { RouteInsightsPanel } from "./route-insights-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -41,12 +42,13 @@ export default async function FuelInsightsPage() {
   return (
     <div className="mx-auto max-w-3xl text-zinc-900">
       <h1 className="text-2xl font-bold sm:text-3xl">Fuel pricing</h1>
-      <p className="mt-2 text-sm text-zinc-600">
-        Enter origin and destination ZIP codes. LOB estimates retail diesel at each end from state-level reference data,
-        then shows a simple blend for trip planning. Swap the data file or wire an API (EIA, rack, etc.) when you are
-        ready for live pumps.
+      <p className="mt-2 text-sm leading-relaxed text-zinc-600">
+        Enter a <strong>US ZIP</strong> or <strong>Canadian postal / FSA</strong> at each end. LOB estimates retail diesel
+        from US state and Canadian province reference tables, then blends both for quick planning. Replace the JSON
+        files or connect EIA / provincial / rack feeds for production.
       </p>
       <FuelLaneForm />
+      <RouteInsightsPanel />
       <p className="mt-8 text-xs text-zinc-500">
         Prefer lane benchmarks? Use{" "}
         <Link href="/insights/lanes" className="font-medium text-lob-navy underline">

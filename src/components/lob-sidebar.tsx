@@ -9,6 +9,7 @@ export type LobNavId =
   | "facilityPickup"
   | "facilityDelivery"
   | "carrierProfile"
+  | "carrierPrefs"
   | "onboarding";
 
 export type LobSidebarStats = { active: number; rush: number; delivered: number };
@@ -36,6 +37,12 @@ const items: { id: LobNavId; href: string; label: string; hint: string }[] = [
     href: "/carrier/compliance",
     label: "Carrier profile",
     hint: "DOT/MC, insurance, fleet & equipment for shippers",
+  },
+  {
+    id: "carrierPrefs",
+    href: "/shipper/carrier-preferences",
+    label: "Carrier preferences",
+    hint: "Block carriers from capacity & your loads; use with per-load tiers when posting",
   },
   { id: "onboarding", href: "/onboarding", label: "Account setup", hint: "Link supplier or carrier company" },
 ];

@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 
-import { blendedDieselForLane } from "@/lib/fuel-prices";
+import { blendedDieselForPostalEndpoints } from "@/lib/fuel-prices";
+import { fetchUsNationalWeeklyDieselRetail } from "@/lib/insights/eia-weekly-diesel-us";
+import { LEGAL_DIESEL_DATA_SOURCES } from "@/lib/insights/legal-fuel-sources";
 import { prisma } from "@/lib/prisma";
 import { getActorContext } from "@/lib/request-context";
 
 /**
- * Lane diesel snapshot: origin vs destination state averages (table-backed; swap for EIA/live later).
- * Same access rules as lane analytics: subscriber companies or admin.
+ * Lane diesel snapshot: US state or Canadian province averages (table-backed).
+ * Query: `origin` & `destination` (US ZIP or CA postal / FSA), or legacy `originZip` & `destinationZip`.
  */
 export async function GET(req: Request) {
   const actor = await getActorContext();
@@ -28,21 +30,36 @@ export async function GET(req: Request) {
   }
 
   const { searchParams } = new URL(req.url);
-  const originZip = searchParams.get("originZip")?.replace(/\D/g, "").slice(0, 5) ?? "";
-  const destZip = searchParams.get("destinationZip")?.replace(/\D/g, "").slice(0, 5) ?? "";
-  if (originZip.length < 5 || destZip.length < 5) {
+  const origin = (searchParams.get("origin") ?? searchParams.get("originZip") ?? "").trim();
+  const destination = (searchParams.get("destination") ?? searchParams.get("destinationZip") ?? "").trim();
+
+  const blend = blendedDieselForPostalEndpoints(origin, destination);
+  if (!blend) {
     return NextResponse.json(
-      { error: "Provide originZip and destinationZip (5 digits)." },
+      {
+        error:
+          "Enter a valid US ZIP (5 digits) or Canadian postal / FSA for both origin and destination (e.g. 97201 & T2P 1J4).",
+      },
       { status: 400 },
     );
   }
 
-  const blend = blendedDieselForLane(originZip, destZip);
+  const eiaWeekly = await fetchUsNationalWeeklyDieselRetail();
+
   return NextResponse.json({
     data: {
       ...blend,
       note:
-        "Prices are approximate state-level retail diesel averages for planning (demo data file). Wire EIA or a carrier data feed for live racks.",
+        "Endpoints use LOB reference tables (province/state). Optional EIA_API_KEY adds the official U.S. weekly national retail average for context. Station-level “cheapest on route” needs a licensed feed (fleet card, OPIS, etc.) — never scrape consumer price apps.",
+      liveUsWeeklyRetail: eiaWeekly.ok
+        ? {
+            usdPerGallon: eiaWeekly.usdPerGallon,
+            period: eiaWeekly.period,
+            provider: eiaWeekly.provider,
+            href: eiaWeekly.documentationUrl,
+          }
+        : null,
+      legalDieselDataSources: LEGAL_DIESEL_DATA_SOURCES,
     },
   });
 }

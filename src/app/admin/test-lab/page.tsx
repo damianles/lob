@@ -38,6 +38,24 @@ export default async function AdminTestLabPage() {
           <p className="mt-1 text-sm text-zinc-600">
             Requires <code className="rounded bg-zinc-100 px-1">LOB_ALLOW_ADMIN_PERSONA_SWITCH=true</code> and seed data.
           </p>
+          <ol className="mt-4 list-decimal space-y-2 pl-5 text-sm text-zinc-700">
+            <li>
+              Add{" "}
+              <code className="rounded bg-zinc-100 px-1 text-xs">
+                LOB_ALLOW_ADMIN_PERSONA_SWITCH=true
+              </code>{" "}
+              to <code className="rounded bg-zinc-100 px-1 text-xs">.env.local</code> for local dev, or to your Vercel
+              project → Environment Variables for Preview (and Production only if you intentionally accept the risk).
+            </li>
+            <li>
+              Run <code className="rounded bg-zinc-100 px-1 text-xs">npm run db:seed</code> against the same database
+              your app uses so <strong>North Ridge Lumber</strong> and <strong>Blue Ox Transport</strong> exist.
+            </li>
+            <li>
+              Restart the dev server (local) or redeploy (Vercel), then hard-refresh this page. The switcher stays off
+              until the env var is present at runtime.
+            </li>
+          </ol>
           <div className="mt-4">
             <PersonaActions personaSwitchEnabled={personaSwitchEnabled} />
           </div>

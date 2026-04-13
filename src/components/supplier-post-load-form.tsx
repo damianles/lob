@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react";
 
+import { RadioChoice } from "@/components/ui/radio-choice";
 import { LUMBER_EQUIPMENT } from "@/lib/lumber-equipment";
+
+type CarrierPick = { id: string; legalName: string };
 
 type PuDel = {
   address: string;
@@ -101,6 +104,14 @@ export function SupplierPostLoadForm({
   const [parsRequired, setParsRequired] = useState(false);
   const [parsNumber, setParsNumber] = useState("");
 
+  const [carrierPicklist, setCarrierPicklist] = useState<CarrierPick[]>([]);
+  const [blockedCarrierIds, setBlockedCarrierIds] = useState<Set<string>>(new Set());
+  const [carrierVisibilityMode, setCarrierVisibilityMode] = useState<"OPEN" | "TIER_ASSIGNED">("OPEN");
+  const [tier1, setTier1] = useState<Set<string>>(new Set());
+  const [tier2, setTier2] = useState<Set<string>>(new Set());
+  const [tier3, setTier3] = useState<Set<string>>(new Set());
+  const [perLoadExcluded, setPerLoadExcluded] = useState<Set<string>>(new Set());
+
   useEffect(() => {
     const n = Math.min(4, Math.max(1, numPickups));
     setPickups((prev) => {
@@ -118,6 +129,94 @@ export function SupplierPostLoadForm({
       return next.slice(0, n);
     });
   }, [numDeliveries]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const [rPick, rBlock] = await Promise.all([
+        fetch("/api/shipper/carrier-picklist"),
+        fetch("/api/shipper/blocked-carriers"),
+      ]);
+      if (cancelled || !rPick.ok || !rBlock.ok) return;
+      const jPick = await rPick.json();
+      const jBlock = await rBlock.json();
+      setCarrierPicklist(jPick.data ?? []);
+      setBlockedCarrierIds(new Set((jBlock.data?.blocked ?? []).map((c: { id: string }) => c.id)));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  function setCarrierTierSlot(tier: 1 | 2 | 3, carrierId: string, checked: boolean) {
+    setTier1((s) => {
+      const n = new Set(s);
+      n.delete(carrierId);
+      return n;
+    });
+    setTier2((s) => {
+      const n = new Set(s);
+      n.delete(carrierId);
+      return n;
+    });
+    setTier3((s) => {
+      const n = new Set(s);
+      n.delete(carrierId);
+      return n;
+    });
+    if (checked) {
+      if (tier === 1) setTier1((s) => new Set(s).add(carrierId));
+      if (tier === 2) setTier2((s) => new Set(s).add(carrierId));
+      if (tier === 3) setTier3((s) => new Set(s).add(carrierId));
+    }
+    setPerLoadExcluded((s) => {
+      const n = new Set(s);
+      n.delete(carrierId);
+      return n;
+    });
+  }
+
+  function clearCarrierTier(carrierId: string) {
+    setTier1((s) => {
+      const n = new Set(s);
+      n.delete(carrierId);
+      return n;
+    });
+    setTier2((s) => {
+      const n = new Set(s);
+      n.delete(carrierId);
+      return n;
+    });
+    setTier3((s) => {
+      const n = new Set(s);
+      n.delete(carrierId);
+      return n;
+    });
+  }
+
+  function togglePerLoadExclude(carrierId: string) {
+    setPerLoadExcluded((s) => {
+      const n = new Set(s);
+      if (n.has(carrierId)) n.delete(carrierId);
+      else n.add(carrierId);
+      return n;
+    });
+    setTier1((s) => {
+      const n = new Set(s);
+      n.delete(carrierId);
+      return n;
+    });
+    setTier2((s) => {
+      const n = new Set(s);
+      n.delete(carrierId);
+      return n;
+    });
+    setTier3((s) => {
+      const n = new Set(s);
+      n.delete(carrierId);
+      return n;
+    });
+  }
 
   function syncPickup(idx: number, patch: Partial<PuDel>) {
     setPickups((rows) => rows.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
@@ -160,6 +259,11 @@ export function SupplierPostLoadForm({
     }
     if (!deliveries[0]?.address.trim() || !deliveries[0]?.date) {
       setErr("Delivery 1 address and delivery date are required.");
+      return;
+    }
+
+    if (carrierVisibilityMode === "TIER_ASSIGNED" && tier1.size + tier2.size + tier3.size === 0) {
+      setErr("Tier visibility: add at least one carrier to tier 1, 2, or 3 — or choose open visibility.");
       return;
     }
 
@@ -227,6 +331,11 @@ export function SupplierPostLoadForm({
         : undefined,
     };
 
+    const tierAssignments: { carrierCompanyId: string; tier: number }[] = [];
+    tier1.forEach((id) => tierAssignments.push({ carrierCompanyId: id, tier: 1 }));
+    tier2.forEach((id) => tierAssignments.push({ carrierCompanyId: id, tier: 2 }));
+    tier3.forEach((id) => tierAssignments.push({ carrierCompanyId: id, tier: 3 }));
+
     setBusy(true);
     const res = await fetch("/api/loads", {
       method: "POST",
@@ -246,6 +355,9 @@ export function SupplierPostLoadForm({
         offerCurrency: currency,
         offeredRateUsd: r,
         extendedPosting,
+        carrierVisibilityMode,
+        tierAssignments: carrierVisibilityMode === "TIER_ASSIGNED" ? tierAssignments : [],
+        perLoadExcludedCarrierIds: [...perLoadExcluded],
       }),
     });
     const data = await res.json().catch(() => ({}));
@@ -569,6 +681,119 @@ export function SupplierPostLoadForm({
         </section>
 
         <section className="rounded border border-emerald-200 bg-white/90 p-3">
+          <h4 className="text-xs font-bold uppercase tracking-wide text-emerald-900">Who can see this load</h4>
+          <p className="mt-1 text-xs text-zinc-600">
+            Carriers blocked in{" "}
+            <a className="font-medium text-lob-navy underline" href="/shipper/carrier-preferences">
+              Carrier preferences
+            </a>{" "}
+            never see your loads. Here you can further restrict this posting.
+          </p>
+          <div className="mt-3">
+            <RadioChoice
+              label="Load visibility"
+              name="load-carrier-visibility"
+              value={carrierVisibilityMode}
+              onChange={setCarrierVisibilityMode}
+              options={[
+                {
+                  value: "OPEN",
+                  label: "Open",
+                  description: "Approved carriers (except your blocked list) may see and book.",
+                },
+                {
+                  value: "TIER_ASSIGNED",
+                  label: "Tiers only",
+                  description: "Only carriers you place in tiers below (blocked list still cannot be added).",
+                },
+              ]}
+              className="[&_label]:max-w-full [&_label]:items-start"
+            />
+          </div>
+          {carrierPicklist.length > 0 && (
+            <div className="mt-4 max-h-56 overflow-y-auto rounded border border-zinc-200 bg-zinc-50/80">
+              <table className="w-full text-left text-xs">
+                <thead className="sticky top-0 bg-zinc-100 text-[10px] font-semibold uppercase text-zinc-600">
+                  <tr>
+                    <th className="px-2 py-2">Carrier</th>
+                    {carrierVisibilityMode === "TIER_ASSIGNED" && (
+                      <>
+                        <th className="px-1 py-2 text-center">T1</th>
+                        <th className="px-1 py-2 text-center">T2</th>
+                        <th className="px-1 py-2 text-center">T3</th>
+                        <th className="px-1 py-2 text-center">—</th>
+                      </>
+                    )}
+                    <th className="px-1 py-2 text-center">Exclude load</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {carrierPicklist
+                    .filter((c) => !blockedCarrierIds.has(c.id))
+                    .map((c) => (
+                      <tr key={c.id} className="border-t border-zinc-200/80">
+                        <td className="px-2 py-1.5 text-sm text-zinc-800">{c.legalName}</td>
+                        {carrierVisibilityMode === "TIER_ASSIGNED" && (
+                          <>
+                            <td className="px-1 py-1.5 text-center">
+                              <input
+                                type="radio"
+                                name={`tier-${c.id}`}
+                                checked={tier1.has(c.id)}
+                                onChange={() => setCarrierTierSlot(1, c.id, true)}
+                                className="h-3.5 w-3.5"
+                              />
+                            </td>
+                            <td className="px-1 py-1.5 text-center">
+                              <input
+                                type="radio"
+                                name={`tier-${c.id}`}
+                                checked={tier2.has(c.id)}
+                                onChange={() => setCarrierTierSlot(2, c.id, true)}
+                                className="h-3.5 w-3.5"
+                              />
+                            </td>
+                            <td className="px-1 py-1.5 text-center">
+                              <input
+                                type="radio"
+                                name={`tier-${c.id}`}
+                                checked={tier3.has(c.id)}
+                                onChange={() => setCarrierTierSlot(3, c.id, true)}
+                                className="h-3.5 w-3.5"
+                              />
+                            </td>
+                            <td className="px-1 py-1.5 text-center">
+                              <input
+                                type="radio"
+                                name={`tier-${c.id}`}
+                                checked={!tier1.has(c.id) && !tier2.has(c.id) && !tier3.has(c.id)}
+                                onChange={() => clearCarrierTier(c.id)}
+                                className="h-3.5 w-3.5"
+                                title="Not in a tier for this load"
+                              />
+                            </td>
+                          </>
+                        )}
+                        <td className="px-1 py-1.5 text-center">
+                          <input
+                            type="checkbox"
+                            checked={perLoadExcluded.has(c.id)}
+                            onChange={() => togglePerLoadExclude(c.id)}
+                            className="h-3.5 w-3.5"
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {carrierPicklist.length === 0 && (
+            <p className="mt-2 text-xs text-zinc-500">No approved carriers in directory — visibility rules optional.</p>
+          )}
+        </section>
+
+        <section className="rounded border border-emerald-200 bg-white/90 p-3">
           <h4 className="text-xs font-bold uppercase tracking-wide text-emerald-900">Rate</h4>
           <div className="mt-2 flex flex-wrap gap-3">
             <input
@@ -586,8 +811,10 @@ export function SupplierPostLoadForm({
               </select>
             </label>
             <p className="text-xs text-zinc-500">
-              Fair-market check uses 60-day lane averages (±30% if ≥5 samples, ±50% if &lt;5). Benchmarks:{" "}
-              <code className="rounded bg-zinc-100 px-1">data/market-benchmarks.json</code>
+              Fair-market check: live DB averages when enough samples in the rolling window; otherwise your wholesaler base
+              in <code className="rounded bg-zinc-100 px-1">data/market-benchmarks.json</code> (see{" "}
+              <code className="rounded bg-zinc-100 px-1">LOB_MIN_SAMPLES_FOR_DB_BENCHMARK</code>). Band ±30% if ≥5 samples,
+              ±50% if fewer.
             </p>
           </div>
         </section>

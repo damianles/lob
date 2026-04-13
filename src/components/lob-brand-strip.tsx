@@ -1,7 +1,6 @@
 /**
- * Top breathing room for app shells — full wordmark removed to reduce repeated branding
- * (header uses the wood “O” home mark; marketing pages can still use LobBrandLockup where needed).
+ * Spacing below the global masthead + nav — full wordmark lives in `LobBrandMasthead` (layout) only once per screen.
  */
 export function LobBrandStrip() {
-  return <div className="shrink-0 pt-6 sm:pt-8" aria-hidden />;
+  return <div className="shrink-0 pt-4 sm:pt-6" aria-hidden />;
 }

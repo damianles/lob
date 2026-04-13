@@ -6,9 +6,12 @@ import { useMemo, useState } from "react";
 
 import { LobBrandStrip } from "@/components/lob-brand-strip";
 import { LobSidebar, type LobSidebarStats } from "@/components/lob-sidebar";
+import { useDistanceUnitPreference } from "@/components/providers/app-providers";
 import { SupplierPostLoadForm } from "@/components/supplier-post-load-form";
+import { RadioChoice } from "@/components/ui/radio-choice";
 import { LUMBER_EQUIPMENT, equipmentShortTag } from "@/lib/lumber-equipment";
 import { formatMoney } from "@/lib/money";
+import { parseRadiusToMiles } from "@/lib/units";
 import { milesBetweenZips } from "@/lib/zip-distance";
 
 /** Client-side summary only; server uses LOB_CAD_TO_USD_RATE for validation. */
@@ -104,15 +107,16 @@ export function LoadBoardWorkspace({
   const [pickupTo, setPickupTo] = useState("");
   const [sortBy, setSortBy] = useState<"postedDesc" | "pickupAsc" | "pickupDesc">("postedDesc");
   const [emrZip, setEmrZip] = useState("");
-  const [emrOriginMi, setEmrOriginMi] = useState("");
-  const [emrDestMi, setEmrDestMi] = useState("");
+  const [emrOriginRadius, setEmrOriginRadius] = useState("");
+  const [emrDestRadius, setEmrDestRadius] = useState("");
+  const { distanceUnit, setDistanceUnit } = useDistanceUnitPreference();
 
   const isShipper = actor.role === "SHIPPER" && Boolean(actor.companyId);
   const isDispatcher = actor.role === "DISPATCHER" && Boolean(actor.companyId) && actor.carrierApproved;
 
   const filteredLoads = useMemo(() => {
-    const originMi = emrOriginMi.trim() ? Number(emrOriginMi) : null;
-    const destMi = emrDestMi.trim() ? Number(emrDestMi) : null;
+    const originMi = emrOriginRadius.trim() ? parseRadiusToMiles(emrOriginRadius, distanceUnit) : null;
+    const destMi = emrDestRadius.trim() ? parseRadiusToMiles(emrDestRadius, distanceUnit) : null;
     const emrZipTrim = emrZip.trim();
 
     const list = loads.filter((l) => {
@@ -144,12 +148,12 @@ export function LoadBoardWorkspace({
         if (pu > end) return false;
       }
 
-      if (emrZipTrim && (originMi != null || destMi != null)) {
-        if (originMi != null && Number.isFinite(originMi)) {
+      if (emrZipTrim) {
+        if (originMi != null) {
           const miles = milesBetweenZips(emrZipTrim, l.originZip);
           if (miles == null || miles > originMi) return false;
         }
-        if (destMi != null && Number.isFinite(destMi)) {
+        if (destMi != null) {
           const miles = milesBetweenZips(emrZipTrim, l.destinationZip);
           if (miles == null || miles > destMi) return false;
         }
@@ -181,8 +185,9 @@ export function LoadBoardWorkspace({
     pickupTo,
     sortBy,
     emrZip,
-    emrOriginMi,
-    emrDestMi,
+    emrOriginRadius,
+    emrDestRadius,
+    distanceUnit,
   ]);
 
   const summary = useMemo(() => {
@@ -413,17 +418,31 @@ export function LoadBoardWorkspace({
                 </div>
               </div>
               <div className="rounded-lg border border-dashed border-zinc-300 bg-white px-3 py-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-zinc-600">EMR</span>
-                  <span
-                    className="cursor-help text-xs text-lob-navy underline decoration-dotted"
-                    title="Empty Mile Radius — enter your current US/CA postal code and how far you are willing to deadhead to the load origin and/or destination."
-                  >
-                    Empty Mile Radius
-                  </span>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-zinc-600">EMR</span>
+                    <span
+                      className="cursor-help text-xs text-lob-navy underline decoration-dotted"
+                      title="Empty Mile Radius — enter your current US/CA postal code and how far you are willing to deadhead to the load origin and/or destination."
+                    >
+                      Empty Mile Radius
+                    </span>
+                  </div>
+                  <RadioChoice
+                    label="Distance units for radius"
+                    name="load-board-emr-unit"
+                    value={distanceUnit}
+                    onChange={setDistanceUnit}
+                    options={[
+                      { value: "mi", label: "Miles" },
+                      { value: "km", label: "Kilometres" },
+                    ]}
+                    className="[&_label]:py-1.5 [&_label]:text-xs"
+                  />
                 </div>
                 <p className="mt-1 text-[11px] text-zinc-500">
-                  Straight-line miles between US ZIP or Canadian postal codes (FSA). Refine with routing later.
+                  Great-circle distance between US ZIP or Canadian postal (FSA). Radii below use your selected unit;
+                  filtering always compares in miles internally.
                 </p>
                 <div className="mt-2 grid gap-2 sm:grid-cols-3">
                   <input
@@ -434,15 +453,15 @@ export function LoadBoardWorkspace({
                   />
                   <input
                     className="rounded border border-zinc-300 px-2 py-2 text-sm"
-                    placeholder="Max miles to origin (optional)"
-                    value={emrOriginMi}
-                    onChange={(e) => setEmrOriginMi(e.target.value)}
+                    placeholder={distanceUnit === "mi" ? "Max mi to origin (optional)" : "Max km to origin (optional)"}
+                    value={emrOriginRadius}
+                    onChange={(e) => setEmrOriginRadius(e.target.value)}
                   />
                   <input
                     className="rounded border border-zinc-300 px-2 py-2 text-sm"
-                    placeholder="Max miles to destination (optional)"
-                    value={emrDestMi}
-                    onChange={(e) => setEmrDestMi(e.target.value)}
+                    placeholder={distanceUnit === "mi" ? "Max mi to destination (optional)" : "Max km to destination (optional)"}
+                    value={emrDestRadius}
+                    onChange={(e) => setEmrDestRadius(e.target.value)}
                   />
                 </div>
               </div>

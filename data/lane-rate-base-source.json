@@ -1,0 +1,23 @@
+{
+  "role": "authoritative_static_base",
+  "description": "Seed lane rate averages for fair-rate validation and analytics. No transaction dates — counts reflect historical rows from the source spreadsheet, stored as benchmarkAvgUsd (USD equivalent; CA–CA lanes converted with LOB_CAD_TO_USD_RATE at build time).",
+  "benchmarkFile": "data/market-benchmarks.json",
+  "buildScript": "scripts/build-benchmarks-from-posted-xlsx.ts",
+  "insightsFile": "data/benchmark-insights.json",
+  "sourceSpreadsheet": "WholeSaler_Trucker_Lists.xlsx (user-provided; path on machine that last ran the script)",
+  "sheetsUsed": [
+    "POSTED_LOADS_BY_BUYER",
+    "POSTED_LOADS_BY_MILL",
+    "POSTED_LOADS_BY_SHIPPERS"
+  ],
+  "lastDocumentedBuild": {
+    "generatedAt": "2026-04-12T14:12:10.495Z",
+    "rowsInSheets": 3135,
+    "rowsAfterOutlierFilter": 3111,
+    "uniqueCityLanes": 520,
+    "uniqueStateFallbackLanes": 43,
+    "equipmentTag": "*",
+    "cadToUsdRate": 0.73
+  },
+  "liveDataTransition": "LaneRateObservation rows (from posted loads and imports) replace this base only when enough samples exist in the rolling window — see LOB_MIN_SAMPLES_FOR_DB_BENCHMARK and LOB_BENCHMARK_WINDOW_DAYS in .env.example."
+}

@@ -40,10 +40,20 @@ export async function GET(req: Request) {
 
   const today = startOfTodayUtc();
 
+  let blockedCarrierIds: string[] = [];
+  if (actor.role === "SHIPPER" && actor.companyId) {
+    const ex = await prisma.shipperCarrierExclusion.findMany({
+      where: { shipperCompanyId: actor.companyId },
+      select: { carrierCompanyId: true },
+    });
+    blockedCarrierIds = ex.map((e) => e.carrierCompanyId);
+  }
+
   const rows = await prisma.capacityOffer.findMany({
     where: {
       status: "OPEN",
       availableUntil: { gte: today },
+      ...(blockedCarrierIds.length ? { carrierCompanyId: { notIn: blockedCarrierIds } } : {}),
       ...(originZip ? { originZip: { startsWith: originZip.replace(/\D/g, "").slice(0, 5) } } : {}),
       ...(destinationZip
         ? { destinationZip: { startsWith: destinationZip.replace(/\D/g, "").slice(0, 5) } }

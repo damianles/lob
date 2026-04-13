@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { LoadStatus, OfferCurrency, VerificationStatus } from "@prisma/client";
 
+import { carrierMayViewPostedLoad } from "@/lib/carrier-load-access";
 import { prisma } from "@/lib/prisma";
 import { getActorContext } from "@/lib/request-context";
 import { createBookingSchema } from "@/lib/validation";
@@ -38,12 +39,29 @@ export async function POST(
     return NextResponse.json({ error: "You can only book for your own carrier company." }, { status: 403 });
   }
 
-  const load = await prisma.load.findUnique({ where: { id: loadId } });
+  const load = await prisma.load.findUnique({
+    where: { id: loadId },
+    select: {
+      id: true,
+      status: true,
+      shipperCompanyId: true,
+      carrierVisibilityMode: true,
+      offerCurrency: true,
+    },
+  });
   if (!load) {
     return NextResponse.json({ error: "Load not found." }, { status: 404 });
   }
   if (load.status !== LoadStatus.POSTED) {
     return NextResponse.json({ error: "Only posted loads can be booked." }, { status: 409 });
+  }
+
+  const mayBook = await carrierMayViewPostedLoad(prisma, load, carrierCompanyId);
+  if (!mayBook) {
+    return NextResponse.json(
+      { error: "This load is not offered to your carrier (supplier visibility rules)." },
+      { status: 403 },
+    );
   }
 
   const agreedCurrency: OfferCurrency =

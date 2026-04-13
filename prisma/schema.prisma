@@ -67,6 +67,12 @@ enum RateObservationSource {
   IMPORT
 }
 
+/** Who may see a posted load on the open board (dispatchers). */
+enum LoadCarrierVisibilityMode {
+  OPEN
+  TIER_ASSIGNED
+}
+
 model Company {
   id                 String             @id @default(cuid())
   legalName          String             @unique
@@ -99,6 +105,25 @@ model Company {
   reportedIncidents   Incident[]       @relation("IncidentReporter")
   incidentsAgainst    Incident[]       @relation("IncidentTarget")
   capacityOffers      CapacityOffer[]
+  blocksCarriers      ShipperCarrierExclusion[] @relation("ShipperBlocksCarrier")
+  blockedByShippers   ShipperCarrierExclusion[] @relation("CarrierBlockedByShipper")
+  loadCarrierTiers    LoadCarrierTier[]
+  loadExclusionsAgainst LoadCarrierExclusion[] @relation("CarrierLoadExclusion")
+}
+
+/** Supplier excludes a carrier: hide their capacity from this shipper and hide this shipper's loads from that carrier. */
+model ShipperCarrierExclusion {
+  id                String   @id @default(cuid())
+  shipperCompanyId  String
+  carrierCompanyId  String
+  createdAt         DateTime @default(now())
+
+  shipperCompany Company @relation("ShipperBlocksCarrier", fields: [shipperCompanyId], references: [id], onDelete: Cascade)
+  carrierCompany Company @relation("CarrierBlockedByShipper", fields: [carrierCompanyId], references: [id], onDelete: Cascade)
+
+  @@unique([shipperCompanyId, carrierCompanyId])
+  @@index([shipperCompanyId])
+  @@index([carrierCompanyId])
 }
 
 model User {
@@ -139,6 +164,7 @@ model Load {
   createdByUserId    String
   requestedPickupAt  DateTime
   extendedPosting    Json?
+  carrierVisibilityMode LoadCarrierVisibilityMode @default(OPEN)
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
 
@@ -148,6 +174,38 @@ model Load {
   dispatchLink          DispatchLink?
   incidents             Incident[]
   laneRateObservation   LaneRateObservation?
+  carrierTiers          LoadCarrierTier[]
+  excludedCarriers      LoadCarrierExclusion[] @relation("LoadExcludesCarrier")
+}
+
+/** When carrierVisibilityMode is TIER_ASSIGNED, only listed carriers may see the posted load. */
+model LoadCarrierTier {
+  id               String   @id @default(cuid())
+  loadId           String
+  carrierCompanyId String
+  /** 1 = first preference group; same-day visibility for all tiers in MVP. */
+  tier             Int      @default(1)
+  createdAt        DateTime @default(now())
+
+  load           Load    @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  carrierCompany Company @relation(fields: [carrierCompanyId], references: [id], onDelete: Cascade)
+
+  @@unique([loadId, carrierCompanyId])
+  @@index([loadId])
+}
+
+/** Carrier cannot see this specific load (even if OPEN or listed in a tier). */
+model LoadCarrierExclusion {
+  id               String   @id @default(cuid())
+  loadId           String
+  carrierCompanyId String
+  createdAt        DateTime @default(now())
+
+  load           Load    @relation("LoadExcludesCarrier", fields: [loadId], references: [id], onDelete: Cascade)
+  carrierCompany Company @relation("CarrierLoadExclusion", fields: [carrierCompanyId], references: [id], onDelete: Cascade)
+
+  @@unique([loadId, carrierCompanyId])
+  @@index([loadId])
 }
 
 model LaneRateObservation {

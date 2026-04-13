@@ -1,5 +1,5 @@
 /**
- * Builds Next.js app icons from public/brand/lob-mark-compact.png (LOB + wood “O” only).
+ * Builds Next.js app icons from public/brand/lob-app-icon.png (preferred), else lob-mark-compact.png.
  * Scales uniformly (fit: contain) on LOB navy — does not redraw the mark.
  *
  * Run: npm run brand:icons
@@ -10,9 +10,10 @@ const path = require("node:path");
 const fs = require("node:fs");
 
 const root = path.join(__dirname, "..");
+const appIcon = path.join(root, "public", "brand", "lob-app-icon.png");
 const compact = path.join(root, "public", "brand", "lob-mark-compact.png");
 const fallback = path.join(root, "public", "brand", "lob-concept-primary.png");
-const srcPng = fs.existsSync(compact) ? compact : fallback;
+const srcPng = fs.existsSync(appIcon) ? appIcon : fs.existsSync(compact) ? compact : fallback;
 /** Matches --lob-navy in globals.css (#001233) */
 const NAVY = { r: 0, g: 18, b: 51, alpha: 1 };
 

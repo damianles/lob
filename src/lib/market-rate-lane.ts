@@ -34,6 +34,15 @@ export function benchmarkWindowDays(): number {
   return Number.isFinite(n) && n > 0 ? Math.min(n, 365) : 60;
 }
 
+/**
+ * Minimum posted observations in the rolling DB window before we trust DB over
+ * `data/market-benchmarks.json` (wholesaler base). Below this, the static file wins at each match level (zip → city → state).
+ */
+export function minSamplesForDbBenchmark(): number {
+  const n = Number(process.env.LOB_MIN_SAMPLES_FOR_DB_BENCHMARK ?? "5");
+  return Number.isFinite(n) && n >= 0 ? Math.min(Math.floor(n), 10000) : 5;
+}
+
 function benchmarkCutoff(): Date {
   return new Date(Date.now() - benchmarkWindowDays() * 86400000);
 }
@@ -226,8 +235,10 @@ export async function findLaneBenchmark(
   const oc = originCity ? canonicalCityKey(originCity) : "";
   const dc = destinationCity ? canonicalCityKey(destinationCity) : "";
 
+  const minN = minSamplesForDbBenchmark();
+
   const zipDb = await dbAggregateZip(cutoff, oSt, dSt, oz, dz, eqNorm);
-  if (zipDb) {
+  if (zipDb && zipDb.n >= minN) {
     return {
       row: syntheticRow(zipDb.avg, zipDb.n, "zip", {
         originState: oSt,
@@ -242,7 +253,7 @@ export async function findLaneBenchmark(
 
   if (oc && dc) {
     const cityDb = await dbAggregateCity(cutoff, oSt, dSt, oc, dc, eqNorm);
-    if (cityDb) {
+    if (cityDb && cityDb.n >= minN) {
       return {
         row: syntheticRow(cityDb.avg, cityDb.n, "city", {
           originState: oSt,
@@ -257,7 +268,7 @@ export async function findLaneBenchmark(
   }
 
   const stateDb = await dbAggregateState(cutoff, oSt, dSt, eqNorm);
-  if (stateDb) {
+  if (stateDb && stateDb.n >= minN) {
     return {
       row: syntheticRow(stateDb.avg, stateDb.n, "state", {
         originState: oSt,
@@ -325,22 +336,34 @@ export async function validateOfferedRateAgainstBenchmark(args: {
     }
     return {
       ok: false,
-      message: `No ${benchmarkWindowDays()}-day benchmark for this lane/equipment yet. Allowed fallback range is ~$${min}–$${max} USD equivalent (set LOB_DEFAULT_MIN_RATE_USD / LOB_DEFAULT_MAX_RATE_USD or add observations / data/market-benchmarks.json). Offered: ${currency} ${args.offeredRateUsd}.`,
+      message: `No lane benchmark for this OD/equipment in the live window or in data/market-benchmarks.json (base table). Allowed fallback range is ~$${min}–$${max} USD equivalent (set LOB_DEFAULT_MIN_RATE_USD / LOB_DEFAULT_MAX_RATE_USD or extend the base file). Offered: ${currency} ${args.offeredRateUsd}.`,
     };
   }
 
   const avg = hit.row.benchmarkAvgUsd;
   const n = hit.row.sampleCount ?? 10;
-  const lowPct = n >= 5 ? 0.7 : 0.5;
-  const highPct = n >= 5 ? 1.3 : 1.5;
+  const thin = n < minSamplesForDbBenchmark();
+  const fromLiveDb = (hit.row.notes ?? "").includes("Rolling");
+  const lowPct = !thin ? 0.7 : 0.5;
+  const highPct = !thin ? 1.3 : 1.5;
   const min = avg * lowPct;
   const max = avg * highPct;
 
   if (offeredUsdEq < min || offeredUsdEq > max) {
+    const benchmarkLabel = fromLiveDb
+      ? !thin
+        ? `${benchmarkWindowDays()}-day live`
+        : "live (thin)"
+      : !thin
+        ? "base lane"
+        : "base lane (thin reference)";
+    const sampleNote = thin
+      ? `, ${n} sample(s)${fromLiveDb ? "" : " in static table"}`
+      : "";
     return {
       ok: false,
-      thinLane: n < 5,
-      message: `Rate must stay within ${Math.round(lowPct * 100)}–${Math.round(highPct * 100)}% of the ${n >= 5 ? `${benchmarkWindowDays()}-day` : "benchmark"} average (USD ${avg.toLocaleString()}${n < 5 ? `, only ${n} sample(s)` : ""}). ${currency === "CAD" ? `Checked using USD equivalent of your CAD rate (LOB_CAD_TO_USD_RATE). ` : ""}Allowed USD equivalent: $${Math.ceil(min)}–$${Math.floor(max)}.`,
+      thinLane: thin,
+      message: `Rate must stay within ${Math.round(lowPct * 100)}–${Math.round(highPct * 100)}% of the ${benchmarkLabel} average (USD ${avg.toLocaleString()}${sampleNote}). ${currency === "CAD" ? `Checked using USD equivalent of your CAD rate (LOB_CAD_TO_USD_RATE). ` : ""}Allowed USD equivalent: $${Math.ceil(min)}–$${Math.floor(max)}.`,
     };
   }
 

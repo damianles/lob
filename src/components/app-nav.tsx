@@ -4,8 +4,9 @@ import { UserButton, useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { startTransition, useEffect, useState } from "react";
 
-import { LobWoodOMark } from "@/components/lob-wood-o-mark";
-import { BRAND_PRODUCT_NAME } from "@/lib/brand-marketing";
+import { LobAppIconMark, lobAppIconAlt } from "@/components/lob-app-icon-mark";
+import { useDistanceUnitPreference } from "@/components/providers/app-providers";
+import { RadioChoice } from "@/components/ui/radio-choice";
 
 const signedInLinks = [
   { href: "/", label: "Loads" },
@@ -24,6 +25,7 @@ const adminLinks = [
 export function AppNav() {
   const { isSignedIn } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
+  const { distanceUnit, setDistanceUnit } = useDistanceUnitPreference();
 
   useEffect(() => {
     if (!isSignedIn) {
@@ -60,9 +62,9 @@ export function AppNav() {
           <Link
             href="/"
             className="group flex shrink-0 rounded-full p-2 ring-offset-2 transition hover:bg-stone-100/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lob-navy/25"
-            aria-label={`${BRAND_PRODUCT_NAME} — home`}
+            aria-label={lobAppIconAlt()}
           >
-            <LobWoodOMark className="h-9 w-9 sm:h-10 sm:w-10" />
+            <LobAppIconMark className="h-9 w-9 rounded-full object-cover ring-1 ring-stone-200/80 sm:h-10 sm:w-10" priority />
           </Link>
           <nav className="flex min-w-0 flex-wrap items-center gap-x-1 gap-y-1.5" aria-label="Primary">
             {links.map((l) => (
@@ -76,7 +78,18 @@ export function AppNav() {
             ))}
           </nav>
         </div>
-        <div className="flex shrink-0 items-center gap-2 pl-2">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 pl-2 sm:gap-3">
+          <RadioChoice
+            label="Distance units"
+            name="lob-nav-distance-unit"
+            value={distanceUnit}
+            onChange={setDistanceUnit}
+            options={[
+              { value: "mi", label: "mi" },
+              { value: "km", label: "km" },
+            ]}
+            className="[&_label]:px-2.5 [&_label]:py-1.5 [&_label]:text-xs"
+          />
           {isSignedIn ? (
             <UserButton />
           ) : (

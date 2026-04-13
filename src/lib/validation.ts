@@ -22,7 +22,26 @@ export const createLoadSchema = z.object({
   offerCurrency: z.enum(["USD", "CAD"]).default("USD"),
   offeredRateUsd: z.number().positive(),
   extendedPosting: z.record(z.string(), z.unknown()).optional(),
-});
+  carrierVisibilityMode: z.enum(["OPEN", "TIER_ASSIGNED"]).default("OPEN"),
+  tierAssignments: z
+    .array(
+      z.object({
+        carrierCompanyId: z.string().min(1),
+        tier: z.number().int().min(1).max(5),
+      }),
+    )
+    .default([]),
+  perLoadExcludedCarrierIds: z.array(z.string().min(1)).default([]),
+})
+  .superRefine((d, ctx) => {
+    if (d.carrierVisibilityMode === "TIER_ASSIGNED" && d.tierAssignments.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Select at least one carrier in a tier when using tier-based visibility.",
+        path: ["tierAssignments"],
+      });
+    }
+  });
 
 export const createBookingSchema = z.object({
   carrierCompanyId: z.string().min(1).optional(),

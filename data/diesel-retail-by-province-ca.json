@@ -1,0 +1,17 @@
+{
+  "_comment": "Approximate retail diesel CAD/Litre by province for planning demos — replace with licensed rack or government feed.",
+  "Alberta": 1.72,
+  "British Columbia": 1.91,
+  "Manitoba": 1.78,
+  "New Brunswick": 1.85,
+  "Newfoundland and Labrador": 1.88,
+  "Northwest Territories": 2.05,
+  "Nova Scotia": 1.82,
+  "Nunavut": 2.15,
+  "Ontario": 1.79,
+  "Prince Edward Island": 1.84,
+  "Quebec": 1.81,
+  "Saskatchewan": 1.74,
+  "Yukon": 2.02,
+  "default": 1.82
+}

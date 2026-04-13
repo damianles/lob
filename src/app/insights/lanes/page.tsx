@@ -316,10 +316,13 @@ export default async function LaneAnalyticsPage({
             </ul>
           </article>
           <article className="rounded-lg border bg-white p-4">
-            <h2 className="text-lg font-semibold">Spreadsheet benchmarks vs your bookings</h2>
+            <h2 className="text-lg font-semibold">Base lane averages vs your bookings</h2>
             <p className="mt-1 text-xs text-zinc-500">
-              Rows come from <code className="rounded bg-zinc-100 px-1">data/market-benchmarks.json</code> — replace
-              with your export (origin ST, dest ST, equipment, benchmark USD).
+              Primary table: <code className="rounded bg-zinc-100 px-1">data/market-benchmarks.json</code> (built from your
+              wholesaler posted-load sheets; see <code className="rounded bg-zinc-100 px-1">data/lane-rate-base-source.json</code>
+              ). Fair-rate checks use this until enough live posts exist in the DB window (
+              <code className="rounded bg-zinc-100 px-1">LOB_MIN_SAMPLES_FOR_DB_BENCHMARK</code>, default 5). Rebuild from a
+              new XLSX with <code className="rounded bg-zinc-100 px-1">npx tsx scripts/build-benchmarks-from-posted-xlsx.ts</code>.
             </p>
             <ul className="mt-3 max-h-64 space-y-3 overflow-auto text-sm">
               {overview.spreadsheetBenchmarks.map((row) => (

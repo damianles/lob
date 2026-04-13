@@ -1,3 +1,19 @@
+/**
+ * Brand files live under `public/brand/`. (Design review copies are in `public/brand/catalog/` — that folder’s PNGs are
+ * gitignored; promote any chosen final into `public/brand/` so deploys include them.)
+ *
+ * Shipped today:
+ * - lob-app-icon.png — square app icon (wood “O”, LOB mark) for nav + onboarding
+ * - lob-brand-lockup.png — full “Lumber One Board” wordmark (masthead)
+ * - lob-mark-compact.png — LOB + wood “O” + rule (compact horizontal)
+ * - lob-brand-hero.png — marketing split (run `npm run brand:extract` after replacing)
+ * - lob-concept-primary.png — alternate wide concept art
+ */
+
+/** Square app icon (wood core “O”) — nav home control, small marks. */
+export const LOB_APP_ICON_SRC = "/brand/lob-app-icon.png";
+export const LOB_APP_ICON_SIZE = 2048;
+
 /** Primary navy horizontal mark (replace file in public/brand to update sign-in / core logo). */
 export const LOB_CONCEPT_PRIMARY_SRC = "/brand/lob-concept-primary.png";
 export const LOB_CONCEPT_PRIMARY_WIDTH = 1024;
