@@ -1,5 +1,32 @@
 # Get the new LOB live (read this first)
 
+## Automatic deploys (CD)
+
+**CD (continuous deployment)** means: every time you **push to GitHub** on the branch Vercel watches (usually `main`), Vercel **builds and publishes** a new version **without you clicking Deploy**.
+
+To have that:
+
+1. **Vercel** → your project → **Settings → Git**  
+   - Connected to the **correct** GitHub repo  
+   - **Production Branch** = `main` (or whatever you use)
+
+2. **Push from your laptop** (repo root is this folder — no extra `cd web`):
+   ```bash
+   cd /Users/damianles/LOB/web
+   git pull origin main
+   git push origin main
+   ```
+
+3. **Watch it build**: Vercel → **Deployments** → latest should show the new commit SHA.
+
+If updates **don’t show** in the browser:
+
+- Hard refresh: **Cmd+Shift+R** (Mac) or clear cache for the site.  
+- Confirm the **Deploy** row matches your **latest Git commit** (compare SHA to `git log -1`).  
+- **Wrong Vercel project** or **Root Directory set to `web`** when the repo *is* already `web` will show an old or broken build — **Root Directory must be empty** for this repo layout.
+
+---
+
 ## What was wrong
 
 1. **Almost none of the app was committed to Git.** Vercel only deploys what is in GitHub. Your site was still the old “Create Next App” page from the first commit.
