@@ -2,7 +2,7 @@
 
 ## Deploy looks old on Vercel?
 
-**→ Open [`PUSH_AND_VERCEL.md`](./PUSH_AND_VERCEL.md)** — the full app was only committed locally until recently; you must **push to GitHub** and set Vercel **Root Directory empty**.
+**→ Open [`PUSH_AND_VERCEL.md`](./PUSH_AND_VERCEL.md)** — push to GitHub, Vercel **Root Directory empty**, and **automatic deploys (CD)** on every push to `main`. If the UI still looks old, hard-refresh (Cmd+Shift+R) and check the deployment SHA matches `git log -1`.
 
 ---
 
