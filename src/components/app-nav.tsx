@@ -65,7 +65,7 @@ export function AppNav() {
             className="group flex shrink-0 rounded-xl p-1.5 ring-offset-2 transition hover:bg-stone-100/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lob-navy/25"
             aria-label={lobAppIconAlt()}
           >
-            <LobWoodOIcon className="h-9 w-9 shrink-0 drop-shadow-sm sm:h-10 sm:w-10" decorative />
+            <LobWoodOIcon className="h-10 w-10 shrink-0 drop-shadow-sm sm:h-11 sm:w-11" decorative />
           </Link>
           <nav className="flex min-w-0 flex-wrap items-center gap-x-1 gap-y-1.5" aria-label="Primary">
             {links.map((l) => (

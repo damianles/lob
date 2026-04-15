@@ -7,6 +7,7 @@ import { LobBrandMasthead } from "@/components/lob-brand-masthead";
 import { DemoBanner } from "@/components/demo-banner";
 import { DeployFingerprint } from "@/components/deploy-fingerprint";
 import { AppProviders } from "@/components/providers/app-providers";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -33,7 +34,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased pb-16 lg:pb-0`}
       >
         <ClerkProvider>
           <AppProviders>
@@ -42,6 +43,7 @@ export default function RootLayout({
             <LobBrandMasthead />
             <AppNav />
             {children}
+            <MobileBottomNav />
           </AppProviders>
         </ClerkProvider>
       </body>

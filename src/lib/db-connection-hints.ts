@@ -4,9 +4,25 @@
 export function getDatabaseErrorGuidance(prismaMessage: string): {
   title: string;
   body: string[];
-  code: "direct_supabase_host" | "generic";
+  code: "direct_supabase_host" | "pool_exhausted" | "generic";
 } {
   const msg = prismaMessage.toLowerCase();
+  if (
+    msg.includes("max clients reached") ||
+    msg.includes("emaxconnsession") ||
+    /pool_size:\s*\d+/.test(msg)
+  ) {
+    return {
+      title: "Too many database connections (pool exhausted)",
+      body: [
+        "Supabase’s Session pooler only allows a small number of simultaneous connections from your app (often 15 total).",
+        "Each Vercel instance was opening too many Postgres connections at once. The app now defaults to 1 connection per worker when DATABASE_URL uses pooler.supabase.com — deploy that build, or set DATABASE_POOL_MAX=1 in Vercel (Production + Preview) and redeploy.",
+        "If errors continue, check that Preview and Production are not both hammering the same DB, or consider Supabase Transaction pooler / a higher database plan.",
+      ],
+      code: "pool_exhausted",
+    };
+  }
+
   const directHost =
     msg.includes("db.") &&
     msg.includes("supabase.co") &&

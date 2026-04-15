@@ -18,7 +18,7 @@ export default function Page() {
         </div>
         <div className="overflow-hidden rounded-2xl border border-stone-200/80 bg-white shadow-xl shadow-stone-900/[0.08] ring-1 ring-stone-900/[0.04]">
           <div className="border-b border-stone-100 bg-gradient-to-b from-white to-stone-50/80 px-4 pb-4 pt-5">
-            <LobBrandPrimary className="mx-auto h-auto max-h-40 w-full object-contain sm:max-h-44" priority />
+            <LobBrandPrimary className="mx-auto h-auto max-h-48 w-full object-contain sm:max-h-52" priority />
           </div>
           <div className="px-1 pb-4 pt-2">
             <SignIn />

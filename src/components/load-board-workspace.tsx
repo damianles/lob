@@ -8,6 +8,11 @@ import { LobBrandStrip } from "@/components/lob-brand-strip";
 import { LobSidebar, type LobSidebarStats } from "@/components/lob-sidebar";
 import { useDistanceUnitPreference } from "@/components/providers/app-providers";
 import { SupplierPostLoadForm } from "@/components/supplier-post-load-form";
+import { LoadCard } from "@/components/load-card";
+import { EmptyState, SearchIcon, TruckIcon } from "@/components/ui/empty-state";
+import { FilterChip, FilterChipGroup } from "@/components/ui/filter-chip";
+import { FloatingActionButton, PlusIcon } from "@/components/ui/floating-action-button";
+import { Button } from "@/components/ui/button";
 import { RadioChoice } from "@/components/ui/radio-choice";
 import { LUMBER_EQUIPMENT, equipmentShortTag } from "@/lib/lumber-equipment";
 import { formatMoney } from "@/lib/money";
@@ -106,6 +111,7 @@ export function LoadBoardWorkspace({
   const [pickupFrom, setPickupFrom] = useState("");
   const [pickupTo, setPickupTo] = useState("");
   const [sortBy, setSortBy] = useState<"postedDesc" | "pickupAsc" | "pickupDesc">("postedDesc");
+  const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
   const [emrZip, setEmrZip] = useState("");
   const [emrOriginRadius, setEmrOriginRadius] = useState("");
   const [emrDestRadius, setEmrDestRadius] = useState("");
@@ -113,6 +119,34 @@ export function LoadBoardWorkspace({
 
   const isShipper = actor.role === "SHIPPER" && Boolean(actor.companyId);
   const isDispatcher = actor.role === "DISPATCHER" && Boolean(actor.companyId) && actor.carrierApproved;
+
+  const hasActiveFilters = Boolean(
+    originQ ||
+      destQ ||
+      equipmentFilter ||
+      weightMin ||
+      weightMax ||
+      postedFrom ||
+      postedTo ||
+      pickupFrom ||
+      pickupTo ||
+      emrZip,
+  );
+
+  function clearAllFilters() {
+    setOriginQ("");
+    setDestQ("");
+    setEquipmentFilter("");
+    setWeightMin("");
+    setWeightMax("");
+    setPostedFrom("");
+    setPostedTo("");
+    setPickupFrom("");
+    setPickupTo("");
+    setEmrZip("");
+    setEmrOriginRadius("");
+    setEmrDestRadius("");
+  }
 
   const filteredLoads = useMemo(() => {
     const originMi = emrOriginRadius.trim() ? parseRadiusToMiles(emrOriginRadius, distanceUnit) : null;
@@ -208,8 +242,11 @@ export function LoadBoardWorkspace({
     router.refresh();
   }
 
-  async function bookLoad(loadId: string) {
-    const rate = Number(bookRate[loadId] ?? "");
+  async function bookLoad(loadId: string, agreedRateOverride?: number) {
+    const rate =
+      agreedRateOverride != null && Number.isFinite(agreedRateOverride)
+        ? agreedRateOverride
+        : Number(bookRate[loadId] ?? "");
     if (!Number.isFinite(rate) || rate <= 0) {
       setMessage("Enter a valid agreed rate.");
       return;
@@ -231,8 +268,13 @@ export function LoadBoardWorkspace({
     await refresh("Booked.");
   }
 
-  async function dispatchLoad(loadId: string) {
-    const d = dispatchForm[loadId] ?? { driverName: "", hours: "48" };
+  async function dispatchLoad(
+    loadId: string,
+    override?: { driverName: string; hours: number },
+  ) {
+    const d = override
+      ? { driverName: override.driverName, hours: String(override.hours) }
+      : (dispatchForm[loadId] ?? { driverName: "", hours: "48" });
     if (!d.driverName.trim()) {
       setMessage("Driver name is required.");
       return;
@@ -293,7 +335,70 @@ export function LoadBoardWorkspace({
             </button>
           </div>
 
-          <div className="mb-3 flex flex-wrap items-end gap-3">
+          {hasActiveFilters && (
+            <div className="mb-4">
+              <FilterChipGroup onClearAll={clearAllFilters}>
+                {originQ && (
+                  <FilterChip onRemove={() => setOriginQ("")}>
+                    From: {originQ}
+                  </FilterChip>
+                )}
+                {destQ && (
+                  <FilterChip onRemove={() => setDestQ("")}>
+                    To: {destQ}
+                  </FilterChip>
+                )}
+                {equipmentFilter && (
+                  <FilterChip onRemove={() => setEquipmentFilter("")}>
+                    Equipment: {equipmentFilter}
+                  </FilterChip>
+                )}
+                {weightMin && (
+                  <FilterChip onRemove={() => setWeightMin("")}>
+                    Min weight: {Number(weightMin).toLocaleString()} lbs
+                  </FilterChip>
+                )}
+                {weightMax && (
+                  <FilterChip onRemove={() => setWeightMax("")}>
+                    Max weight: {Number(weightMax).toLocaleString()} lbs
+                  </FilterChip>
+                )}
+                {postedFrom && (
+                  <FilterChip onRemove={() => setPostedFrom("")}>
+                    Posted from: {new Date(postedFrom).toLocaleDateString()}
+                  </FilterChip>
+                )}
+                {postedTo && (
+                  <FilterChip onRemove={() => setPostedTo("")}>
+                    Posted to: {new Date(postedTo).toLocaleDateString()}
+                  </FilterChip>
+                )}
+                {pickupFrom && (
+                  <FilterChip onRemove={() => setPickupFrom("")}>
+                    Pickup from: {new Date(pickupFrom).toLocaleDateString()}
+                  </FilterChip>
+                )}
+                {pickupTo && (
+                  <FilterChip onRemove={() => setPickupTo("")}>
+                    Pickup to: {new Date(pickupTo).toLocaleDateString()}
+                  </FilterChip>
+                )}
+                {emrZip && (
+                  <FilterChip
+                    onRemove={() => {
+                      setEmrZip("");
+                      setEmrOriginRadius("");
+                      setEmrDestRadius("");
+                    }}
+                  >
+                    EMR from: {emrZip}
+                  </FilterChip>
+                )}
+              </FilterChipGroup>
+            </div>
+          )}
+
+          <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
             <label className="text-xs font-medium text-zinc-600">
               Sort
               <select
@@ -306,6 +411,19 @@ export function LoadBoardWorkspace({
                 <option value="pickupDesc">Pickup date (latest)</option>
               </select>
             </label>
+            <div className="ml-auto">
+              <RadioChoice
+                label="View mode"
+                name="load-board-view-mode"
+                value={viewMode}
+                onChange={setViewMode}
+                options={[
+                  { value: "cards", label: "Cards" },
+                  { value: "table", label: "Table" },
+                ]}
+                className="[&_label]:px-3 [&_label]:py-2 [&_label]:text-sm"
+              />
+            </div>
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
@@ -515,7 +633,24 @@ export function LoadBoardWorkspace({
           </span>
         </div>
 
-        {/* Results table */}
+        {/* Results table or cards */}
+        {viewMode === "cards" ? (
+        <div className="p-4 sm:p-6">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {filteredLoads.map((load) => (
+              <LoadCard
+                key={load.id}
+                load={load}
+                actor={actor}
+                busyId={busyId}
+                onBook={(loadId, rate) => void bookLoad(loadId, rate)}
+                onDispatch={(loadId, driverName, hours) => void dispatchLoad(loadId, { driverName, hours })}
+                onCopyDriverLink={(url) => copyText(url)}
+              />
+            ))}
+          </div>
+        </div>
+        ) : (
         <div className="overflow-x-auto px-2 sm:px-4">
           <table className="w-full min-w-[1020px] border-collapse text-left text-xs">
             <thead>
@@ -710,12 +845,39 @@ export function LoadBoardWorkspace({
               })}
             </tbody>
           </table>
-          {filteredLoads.length === 0 && (
-            <p className="p-8 text-center text-sm text-zinc-500">
-              No loads match these filters. Clear search or post a load as a supplier.
-            </p>
-          )}
         </div>
+        )}
+        {filteredLoads.length === 0 && (
+          <EmptyState
+            icon={hasActiveFilters ? <SearchIcon /> : <TruckIcon />}
+            title={hasActiveFilters ? "No loads match your filters" : "No loads on the board yet"}
+            description={
+              hasActiveFilters
+                ? "Try adjusting your search criteria or clearing some filters"
+                : isShipper
+                  ? "Post your first load to get started"
+                  : "Check back soon for new load postings"
+            }
+            action={
+              <>
+                {hasActiveFilters && (
+                  <Button type="button" variant="outline" onClick={clearAllFilters}>
+                    Clear all filters
+                  </Button>
+                )}
+                {isShipper && (
+                  <Button type="button" variant="primary" onClick={() => setPostOpen(true)}>
+                    Post a load
+                  </Button>
+                )}
+              </>
+            }
+          />
+        )}
+
+        {isShipper && (
+          <FloatingActionButton onClick={() => setPostOpen(true)} icon={<PlusIcon />} label="Post load" />
+        )}
       </div>
     </div>
   );

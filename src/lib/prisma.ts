@@ -26,8 +26,33 @@ function connectionStringForPgPool(raw: string): string {
   return url + (url.includes("?") ? "&" : "?") + "sslmode=no-verify";
 }
 
+function isSupabasePoolerUrl(raw: string): boolean {
+  return raw.includes("pooler.supabase.com");
+}
+
+/**
+ * Supabase Session pooler caps total clients (often 15). `pg` defaults to max 10 connections per Pool —
+ * a few warm Vercel lambdas × 10 exhausts the pool instantly (EMAXCONNSESSION / "max clients reached").
+ * One connection per serverless worker is the usual fix; override with DATABASE_POOL_MAX if you know your limits.
+ */
 function poolOptionsFromUrl(connectionString: string): PoolConfig {
-  return { connectionString: connectionStringForPgPool(connectionString) };
+  const connectionStringResolved = connectionStringForPgPool(connectionString);
+  const fromPooler = isSupabasePoolerUrl(connectionString);
+  const envMax = process.env.DATABASE_POOL_MAX?.trim();
+  const max =
+    envMax !== undefined && envMax !== ""
+      ? Math.max(1, Number.parseInt(envMax, 10) || 1)
+      : fromPooler
+        ? 1
+        : 10;
+
+  return {
+    connectionString: connectionStringResolved,
+    max,
+    // Return connections to the pooler quickly when idle (helps stay under Supabase session caps).
+    idleTimeoutMillis: fromPooler ? 10_000 : 30_000,
+    connectionTimeoutMillis: 15_000,
+  };
 }
 
 function createPrismaClient(): PrismaClient {

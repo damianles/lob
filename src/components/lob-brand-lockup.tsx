@@ -14,7 +14,7 @@ export function LobBrandLockup({ className, priority }: Props) {
     <div
       className={
         className ??
-        "relative h-[4.5rem] w-full max-w-[min(100%,260px)] sm:h-[5rem]"
+        "relative h-[5.5rem] w-full max-w-[min(100%,320px)] sm:h-[6.25rem]"
       }
     >
       <Image
@@ -22,7 +22,7 @@ export function LobBrandLockup({ className, priority }: Props) {
         alt="Lumber One Board"
         fill
         priority={priority}
-        sizes="(max-width: 640px) 240px, 320px"
+        sizes="(max-width: 640px) 280px, 360px"
         className="object-contain object-left"
       />
     </div>

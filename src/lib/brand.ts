@@ -3,7 +3,7 @@
  * gitignored; promote any chosen final into `public/brand/` so deploys include them.)
  *
  * Shipped today:
- * - lob-app-icon.png — square app icon (wood “O”, LOB mark) for nav + onboarding
+ * - lob-app-icon.png — square app icon (official LOB “O” / mark) for nav, sidebar, onboarding — keep in sync with design
  * - lob-brand-lockup.png — full “Lumber One Board” wordmark (masthead)
  * - lob-mark-compact.png — LOB + wood “O” + rule (compact horizontal)
  * - lob-brand-hero.png — marketing split (run `npm run brand:extract` after replacing)
@@ -29,7 +29,7 @@ export const LOB_BRAND_LOCKUP_SRC = "/brand/lob-brand-lockup.png";
 export const LOB_BRAND_LOCKUP_WIDTH = 512;
 export const LOB_BRAND_LOCKUP_HEIGHT = 540;
 
-/** Compact mark: LOB + wood “O” + rule only (nav, sidebar, favicon source). */
+/** Compact mark: LOB + “O” + rule only (horizontal strip; favicon source via build script). */
 export const LOB_MARK_COMPACT_SRC = "/brand/lob-mark-compact.png";
 export const LOB_MARK_COMPACT_WIDTH = 512;
 export const LOB_MARK_COMPACT_HEIGHT = 248;

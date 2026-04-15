@@ -11,7 +11,7 @@ type Props = {
   priority?: boolean;
 };
 
-/** Full navy LOB board (LOB + wood O + “Lumber One Board”) — auth pages and anywhere you want the primary mark. */
+/** Full navy LOB board (LOB + brand O + “Lumber One Board”) — auth pages and anywhere you want the primary mark. */
 export function LobBrandPrimary({ className, priority }: Props) {
   return (
     <Image

@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
 import { DispatchQrPanel } from "@/components/dispatch-qr-panel";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { LobBrandStrip } from "@/components/lob-brand-strip";
 import { LobSidebar } from "@/components/lob-sidebar";
 import { LoadTimeline } from "@/components/load-timeline";
@@ -171,9 +172,13 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
           <LobBrandStrip />
           <div className="p-4 sm:p-6">
           <div className="mx-auto max-w-3xl">
-            <Link href="/" className="text-sm font-medium text-lob-navy hover:underline">
-              ← Load board
-            </Link>
+            <Breadcrumb
+              items={[
+                { label: "Loads", href: "/" },
+                { label: load.referenceNumber },
+              ]}
+              className="mb-4"
+            />
             <h1 className="mt-3 text-2xl font-bold text-zinc-900">{load.referenceNumber}</h1>
             <p className="mt-1 text-sm text-zinc-600">
               {load.originCity}, {load.originState} {load.originZip} → {load.destinationCity}, {load.destinationState}{" "}

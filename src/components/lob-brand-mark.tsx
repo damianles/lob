@@ -9,7 +9,7 @@ type Props = {
 };
 
 /**
- * LOB letters + wood “O” — `fill` + `object-contain` avoids Next/Image’s overflow-hidden wrapper
+ * LOB letters + brand “O” — `fill` + `object-contain` avoids Next/Image’s overflow-hidden wrapper
  * clipping the mark in flex headers (common when only `h-* w-auto` was set on Image).
  */
 export function LobBrandMark({ className, priority }: Props) {
@@ -17,7 +17,7 @@ export function LobBrandMark({ className, priority }: Props) {
     <div
       className={
         className ??
-        "relative h-9 w-[8.75rem] shrink-0 sm:h-10 sm:w-[10rem]"
+        "relative h-10 w-[9.5rem] shrink-0 sm:h-11 sm:w-[11rem]"
       }
     >
       <Image
@@ -25,7 +25,7 @@ export function LobBrandMark({ className, priority }: Props) {
         alt="LOB"
         fill
         priority={priority}
-        sizes="(max-width: 640px) 148px, 168px"
+        sizes="(max-width: 640px) 160px, 180px"
         className="object-contain object-left"
       />
     </div>

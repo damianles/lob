@@ -65,7 +65,7 @@ export function LobSidebar({
           className="flex min-w-0 items-start gap-2.5 rounded-xl p-1.5 transition hover:bg-white/70"
           aria-label={`${BRAND_PRODUCT_NAME} — home`}
         >
-          <LobWoodOIcon className="h-10 w-10 shrink-0 drop-shadow-sm" decorative />
+          <LobWoodOIcon className="h-11 w-11 shrink-0 drop-shadow-sm" decorative />
           <div className="min-w-0 flex-1 pt-0.5">
             <p className="text-[13px] font-semibold leading-tight tracking-tight text-lob-navy">{BRAND_PRODUCT_NAME}</p>
             <p className="mt-1 text-[9px] font-bold uppercase leading-snug tracking-[0.12em] text-lob-gold-muted">
