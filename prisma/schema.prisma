@@ -120,6 +120,7 @@ model Company {
   loadCarrierTiers      LoadCarrierTier[]
   loadExclusionsAgainst LoadCarrierExclusion[]    @relation("CarrierLoadExclusion")
   loadTemplates         LoadTemplate[]            @relation("CompanyLoadTemplates")
+  savedLanes            SavedLane[]               @relation("CompanySavedLanes")
 }
 
 /**
@@ -153,6 +154,7 @@ model User {
   createdLoads       Load[]         @relation("LoadCreator")
   assignedDispatches DispatchLink[] @relation("DispatchAssignedBy")
   loadTemplates      LoadTemplate[] @relation("LoadTemplateCreator")
+  savedLanes         SavedLane[]    @relation("SavedLaneCreator")
 }
 
 model Load {
@@ -194,6 +196,7 @@ model Load {
    * ---- First-class lumber spec columns (mirrored from extendedPosting.lumber) ----
    */
   /**
+   * /**
    * /**
    * /** DIMENSIONAL | BOARDS | TIMBERS | PANELS | ENGINEERED | BUNDLES | POLES | PELLETS | CHIPS | MILLWORK | OTHER
    */
@@ -294,6 +297,49 @@ model LoadTemplate {
 
   @@index([companyId])
   @@index([companyId, name])
+}
+
+/**
+ * Address-only saved lane. Lighter than a LoadTemplate — just pickup +
+ * delivery endpoints — so a mill can quickly fill route fields without
+ * inheriting product/rate/equipment from a snapshot. Re-using a saved lane
+ * bumps useCount + lastUsedAt so the picker can sort by "what you actually
+ * use".
+ */
+model SavedLane {
+  id              String  @id @default(cuid())
+  companyId       String
+  createdByUserId String
+  /**
+   * User-supplied friendly name (e.g. "PG Mill → Boise yard"). Optional.
+   */
+  label           String?
+
+  originCity         String
+  originState        String
+  originZip          String
+  /**
+   * Optional street/yard/dock detail (free-form, displayed but not parsed).
+   */
+  originAddress      String?
+  originPhone        String?
+  destinationCity    String
+  destinationState   String
+  destinationZip     String
+  destinationAddress String?
+  destinationPhone   String?
+
+  useCount   Int       @default(0)
+  lastUsedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company   Company @relation("CompanySavedLanes", fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy User    @relation("SavedLaneCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+
+  @@index([companyId, lastUsedAt])
+  @@index([companyId, useCount])
 }
 
 /**

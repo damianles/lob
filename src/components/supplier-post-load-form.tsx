@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from "react";
 
+import { AddressDataLists } from "@/components/address-datalists";
 import { BoardFootHelper } from "@/components/board-foot-helper";
 import { LanePriceChip } from "@/components/lane-price-chip";
 import { LoadTemplatesPanel, type LoadTemplate } from "@/components/load-templates-panel";
 import { LumberSpecForm } from "@/components/lumber-spec-form";
 import { RecentPostsPicker } from "@/components/recent-posts-picker";
+import { SavedLanesPanel, type SavedLane } from "@/components/saved-lanes-panel";
 import { RadioChoice } from "@/components/ui/radio-choice";
 import { LUMBER_EQUIPMENT } from "@/lib/lumber-equipment";
 import type { LumberSpec } from "@/lib/lumber-spec";
@@ -242,6 +244,44 @@ export function SupplierPostLoadForm({
   }
 
   /**
+   * Apply a saved-lane to the form. Address-only — explicitly does NOT
+   * touch product/spec/rate/dates, so the user can re-fill those fresh
+   * for each shipment without losing anything they already typed.
+   */
+  function applyLane(l: SavedLane) {
+    setOriginCity(l.originCity);
+    setOriginState(l.originState);
+    setOriginZip(l.originZip);
+    setDestinationCity(l.destinationCity);
+    setDestinationState(l.destinationState);
+    setDestinationZip(l.destinationZip);
+    if (l.originAddress || l.originPhone) {
+      setPickups((rows) => {
+        const next = rows.length ? [...rows] : [{ ...emptyLoc }];
+        next[0] = {
+          ...next[0],
+          address: l.originAddress ?? next[0].address,
+          phone: l.originPhone ?? next[0].phone,
+          postal: l.originZip || next[0].postal,
+        };
+        return next;
+      });
+    }
+    if (l.destinationAddress || l.destinationPhone) {
+      setDeliveries((rows) => {
+        const next = rows.length ? [...rows] : [{ ...emptyLoc }];
+        next[0] = {
+          ...next[0],
+          address: l.destinationAddress ?? next[0].address,
+          phone: l.destinationPhone ?? next[0].phone,
+          postal: l.destinationZip || next[0].postal,
+        };
+        return next;
+      });
+    }
+  }
+
+  /**
    * Shared "apply a template-shaped payload to the form" helper, reused by
    * the saved-template picker and the recent-posts picker so both have
    * identical behavior.
@@ -416,6 +456,22 @@ export function SupplierPostLoadForm({
       </div>
       {err && <p className="mt-2 text-sm text-red-800">{err}</p>}
       <form className="mt-3 space-y-6" onSubmit={submit}>
+        <AddressDataLists />
+        <SavedLanesPanel
+          onPick={applyLane}
+          getCurrentLane={() => ({
+            originCity,
+            originState,
+            originZip,
+            originAddress: pickups[0]?.address,
+            originPhone: pickups[0]?.phone,
+            destinationCity,
+            destinationState,
+            destinationZip,
+            destinationAddress: deliveries[0]?.address,
+            destinationPhone: deliveries[0]?.phone,
+          })}
+        />
         <LoadTemplatesPanel
           getCurrentSnapshot={() => ({
             originCity,
@@ -470,13 +526,23 @@ export function SupplierPostLoadForm({
           <h4 className="text-xs font-bold uppercase tracking-wide text-emerald-900">Lane (search)</h4>
           <p className="mt-1 text-xs text-zinc-500">Used for the board and fair-rate check; can match pickup 1.</p>
           <div className="mt-2 grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
-            <input className="rounded border px-2 py-2 text-sm" placeholder="Origin city *" value={originCity} onChange={(e) => setOriginCity(e.target.value)} required />
+            <input
+              className="rounded border px-2 py-2 text-sm"
+              placeholder="Origin city *"
+              value={originCity}
+              onChange={(e) => setOriginCity(e.target.value)}
+              list="recent-origin-cities"
+              autoComplete="off"
+              required
+            />
             <input
               className="rounded border px-2 py-2 text-sm"
               placeholder="State / prov *"
               maxLength={2}
               value={originState}
               onChange={(e) => setOriginState(e.target.value)}
+              list="recent-origin-states"
+              autoComplete="off"
               required
             />
             <input
@@ -484,15 +550,27 @@ export function SupplierPostLoadForm({
               placeholder="Origin postal / ZIP *"
               value={originZip}
               onChange={(e) => setOriginZip(e.target.value)}
+              list="recent-origin-zips"
+              autoComplete="off"
               required
             />
-            <input className="rounded border px-2 py-2 text-sm" placeholder="Dest city *" value={destinationCity} onChange={(e) => setDestinationCity(e.target.value)} required />
+            <input
+              className="rounded border px-2 py-2 text-sm"
+              placeholder="Dest city *"
+              value={destinationCity}
+              onChange={(e) => setDestinationCity(e.target.value)}
+              list="recent-destination-cities"
+              autoComplete="off"
+              required
+            />
             <input
               className="rounded border px-2 py-2 text-sm"
               placeholder="State / prov *"
               maxLength={2}
               value={destinationState}
               onChange={(e) => setDestinationState(e.target.value)}
+              list="recent-destination-states"
+              autoComplete="off"
               required
             />
             <input
@@ -500,6 +578,8 @@ export function SupplierPostLoadForm({
               placeholder="Dest postal / ZIP *"
               value={destinationZip}
               onChange={(e) => setDestinationZip(e.target.value)}
+              list="recent-destination-zips"
+              autoComplete="off"
               required
             />
           </div>
@@ -530,7 +610,7 @@ export function SupplierPostLoadForm({
             <div key={i} className="mt-3 grid gap-2 border-t border-emerald-100 pt-3 sm:grid-cols-2 lg:grid-cols-3">
               <p className="text-xs font-semibold text-zinc-700 sm:col-span-2 lg:col-span-3">Pickup {i + 1}</p>
               <input className="rounded border px-2 py-2 text-sm sm:col-span-2" placeholder="Address *" value={p.address} onChange={(e) => syncPickup(i, { address: e.target.value })} required={i === 0} />
-              <input className="rounded border px-2 py-2 text-sm" placeholder="Postal / ZIP" value={p.postal} onChange={(e) => syncPickup(i, { postal: e.target.value })} />
+              <input className="rounded border px-2 py-2 text-sm" placeholder="Postal / ZIP" value={p.postal} onChange={(e) => syncPickup(i, { postal: e.target.value })} list="recent-origin-zips" autoComplete="off" />
               <input className="rounded border px-2 py-2 text-sm" placeholder="Phone" value={p.phone} onChange={(e) => syncPickup(i, { phone: e.target.value })} />
               <input className="rounded border px-2 py-2 text-sm" type="date" placeholder="Date" value={p.date} onChange={(e) => syncPickup(i, { date: e.target.value })} />
               <input className="rounded border px-2 py-2 text-sm" placeholder="Time / notes" value={p.time} onChange={(e) => syncPickup(i, { time: e.target.value })} />
@@ -565,7 +645,7 @@ export function SupplierPostLoadForm({
             <div key={i} className="mt-3 grid gap-2 border-t border-emerald-100 pt-3 sm:grid-cols-2 lg:grid-cols-3">
               <p className="text-xs font-semibold text-zinc-700 sm:col-span-2 lg:col-span-3">Delivery {i + 1}</p>
               <input className="rounded border px-2 py-2 text-sm sm:col-span-2" placeholder="Address *" value={d.address} onChange={(e) => syncDelivery(i, { address: e.target.value })} required={i === 0} />
-              <input className="rounded border px-2 py-2 text-sm" placeholder="Postal / ZIP" value={d.postal} onChange={(e) => syncDelivery(i, { postal: e.target.value })} />
+              <input className="rounded border px-2 py-2 text-sm" placeholder="Postal / ZIP" value={d.postal} onChange={(e) => syncDelivery(i, { postal: e.target.value })} list="recent-destination-zips" autoComplete="off" />
               <input className="rounded border px-2 py-2 text-sm" placeholder="Phone" value={d.phone} onChange={(e) => syncDelivery(i, { phone: e.target.value })} />
               <input className="rounded border px-2 py-2 text-sm" type="date" value={d.date} onChange={(e) => syncDelivery(i, { date: e.target.value })} required={i === 0} />
               <input className="rounded border px-2 py-2 text-sm" placeholder="Time" value={d.time} onChange={(e) => syncDelivery(i, { time: e.target.value })} />
