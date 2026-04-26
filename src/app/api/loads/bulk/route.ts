@@ -14,6 +14,7 @@ import {
 import { parseRequestedPickupAt } from "@/lib/parse-pickup-date";
 import { prisma } from "@/lib/prisma";
 import { getActorContext } from "@/lib/request-context";
+import { extractLumberSpec, lumberSpecToLoadColumns } from "@/lib/lumber-spec";
 
 /**
  * Bulk load creation from CSV. Only shippers can use this.
@@ -123,6 +124,9 @@ export async function POST(req: Request) {
       hit?.row.benchmarkAvgUsd != null ? new Prisma.Decimal(hit.row.benchmarkAvgUsd) : undefined;
     const rateUsdEq = offeredAmountUsdEquivalent(p.offeredRateUsd, p.offerCurrency);
 
+    const lumberSpec = extractLumberSpec(p.extendedPosting);
+    const lumberColumns = lumberSpecToLoadColumns(lumberSpec);
+
     try {
       const row = await prisma.load.create({
         data: {
@@ -148,6 +152,7 @@ export async function POST(req: Request) {
           extendedPosting: p.extendedPosting
             ? (p.extendedPosting as Prisma.InputJsonValue)
             : undefined,
+          ...lumberColumns,
           laneRateObservation: {
             create: {
               observedAt: new Date(),

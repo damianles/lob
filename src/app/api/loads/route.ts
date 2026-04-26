@@ -18,6 +18,7 @@ import { shipperCompanyNameForViewer } from "@/lib/shipper-visibility";
 import { reliabilityPolicy } from "@/lib/policies";
 import { fetchPostedLoadVisibilityContext, postedLoadVisibleToCarrier } from "@/lib/carrier-load-access";
 import { createLoadSchema } from "@/lib/validation";
+import { extractLumberSpec, lumberSpecToLoadColumns } from "@/lib/lumber-spec";
 
 export async function GET() {
   const actor = await getActorContext();
@@ -226,6 +227,9 @@ export async function POST(req: Request) {
   const shipperCompanyId = actor.companyId;
   const createdByUserId = actor.userId;
 
+  const lumberSpec = extractLumberSpec(payload.extendedPosting);
+  const lumberColumns = lumberSpecToLoadColumns(lumberSpec);
+
   const load = await prisma.$transaction(async (tx) => {
     const row = await tx.load.create({
       data: {
@@ -251,6 +255,7 @@ export async function POST(req: Request) {
         extendedPosting: payload.extendedPosting
           ? (payload.extendedPosting as Prisma.InputJsonValue)
           : undefined,
+        ...lumberColumns,
         laneRateObservation: {
           create: {
             observedAt: new Date(),

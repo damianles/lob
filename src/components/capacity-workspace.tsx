@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { CarrierTypeTag } from "@/components/carrier-type-tag";
 import { LUMBER_EQUIPMENT } from "@/lib/lumber-equipment";
 
 type Me = { role?: string; companyId?: string | null };
 
-type OpenRow = {
+type LaneRow = {
   id: string;
   originZip: string;
   originCity: string | null;
@@ -19,10 +20,18 @@ type OpenRow = {
   notes: string | null;
   availableFrom: string;
   availableUntil: string;
-  createdAt: string;
 };
 
-type MineRow = OpenRow & { isExpired: boolean };
+/** Shipper-facing row — adds anonymized carrier-type signals; identity is hidden. */
+type OpenRow = LaneRow & {
+  createdAt: string;
+  carrierType: "ASSET_BASED" | "BROKER" | null;
+  isOwnerOperator: boolean;
+  carrierVerified: boolean;
+};
+
+/** Carrier's own posts — they already know who they are. */
+type MineRow = LaneRow & { isExpired: boolean };
 
 function ymd(d: Date) {
   return d.toISOString().slice(0, 10);
@@ -219,6 +228,7 @@ export function CapacityWorkspace() {
               <thead className="border-b bg-zinc-50 text-xs font-semibold uppercase text-zinc-600">
                 <tr>
                   <th className="px-3 py-2">Lane</th>
+                  <th className="px-3 py-2">Carrier type</th>
                   <th className="px-3 py-2">Equipment</th>
                   <th className="px-3 py-2 text-right">Asking</th>
                   <th className="px-3 py-2">Available</th>
@@ -231,6 +241,27 @@ export function CapacityWorkspace() {
                     <td className="px-3 py-2">
                       {[r.originCity, r.originState].filter(Boolean).join(", ") || r.originZip} →{" "}
                       {[r.destinationCity, r.destinationState].filter(Boolean).join(", ") || r.destinationZip}
+                    </td>
+                    <td className="px-3 py-2">
+                      <div className="flex flex-wrap items-center gap-1">
+                        {r.carrierType || r.isOwnerOperator ? (
+                          <CarrierTypeTag
+                            carrierType={r.carrierType}
+                            isOwnerOperator={r.isOwnerOperator}
+                            compact
+                          />
+                        ) : (
+                          <span className="text-[11px] text-zinc-400 italic">Unverified</span>
+                        )}
+                        {r.carrierVerified && (
+                          <span
+                            className="inline-flex items-center rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-900 ring-1 ring-emerald-300"
+                            title="Carrier identity & docs verified by LOB"
+                          >
+                            ✓ Verified
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-3 py-2">{r.equipmentType}</td>
                     <td className="px-3 py-2 text-right font-medium tabular-nums">

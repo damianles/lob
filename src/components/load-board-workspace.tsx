@@ -16,6 +16,11 @@ import { FloatingActionButton, PlusIcon } from "@/components/ui/floating-action-
 import { Button } from "@/components/ui/button";
 import { RadioChoice } from "@/components/ui/radio-choice";
 import { LUMBER_EQUIPMENT, equipmentShortTag } from "@/lib/lumber-equipment";
+import {
+  LUMBER_PANEL_TYPE_OPTIONS,
+  LUMBER_SPECIES_OPTIONS,
+  LUMBER_TREATMENT_OPTIONS,
+} from "@/lib/lumber-spec";
 import { formatMoney } from "@/lib/money";
 import { parseRadiusToMiles } from "@/lib/units";
 import { milesBetweenZips } from "@/lib/zip-distance";
@@ -91,6 +96,44 @@ function postedDateLabel(iso: string) {
 
 type BoardStats = LobSidebarStats;
 
+/**
+ * Pure matcher used by the saved-searches "N new" badges. Mirrors the same
+ * filter rules the workspace applies live so the badge count is honest.
+ */
+function loadMatchesPayload(
+  l: SerializableLoad,
+  p: import("@/lib/saved-searches").SavedSearchPayload,
+): boolean {
+  const o = `${l.originCity} ${l.originState} ${l.originZip}`.toLowerCase();
+  const d = `${l.destinationCity} ${l.destinationState} ${l.destinationZip}`.toLowerCase();
+  if (p.originQ && !o.includes(p.originQ.toLowerCase().trim())) return false;
+  if (p.destQ && !d.includes(p.destQ.toLowerCase().trim())) return false;
+  if (p.equipmentFilter && l.equipmentType !== p.equipmentFilter) return false;
+  const min = Number(p.weightMin ?? "");
+  if (p.weightMin && Number.isFinite(min) && l.weightLbs < min) return false;
+  const max = Number(p.weightMax ?? "");
+  if (p.weightMax && Number.isFinite(max) && l.weightLbs > max) return false;
+  if (p.pickupFrom) {
+    const start = new Date(p.pickupFrom).setHours(0, 0, 0, 0);
+    if (new Date(l.requestedPickupAt).getTime() < start) return false;
+  }
+  if (p.pickupTo) {
+    const end = new Date(p.pickupTo).setHours(23, 59, 59, 999);
+    if (new Date(l.requestedPickupAt).getTime() > end) return false;
+  }
+  if (p.hideBrokers && l.booking?.carrierCompany?.carrierType === "BROKER") return false;
+  if (p.lumberSpecies && l.lumberSpec?.species !== p.lumberSpecies) return false;
+  if (p.lumberPanelType && l.lumberSpec?.panelType !== p.lumberPanelType) return false;
+  if (p.lumberTreatment && l.lumberSpec?.treatment !== p.lumberTreatment) return false;
+  if (p.lumberFragileOnly && !l.lumberSpec?.fragile) return false;
+  if (p.lumberWeatherSensitiveOnly && !l.lumberSpec?.weatherSensitive) return false;
+  if (typeof p.minRateUsd === "number") {
+    const rate = toUsdEquivalentForSummary(l);
+    if (rate < p.minRateUsd) return false;
+  }
+  return true;
+}
+
 export function LoadBoardWorkspace({
   loads,
   actor,
@@ -123,6 +166,11 @@ export function LoadBoardWorkspace({
   const [emrOriginRadius, setEmrOriginRadius] = useState("");
   const [emrDestRadius, setEmrDestRadius] = useState("");
   const [hideBrokers, setHideBrokers] = useState(false);
+  const [lumberSpecies, setLumberSpecies] = useState("");
+  const [lumberPanelType, setLumberPanelType] = useState("");
+  const [lumberTreatment, setLumberTreatment] = useState("");
+  const [lumberFragileOnly, setLumberFragileOnly] = useState(false);
+  const [lumberWeatherSensitiveOnly, setLumberWeatherSensitiveOnly] = useState(false);
   const { distanceUnit, setDistanceUnit } = useDistanceUnitPreference();
 
   const isShipper = actor.role === "SHIPPER" && Boolean(actor.companyId);
@@ -139,7 +187,12 @@ export function LoadBoardWorkspace({
       pickupFrom ||
       pickupTo ||
       emrZip ||
-      hideBrokers,
+      hideBrokers ||
+      lumberSpecies ||
+      lumberPanelType ||
+      lumberTreatment ||
+      lumberFragileOnly ||
+      lumberWeatherSensitiveOnly,
   );
 
   function clearAllFilters() {
@@ -156,6 +209,11 @@ export function LoadBoardWorkspace({
     setEmrOriginRadius("");
     setEmrDestRadius("");
     setHideBrokers(false);
+    setLumberSpecies("");
+    setLumberPanelType("");
+    setLumberTreatment("");
+    setLumberFragileOnly(false);
+    setLumberWeatherSensitiveOnly(false);
   }
 
   const filteredLoads = useMemo(() => {
@@ -207,6 +265,12 @@ export function LoadBoardWorkspace({
         return false;
       }
 
+      if (lumberSpecies && l.lumberSpec?.species !== lumberSpecies) return false;
+      if (lumberPanelType && l.lumberSpec?.panelType !== lumberPanelType) return false;
+      if (lumberTreatment && l.lumberSpec?.treatment !== lumberTreatment) return false;
+      if (lumberFragileOnly && !l.lumberSpec?.fragile) return false;
+      if (lumberWeatherSensitiveOnly && !l.lumberSpec?.weatherSensitive) return false;
+
       return true;
     });
 
@@ -237,6 +301,11 @@ export function LoadBoardWorkspace({
     emrDestRadius,
     distanceUnit,
     hideBrokers,
+    lumberSpecies,
+    lumberPanelType,
+    lumberTreatment,
+    lumberFragileOnly,
+    lumberWeatherSensitiveOnly,
   ]);
 
   const summary = useMemo(() => {
@@ -414,6 +483,31 @@ export function LoadBoardWorkspace({
                     Hide brokers
                   </FilterChip>
                 )}
+                {lumberSpecies && (
+                  <FilterChip onRemove={() => setLumberSpecies("")}>
+                    Species: {LUMBER_SPECIES_OPTIONS.find((o) => o.value === lumberSpecies)?.label ?? lumberSpecies}
+                  </FilterChip>
+                )}
+                {lumberPanelType && (
+                  <FilterChip onRemove={() => setLumberPanelType("")}>
+                    Panel: {LUMBER_PANEL_TYPE_OPTIONS.find((o) => o.value === lumberPanelType)?.label ?? lumberPanelType}
+                  </FilterChip>
+                )}
+                {lumberTreatment && (
+                  <FilterChip onRemove={() => setLumberTreatment("")}>
+                    Treatment: {LUMBER_TREATMENT_OPTIONS.find((o) => o.value === lumberTreatment)?.label ?? lumberTreatment}
+                  </FilterChip>
+                )}
+                {lumberFragileOnly && (
+                  <FilterChip onRemove={() => setLumberFragileOnly(false)}>
+                    Fragile only
+                  </FilterChip>
+                )}
+                {lumberWeatherSensitiveOnly && (
+                  <FilterChip onRemove={() => setLumberWeatherSensitiveOnly(false)}>
+                    Weather-sensitive only
+                  </FilterChip>
+                )}
               </FilterChipGroup>
             </div>
           )}
@@ -422,6 +516,12 @@ export function LoadBoardWorkspace({
             <div className="mb-3">
               <SavedSearchesBar
                 ownerKey={actor.companyId}
+                currentLoads={loads.map((l) => ({ id: l.id, createdAt: l.createdAt }))}
+                evaluateMatch={(p, stub) => {
+                  const full = loads.find((x) => x.id === stub.id);
+                  if (!full) return false;
+                  return loadMatchesPayload(full, p);
+                }}
                 currentPayload={{
                   originQ,
                   destQ,
@@ -431,6 +531,11 @@ export function LoadBoardWorkspace({
                   pickupFrom,
                   pickupTo,
                   hideBrokers,
+                  lumberSpecies,
+                  lumberPanelType,
+                  lumberTreatment,
+                  lumberFragileOnly,
+                  lumberWeatherSensitiveOnly,
                 }}
                 onApply={(p) => {
                   setOriginQ(p.originQ ?? "");
@@ -441,6 +546,11 @@ export function LoadBoardWorkspace({
                   setPickupFrom(p.pickupFrom ?? "");
                   setPickupTo(p.pickupTo ?? "");
                   setHideBrokers(Boolean(p.hideBrokers));
+                  setLumberSpecies(p.lumberSpecies ?? "");
+                  setLumberPanelType(p.lumberPanelType ?? "");
+                  setLumberTreatment(p.lumberTreatment ?? "");
+                  setLumberFragileOnly(Boolean(p.lumberFragileOnly));
+                  setLumberWeatherSensitiveOnly(Boolean(p.lumberWeatherSensitiveOnly));
                 }}
               />
             </div>
@@ -643,6 +753,81 @@ export function LoadBoardWorkspace({
                     value={emrDestRadius}
                     onChange={(e) => setEmrDestRadius(e.target.value)}
                   />
+                </div>
+              </div>
+              <div className="rounded-lg border border-dashed border-zinc-300 bg-white px-3 py-3">
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-zinc-600">Lumber spec</span>
+                  <span className="text-[11px] text-zinc-500">
+                    Match loads where the supplier filled in these details on post.
+                  </span>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  <label className="text-xs text-zinc-600">
+                    Species
+                    <select
+                      value={lumberSpecies}
+                      onChange={(e) => setLumberSpecies(e.target.value)}
+                      className="mt-1 block w-full rounded border border-zinc-300 bg-white px-2 py-2 text-sm"
+                    >
+                      <option value="">Any species</option>
+                      {LUMBER_SPECIES_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="text-xs text-zinc-600">
+                    Panel type
+                    <select
+                      value={lumberPanelType}
+                      onChange={(e) => setLumberPanelType(e.target.value)}
+                      className="mt-1 block w-full rounded border border-zinc-300 bg-white px-2 py-2 text-sm"
+                    >
+                      <option value="">Any panel</option>
+                      {LUMBER_PANEL_TYPE_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="text-xs text-zinc-600">
+                    Treatment
+                    <select
+                      value={lumberTreatment}
+                      onChange={(e) => setLumberTreatment(e.target.value)}
+                      className="mt-1 block w-full rounded border border-zinc-300 bg-white px-2 py-2 text-sm"
+                    >
+                      <option value="">Any treatment</option>
+                      {LUMBER_TREATMENT_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-3">
+                  <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-zinc-700">
+                    <input
+                      type="checkbox"
+                      className="h-3.5 w-3.5 rounded border-zinc-300 text-lob-navy focus:ring-lob-navy/30"
+                      checked={lumberFragileOnly}
+                      onChange={(e) => setLumberFragileOnly(e.target.checked)}
+                    />
+                    Fragile only
+                  </label>
+                  <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-zinc-700">
+                    <input
+                      type="checkbox"
+                      className="h-3.5 w-3.5 rounded border-zinc-300 text-lob-navy focus:ring-lob-navy/30"
+                      checked={lumberWeatherSensitiveOnly}
+                      onChange={(e) => setLumberWeatherSensitiveOnly(e.target.checked)}
+                    />
+                    Weather-sensitive only
+                  </label>
                 </div>
               </div>
             </div>

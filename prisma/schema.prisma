@@ -67,56 +67,69 @@ enum RateObservationSource {
   IMPORT
 }
 
-/** Who may see a posted load on the open board (dispatchers). */
+/**
+ * Who may see a posted load on the open board (dispatchers).
+ */
 enum LoadCarrierVisibilityMode {
   OPEN
   TIER_ASSIGNED
 }
 
 model Company {
-  id                 String             @id @default(cuid())
-  legalName          String             @unique
-  dotNumber          String?            @unique
-  mcNumber           String?            @unique
-  carrierType        CarrierType?
-  verificationStatus VerificationStatus @default(PENDING)
-  reliabilityScore   Int                @default(100)
-  factoringEligible  Boolean            @default(false)
-  analyticsSubscriber Boolean           @default(false)
-  supplierKind       SupplierKind?
-  /** Fleet & capabilities — shown to shippers after a load is booked. */
+  id                    String             @id @default(cuid())
+  legalName             String             @unique
+  dotNumber             String?            @unique
+  mcNumber              String?            @unique
+  carrierType           CarrierType?
+  verificationStatus    VerificationStatus @default(PENDING)
+  reliabilityScore      Int                @default(100)
+  factoringEligible     Boolean            @default(false)
+  analyticsSubscriber   Boolean            @default(false)
+  supplierKind          SupplierKind?
+  /**
+   * Fleet & capabilities — shown to shippers after a load is booked.
+   */
   fleetTruckCount       Int?
   fleetTrailerCount     Int?
-  /** JSON string array of equipment codes or labels, e.g. ["SB","Tri"]. */
+  /**
+   * JSON string array of equipment codes or labels, e.g. ["SB","Tri"].
+   */
   trailerEquipmentTypes String?
-  /** Short narrative for shippers (service area, lanes, certifications). */
+  /**
+   * Short narrative for shippers (service area, lanes, certifications).
+   */
   carrierProfileBlurb   String?
-  /** Single-truck operators; admin verification still uses verificationStatus. */
+  /**
+   * Single-truck operators; admin verification still uses verificationStatus.
+   */
   isOwnerOperator       Boolean            @default(false)
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
 
-  users               User[]
-  postedLoads         Load[]           @relation("ShipperLoads")
-  bookings            Booking[]
-  preferredLanes      PreferredLane[]
-  emptyMileSetting    EmptyMileSetting?
-  documents           Document[]
-  reportedIncidents   Incident[]       @relation("IncidentReporter")
-  incidentsAgainst    Incident[]       @relation("IncidentTarget")
-  capacityOffers      CapacityOffer[]
-  blocksCarriers      ShipperCarrierExclusion[] @relation("ShipperBlocksCarrier")
-  blockedByShippers   ShipperCarrierExclusion[] @relation("CarrierBlockedByShipper")
-  loadCarrierTiers    LoadCarrierTier[]
-  loadExclusionsAgainst LoadCarrierExclusion[] @relation("CarrierLoadExclusion")
+  users                 User[]
+  postedLoads           Load[]                    @relation("ShipperLoads")
+  bookings              Booking[]
+  preferredLanes        PreferredLane[]
+  emptyMileSetting      EmptyMileSetting?
+  documents             Document[]
+  reportedIncidents     Incident[]                @relation("IncidentReporter")
+  incidentsAgainst      Incident[]                @relation("IncidentTarget")
+  capacityOffers        CapacityOffer[]
+  blocksCarriers        ShipperCarrierExclusion[] @relation("ShipperBlocksCarrier")
+  blockedByShippers     ShipperCarrierExclusion[] @relation("CarrierBlockedByShipper")
+  loadCarrierTiers      LoadCarrierTier[]
+  loadExclusionsAgainst LoadCarrierExclusion[]    @relation("CarrierLoadExclusion")
+  loadTemplates         LoadTemplate[]            @relation("CompanyLoadTemplates")
 }
 
-/** Supplier excludes a carrier: hide their capacity from this shipper and hide this shipper's loads from that carrier. */
+/**
+ * Supplier excludes a carrier: hide their capacity from this shipper and hide this shipper's loads from that carrier.
+ */
 model ShipperCarrierExclusion {
-  id                String   @id @default(cuid())
-  shipperCompanyId  String
-  carrierCompanyId  String
-  createdAt         DateTime @default(now())
+  id               String   @id @default(cuid())
+  shipperCompanyId String
+  carrierCompanyId String
+  createdAt        DateTime @default(now())
 
   shipperCompany Company @relation("ShipperBlocksCarrier", fields: [shipperCompanyId], references: [id], onDelete: Cascade)
   carrierCompany Company @relation("CarrierBlockedByShipper", fields: [carrierCompanyId], references: [id], onDelete: Cascade)
@@ -127,63 +140,162 @@ model ShipperCarrierExclusion {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  authProviderId String? @unique
-  email     String   @unique
-  name      String
-  role      UserRole
-  companyId String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String   @id @default(cuid())
+  authProviderId String?  @unique
+  email          String   @unique
+  name           String
+  role           UserRole
+  companyId      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  company             Company?          @relation(fields: [companyId], references: [id], onDelete: SetNull)
-  createdLoads        Load[]            @relation("LoadCreator")
-  assignedDispatches  DispatchLink[]    @relation("DispatchAssignedBy")
+  company            Company?       @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  createdLoads       Load[]         @relation("LoadCreator")
+  assignedDispatches DispatchLink[] @relation("DispatchAssignedBy")
+  loadTemplates      LoadTemplate[] @relation("LoadTemplateCreator")
 }
 
 model Load {
-  id                 String     @id @default(cuid())
-  referenceNumber    String     @unique
-  originCity         String
-  originState        String
-  originZip          String
-  destinationCity    String
-  destinationState   String
-  destinationZip     String
-  weightLbs          Int
-  equipmentType      String
-  isRush             Boolean    @default(false)
-  isPrivate          Boolean    @default(false)
-  status             LoadStatus @default(POSTED)
-  offerCurrency      OfferCurrency @default(USD)
-  offeredRateUsd     Decimal?   @db.Decimal(10, 2)
-  marketRateUsd      Decimal?   @db.Decimal(10, 2)
-  finalCostUsd       Decimal?   @db.Decimal(10, 2)
-  uniquePickupCode   String?
-  shipperCompanyId   String
-  createdByUserId    String
-  requestedPickupAt  DateTime
-  extendedPosting    Json?
+  id                    String                    @id @default(cuid())
+  referenceNumber       String                    @unique
+  originCity            String
+  originState           String
+  originZip             String
+  destinationCity       String
+  destinationState      String
+  destinationZip        String
+  weightLbs             Int
+  equipmentType         String
+  isRush                Boolean                   @default(false)
+  isPrivate             Boolean                   @default(false)
+  status                LoadStatus                @default(POSTED)
+  offerCurrency         OfferCurrency             @default(USD)
+  offeredRateUsd        Decimal?                  @db.Decimal(10, 2)
+  marketRateUsd         Decimal?                  @db.Decimal(10, 2)
+  finalCostUsd          Decimal?                  @db.Decimal(10, 2)
+  uniquePickupCode      String?
+  shipperCompanyId      String
+  createdByUserId       String
+  requestedPickupAt     DateTime
+  /**
+   * Free-form structured payload (legacy + supplier extras). lumber.* mirrors first-class columns.
+   */
+  extendedPosting       Json?
   carrierVisibilityMode LoadCarrierVisibilityMode @default(OPEN)
-  createdAt          DateTime   @default(now())
-  updatedAt          DateTime   @updatedAt
 
-  shipperCompany     Company       @relation("ShipperLoads", fields: [shipperCompanyId], references: [id], onDelete: Restrict)
-  createdBy          User          @relation("LoadCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
-  booking               Booking?
-  dispatchLink          DispatchLink?
-  incidents             Incident[]
-  laneRateObservation   LaneRateObservation?
-  carrierTiers          LoadCarrierTier[]
-  excludedCarriers      LoadCarrierExclusion[] @relation("LoadExcludesCarrier")
+  /**
+   * ---- First-class lumber spec columns (mirrored from extendedPosting.lumber) ----
+   */
+  /**
+   * /** DIMENSIONAL | BOARDS | TIMBERS | PANELS | ENGINEERED | BUNDLES | POLES | PELLETS | CHIPS | MILLWORK | OTHER
+   */
+  lumberCategory         String?
+  /**
+   * SPF | DF | DF_LARCH | SYP | HEM_FIR | WRC | YELLOW_CEDAR | WHITE_PINE | PONDEROSA | OAK | MAPLE | BIRCH | ASH | POPLAR | MIXED | OTHER
+   */
+  lumberSpecies          String?
+  lumberGrade            String?
+  /**
+   * GREEN | AD | KD | MC19 | MC15 | MC12
+   */
+  lumberDryness          String?
+  /**
+   * NONE | ACQ | MCA | CCA | BORATE | FIRE_RETARDANT | BROWN_STAIN | ANTI_SAPSTAIN
+   */
+  lumberTreatment        String?
+  /**
+   * OSB | PLY_SOFT | PLY_HARD | MDF | MDO | HDF | PARTICLEBOARD | LVL | LSL | I_JOIST | GLULAM | CLT
+   */
+  lumberPanelType        String?
+  lumberNominalSize      String?
+  lumberLengthFt         Float?
+  lumberPieceCount       Int?
+  lumberBundleCount      Int?
+  lumberMbf              Float?
+  /**
+   * STANDARD | PAPER_WRAP | PLASTIC_WRAP | BANDED_ONLY | PALLETIZED | BULK
+   */
+  lumberPackaging        String?
+  /**
+   * SIDE_LOAD | REAR_LOAD | OVERHEAD | LIVE_LOAD | DROP_TRAILER
+   */
+  lumberLoadingMethod    String?
+  lumberFragile          Boolean?
+  lumberWeatherSensitive Boolean?
+  lumberExportShipment   Boolean?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  shipperCompany      Company                @relation("ShipperLoads", fields: [shipperCompanyId], references: [id], onDelete: Restrict)
+  createdBy           User                   @relation("LoadCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  booking             Booking?
+  dispatchLink        DispatchLink?
+  incidents           Incident[]
+  laneRateObservation LaneRateObservation?
+  carrierTiers        LoadCarrierTier[]
+  excludedCarriers    LoadCarrierExclusion[] @relation("LoadExcludesCarrier")
+
+  @@index([lumberSpecies])
+  @@index([lumberPanelType])
+  @@index([lumberCategory])
+  @@index([originState, destinationState, requestedPickupAt])
 }
 
-/** When carrierVisibilityMode is TIER_ASSIGNED, only listed carriers may see the posted load. */
+/**
+ * Reusable post-load template owned by a shipper company. Power-user mills
+ * stamp out the same 2x4 lane × spec week after week — saving as a template
+ * lets them re-post in 2 clicks.
+ */
+model LoadTemplate {
+  id              String  @id @default(cuid())
+  companyId       String
+  createdByUserId String
+  name            String
+  /**
+   * Optional shorthand displayed in the picker (e.g. "PG → Boise · Tri · 2x4-8").
+   */
+  shortLabel      String?
+
+  originCity       String?
+  originState      String?
+  originZip        String?
+  destinationCity  String?
+  destinationState String?
+  destinationZip   String?
+  equipmentType    String?
+  weightLbs        Int?
+  isRush           Boolean       @default(false)
+  isPrivate        Boolean       @default(false)
+  defaultRateUsd   Decimal?      @db.Decimal(10, 2)
+  defaultCurrency  OfferCurrency @default(USD)
+  notes            String?
+
+  /**
+   * Full LumberSpec snapshot.
+   */
+  lumberSpec Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company   Company @relation("CompanyLoadTemplates", fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy User    @relation("LoadTemplateCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+
+  @@index([companyId])
+  @@index([companyId, name])
+}
+
+/**
+ * When carrierVisibilityMode is TIER_ASSIGNED, only listed carriers may see the posted load.
+ */
 model LoadCarrierTier {
   id               String   @id @default(cuid())
   loadId           String
   carrierCompanyId String
-  /** 1 = first preference group; same-day visibility for all tiers in MVP. */
+  /**
+   * 1 = first preference group; same-day visibility for all tiers in MVP.
+   */
   tier             Int      @default(1)
   createdAt        DateTime @default(now())
 
@@ -194,7 +306,9 @@ model LoadCarrierTier {
   @@index([loadId])
 }
 
-/** Carrier cannot see this specific load (even if OPEN or listed in a tier). */
+/**
+ * Carrier cannot see this specific load (even if OPEN or listed in a tier).
+ */
 model LoadCarrierExclusion {
   id               String   @id @default(cuid())
   loadId           String
@@ -209,20 +323,20 @@ model LoadCarrierExclusion {
 }
 
 model LaneRateObservation {
-  id              String                 @id @default(cuid())
+  id              String                @id @default(cuid())
   observedAt      DateTime
   originState     String
   destState       String
   originCityCanon String
   destCityCanon   String
-  originZip5      String                 @default("")
-  destZip5        String                 @default("")
+  originZip5      String                @default("")
+  destZip5        String                @default("")
   equipmentNorm   String
-  rateUsd         Decimal                @db.Decimal(12, 2)
-  offerCurrency   OfferCurrency          @default(USD)
-  source          RateObservationSource  @default(APP)
-  loadId          String?                @unique
-  load            Load?                  @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  rateUsd         Decimal               @db.Decimal(12, 2)
+  offerCurrency   OfferCurrency         @default(USD)
+  source          RateObservationSource @default(APP)
+  loadId          String?               @unique
+  load            Load?                 @relation(fields: [loadId], references: [id], onDelete: Cascade)
 
   @@index([observedAt])
   @@index([originState, destState])
@@ -230,65 +344,65 @@ model LaneRateObservation {
 }
 
 model Booking {
-  id                String   @id @default(cuid())
-  loadId            String   @unique
-  carrierCompanyId  String
-  agreedCurrency    OfferCurrency @default(USD)
-  agreedRateUsd     Decimal  @db.Decimal(10, 2)
-  bookedAt          DateTime @default(now())
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id               String        @id @default(cuid())
+  loadId           String        @unique
+  carrierCompanyId String
+  agreedCurrency   OfferCurrency @default(USD)
+  agreedRateUsd    Decimal       @db.Decimal(10, 2)
+  bookedAt         DateTime      @default(now())
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
 
-  load              Load     @relation(fields: [loadId], references: [id], onDelete: Restrict)
-  carrierCompany    Company  @relation(fields: [carrierCompanyId], references: [id], onDelete: Restrict)
+  load           Load    @relation(fields: [loadId], references: [id], onDelete: Restrict)
+  carrierCompany Company @relation(fields: [carrierCompanyId], references: [id], onDelete: Restrict)
 }
 
 model DispatchLink {
-  id                 String             @id @default(cuid())
-  loadId             String             @unique
-  token              String             @unique
-  driverName         String
-  driverPhone        String?
-  driverEmail        String?
-  assignedByUserId   String
-  expiresAt          DateTime
-  status             DispatchLinkStatus @default(ACTIVE)
-  pickupConfirmedAt  DateTime?
-  deliveredAt        DateTime?
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
+  id                String             @id @default(cuid())
+  loadId            String             @unique
+  token             String             @unique
+  driverName        String
+  driverPhone       String?
+  driverEmail       String?
+  assignedByUserId  String
+  expiresAt         DateTime
+  status            DispatchLinkStatus @default(ACTIVE)
+  pickupConfirmedAt DateTime?
+  deliveredAt       DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
 
-  load               Load       @relation(fields: [loadId], references: [id], onDelete: Restrict)
-  assignedBy         User       @relation("DispatchAssignedBy", fields: [assignedByUserId], references: [id], onDelete: Restrict)
-  podDocument        Document?
+  load        Load      @relation(fields: [loadId], references: [id], onDelete: Restrict)
+  assignedBy  User      @relation("DispatchAssignedBy", fields: [assignedByUserId], references: [id], onDelete: Restrict)
+  podDocument Document?
 }
 
 model Document {
-  id               String    @id @default(cuid())
-  companyId        String?
-  dispatchLinkId   String?   @unique
-  kind             String
-  fileUrl          String
-  expiresAt        DateTime?
-  createdAt        DateTime  @default(now())
+  id             String    @id @default(cuid())
+  companyId      String?
+  dispatchLinkId String?   @unique
+  kind           String
+  fileUrl        String
+  expiresAt      DateTime?
+  createdAt      DateTime  @default(now())
 
-  company          Company?      @relation(fields: [companyId], references: [id], onDelete: SetNull)
-  dispatchLink     DispatchLink? @relation(fields: [dispatchLinkId], references: [id], onDelete: SetNull)
+  company      Company?      @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  dispatchLink DispatchLink? @relation(fields: [dispatchLinkId], references: [id], onDelete: SetNull)
 }
 
 model Incident {
-  id                 String       @id @default(cuid())
-  loadId             String
+  id                  String       @id @default(cuid())
+  loadId              String
   reportedByCompanyId String
-  targetCompanyId    String
-  type               IncidentType
-  note               String?
-  scoreDelta         Int          @default(-10)
-  createdAt          DateTime     @default(now())
+  targetCompanyId     String
+  type                IncidentType
+  note                String?
+  scoreDelta          Int          @default(-10)
+  createdAt           DateTime     @default(now())
 
-  load               Load         @relation(fields: [loadId], references: [id], onDelete: Restrict)
-  reportedByCompany  Company      @relation("IncidentReporter", fields: [reportedByCompanyId], references: [id], onDelete: Restrict)
-  targetCompany      Company      @relation("IncidentTarget", fields: [targetCompanyId], references: [id], onDelete: Restrict)
+  load              Load    @relation(fields: [loadId], references: [id], onDelete: Restrict)
+  reportedByCompany Company @relation("IncidentReporter", fields: [reportedByCompanyId], references: [id], onDelete: Restrict)
+  targetCompany     Company @relation("IncidentTarget", fields: [targetCompanyId], references: [id], onDelete: Restrict)
 }
 
 model PreferredLane {
@@ -298,44 +412,50 @@ model PreferredLane {
   destinationZip String
   createdAt      DateTime @default(now())
 
-  company        Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@unique([companyId, originZip, destinationZip])
 }
 
 model EmptyMileSetting {
-  id                   String   @id @default(cuid())
-  companyId            String   @unique
-  rateUsdPerMile       Decimal  @db.Decimal(8, 2)
-  maxEmptyMiles        Int      @default(150)
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  id             String   @id @default(cuid())
+  companyId      String   @unique
+  rateUsdPerMile Decimal  @db.Decimal(8, 2)
+  maxEmptyMiles  Int      @default(150)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  company              Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 }
 
-/** Carrier-posted lane capacity; shipper-facing listings omit carrier identity until a future match flow. */
+/**
+ * Carrier-posted lane capacity; shipper-facing listings omit carrier identity until a future match flow.
+ */
 model CapacityOffer {
-  id                 String   @id @default(cuid())
-  carrierCompanyId   String
-  originZip          String
-  originCity         String?
-  originState        String?
-  destinationZip     String
-  destinationCity    String?
-  destinationState   String?
-  equipmentType      String
-  askingRateUsd      Decimal  @db.Decimal(10, 2)
-  notes              String?
-  status             String   @default("OPEN")
-  /** First day this capacity is offered (inclusive). */
-  availableFrom      DateTime @default(now())
-  /** Last day offered (inclusive); max span vs availableFrom is 5 days (enforced in API). */
-  availableUntil     DateTime
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  id               String   @id @default(cuid())
+  carrierCompanyId String
+  originZip        String
+  originCity       String?
+  originState      String?
+  destinationZip   String
+  destinationCity  String?
+  destinationState String?
+  equipmentType    String
+  askingRateUsd    Decimal  @db.Decimal(10, 2)
+  notes            String?
+  status           String   @default("OPEN")
+  /**
+   * First day this capacity is offered (inclusive).
+   */
+  availableFrom    DateTime @default(now())
+  /**
+   * Last day offered (inclusive); max span vs availableFrom is 5 days (enforced in API).
+   */
+  availableUntil   DateTime
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  carrier            Company  @relation(fields: [carrierCompanyId], references: [id], onDelete: Cascade)
+  carrier Company @relation(fields: [carrierCompanyId], references: [id], onDelete: Cascade)
 
   @@index([status])
   @@index([originZip, destinationZip])

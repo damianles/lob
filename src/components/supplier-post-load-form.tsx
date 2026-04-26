@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 
+import { BoardFootHelper } from "@/components/board-foot-helper";
 import { LanePriceChip } from "@/components/lane-price-chip";
+import { LoadTemplatesPanel, type LoadTemplate } from "@/components/load-templates-panel";
 import { LumberSpecForm } from "@/components/lumber-spec-form";
 import { RadioChoice } from "@/components/ui/radio-choice";
 import { LUMBER_EQUIPMENT } from "@/lib/lumber-equipment";
@@ -392,6 +394,39 @@ export function SupplierPostLoadForm({
       </div>
       {err && <p className="mt-2 text-sm text-red-800">{err}</p>}
       <form className="mt-3 space-y-6" onSubmit={submit}>
+        <LoadTemplatesPanel
+          getCurrentSnapshot={() => ({
+            originCity,
+            originState,
+            originZip,
+            destinationCity,
+            destinationState,
+            destinationZip,
+            equipmentType,
+            weightLbs,
+            isRush,
+            isPrivate: false,
+            rateUsd,
+            currency,
+            notes,
+            lumber,
+          })}
+          onLoad={(t: LoadTemplate) => {
+            if (t.originCity != null) setOriginCity(t.originCity);
+            if (t.originState != null) setOriginState(t.originState);
+            if (t.originZip != null) setOriginZip(t.originZip);
+            if (t.destinationCity != null) setDestinationCity(t.destinationCity);
+            if (t.destinationState != null) setDestinationState(t.destinationState);
+            if (t.destinationZip != null) setDestinationZip(t.destinationZip);
+            if (t.equipmentType) setEquipmentType(t.equipmentType);
+            if (t.weightLbs != null) setWeightLbs(String(t.weightLbs));
+            setIsRush(Boolean(t.isRush));
+            if (t.defaultRateUsd != null) setRateUsd(String(t.defaultRateUsd));
+            if (t.defaultCurrency) setCurrency(t.defaultCurrency);
+            if (t.notes != null) setNotes(t.notes);
+            if (t.lumberSpec) setLumber(t.lumberSpec);
+          }}
+        />
         <section className="rounded border border-emerald-200 bg-white/90 p-3">
           <h4 className="text-xs font-bold uppercase tracking-wide text-emerald-900">Basic</h4>
           <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -585,6 +620,12 @@ export function SupplierPostLoadForm({
         </section>
 
         <LumberSpecForm value={lumber} onChange={setLumber} />
+
+        <BoardFootHelper
+          defaultSpeciesCode={lumber.species}
+          defaultDrynessCode={lumber.dryness}
+          onSuggestWeightLbs={(lbs) => setWeightLbs(String(lbs))}
+        />
 
         <section className="rounded border border-emerald-200 bg-white/90 p-3">
           <h4 className="text-xs font-bold uppercase tracking-wide text-emerald-900">Cleaning & securement</h4>

@@ -75,15 +75,35 @@ export async function GET(req: Request) {
       availableFrom: true,
       availableUntil: true,
       createdAt: true,
+      // Carrier reveal stays minimal: type + owner-op flag + verification only.
+      // Identity (name, DOT/MC) is intentionally omitted on the open board.
+      carrier: {
+        select: {
+          carrierType: true,
+          isOwnerOperator: true,
+          verificationStatus: true,
+        },
+      },
     },
   });
 
   const data = rows.map((r) => ({
-    ...r,
+    id: r.id,
+    originZip: r.originZip,
+    originCity: r.originCity,
+    originState: r.originState,
+    destinationZip: r.destinationZip,
+    destinationCity: r.destinationCity,
+    destinationState: r.destinationState,
+    equipmentType: r.equipmentType,
     askingRateUsd: Number(r.askingRateUsd),
+    notes: r.notes,
     availableFrom: r.availableFrom.toISOString(),
     availableUntil: r.availableUntil.toISOString(),
     createdAt: r.createdAt.toISOString(),
+    carrierType: r.carrier?.carrierType ?? null,
+    isOwnerOperator: r.carrier?.isOwnerOperator ?? false,
+    carrierVerified: r.carrier?.verificationStatus === "APPROVED",
   }));
 
   return NextResponse.json({ data });

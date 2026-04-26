@@ -184,6 +184,50 @@ export function extractLumberSpec(extended: unknown): LumberSpec | null {
 }
 
 /**
+ * Map a parsed LumberSpec to the first-class `lumber*` columns on Load.
+ * Returns `{}` if `spec` is null/undefined so it can be spread into a Prisma
+ * `data` payload safely.
+ */
+export function lumberSpecToLoadColumns(spec: LumberSpec | null | undefined): {
+  lumberCategory?: string | null;
+  lumberSpecies?: string | null;
+  lumberGrade?: string | null;
+  lumberDryness?: string | null;
+  lumberTreatment?: string | null;
+  lumberPanelType?: string | null;
+  lumberNominalSize?: string | null;
+  lumberLengthFt?: number | null;
+  lumberPieceCount?: number | null;
+  lumberBundleCount?: number | null;
+  lumberMbf?: number | null;
+  lumberPackaging?: string | null;
+  lumberLoadingMethod?: string | null;
+  lumberFragile?: boolean | null;
+  lumberWeatherSensitive?: boolean | null;
+  lumberExportShipment?: boolean | null;
+} {
+  if (!spec) return {};
+  return {
+    lumberCategory: spec.productCategory ?? null,
+    lumberSpecies: spec.species ?? null,
+    lumberGrade: spec.grade ?? null,
+    lumberDryness: spec.dryness ?? null,
+    lumberTreatment: spec.treatment ?? null,
+    lumberPanelType: spec.panelType ?? null,
+    lumberNominalSize: spec.nominalSize ?? null,
+    lumberLengthFt: typeof spec.lengthFt === "number" ? spec.lengthFt : null,
+    lumberPieceCount: typeof spec.pieceCount === "number" ? spec.pieceCount : null,
+    lumberBundleCount: typeof spec.bundleCount === "number" ? spec.bundleCount : null,
+    lumberMbf: typeof spec.mbf === "number" ? spec.mbf : null,
+    lumberPackaging: spec.packaging ?? null,
+    lumberLoadingMethod: spec.loadingMethod ?? null,
+    lumberFragile: typeof spec.fragile === "boolean" ? spec.fragile : null,
+    lumberWeatherSensitive: typeof spec.weatherSensitive === "boolean" ? spec.weatherSensitive : null,
+    lumberExportShipment: typeof spec.exportShipment === "boolean" ? spec.exportShipment : null,
+  };
+}
+
+/**
  * Render a compact list of "pills" describing the lumber spec.
  * Returns an array of string fragments suitable for badge rendering.
  */

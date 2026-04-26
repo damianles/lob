@@ -20,6 +20,11 @@ export type SavedSearchPayload = {
   hideBrokers?: boolean;
   /** Minimum offered rate USD-equivalent (filter; client-side only). */
   minRateUsd?: number;
+  lumberSpecies?: string;
+  lumberPanelType?: string;
+  lumberTreatment?: string;
+  lumberFragileOnly?: boolean;
+  lumberWeatherSensitiveOnly?: boolean;
 };
 
 export type SavedSearch = {
@@ -28,6 +33,9 @@ export type SavedSearch = {
   /** Owner namespace — currently a company id (carrier). Empty string allowed for guests. */
   ownerKey: string;
   createdAt: string;
+  /** ISO timestamp of the last time the user opened/applied this search.
+   *  Used to compute "N new matches since you last looked" badges. */
+  lastViewedAt?: string;
   payload: SavedSearchPayload;
 };
 
@@ -74,6 +82,15 @@ export function deleteSavedSearch(id: string) {
   writeAll(all);
 }
 
+/** Update lastViewedAt = now for one saved search; safely no-ops on miss. */
+export function markSearchViewed(id: string) {
+  const all = readAll();
+  const idx = all.findIndex((s) => s.id === id);
+  if (idx < 0) return;
+  all[idx] = { ...all[idx], lastViewedAt: new Date().toISOString() };
+  writeAll(all);
+}
+
 export function summarizeSearch(p: SavedSearchPayload): string {
   const bits: string[] = [];
   if (p.originQ) bits.push(`from "${p.originQ}"`);
@@ -83,5 +100,10 @@ export function summarizeSearch(p: SavedSearchPayload): string {
   if (p.pickupFrom || p.pickupTo) bits.push(`pickup ${p.pickupFrom || "…"}→${p.pickupTo || "…"}`);
   if (p.minRateUsd) bits.push(`min $${p.minRateUsd}`);
   if (p.hideBrokers) bits.push("hide brokers");
+  if (p.lumberSpecies) bits.push(p.lumberSpecies);
+  if (p.lumberPanelType) bits.push(p.lumberPanelType);
+  if (p.lumberTreatment && p.lumberTreatment !== "NONE") bits.push(p.lumberTreatment);
+  if (p.lumberFragileOnly) bits.push("fragile");
+  if (p.lumberWeatherSensitiveOnly) bits.push("weather-sensitive");
   return bits.join(" · ") || "no filters";
 }
