@@ -21,7 +21,7 @@ const items: { id: LobNavId; href: string; label: string; hint: string }[] = [
   { id: "loads", href: "/", label: "Loads", hint: "Posted loads from mills & wholesalers" },
   { id: "capacity", href: "/capacity", label: "Capacity", hint: "Carrier truck availability by lane & dates" },
   { id: "insights", href: "/insights", label: "Insights", hint: "Lane rate analytics & fuel pricing" },
-  { id: "booked", href: "/booked", label: "Booked freight", hint: "Confirmed bookings & live status" },
+  { id: "booked", href: "/booked", label: "Shipments", hint: "Track all your loads — sortable, filterable, exportable" },
   { id: "driver", href: "/driver", label: "Driver", hint: "Dispatch links & QR for drivers" },
   {
     id: "facilityPickup",

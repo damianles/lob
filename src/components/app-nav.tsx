@@ -14,7 +14,7 @@ const signedInLinks = [
   { href: "/", label: "Loads" },
   { href: "/capacity", label: "Capacity" },
   { href: "/insights", label: "Insights" },
-  { href: "/booked", label: "Booked" },
+  { href: "/booked", label: "Shipments" },
   { href: "/onboarding", label: "Account setup" },
 ];
 

@@ -2,6 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { LoadStatus, VerificationStatus, type Prisma } from "@prisma/client";
 import Link from "next/link";
 
+import { DbWarmingBanner } from "@/components/db-warming-banner";
 import { LandingEntry } from "@/components/landing-entry";
 import { LoadBoardWorkspace, type BoardActor, type SerializableLoad } from "@/components/load-board-workspace";
 import { prisma } from "@/lib/prisma";
@@ -149,32 +150,31 @@ export default async function Home() {
   return (
     <main className="min-h-[calc(100vh-3.5rem)] bg-lob-paper text-stone-900">
       <div className="px-3 py-3 sm:px-4">
-        {dbError && (
-          <section className="mb-4 rounded-2xl border border-red-200/80 bg-gradient-to-b from-red-50 to-white p-5 text-red-950 shadow-sm shadow-red-900/5">
-            {(() => {
-              const g = getDatabaseErrorGuidance(dbError);
-              return (
-                <>
-                  <h2 className="text-lg font-semibold tracking-tight">{g.title}</h2>
-                  <ul className="mt-3 list-inside list-disc space-y-2 text-sm leading-relaxed text-red-950/90">
-                    {g.body.map((line, i) => (
-                      <li key={i}>{line}</li>
-                    ))}
-                  </ul>
-                  <p className="mt-4 text-sm">
-                    <Link className="font-semibold text-red-900 underline decoration-red-300 underline-offset-2" href="/api/health">
-                      Check /api/health
-                    </Link>{" "}
-                    (hints only; no secrets exposed).
-                  </p>
-                  <p className="mt-3 rounded-lg bg-red-100/60 px-3 py-2 font-mono text-[11px] leading-snug text-red-900/80">
-                    {dbError}
-                  </p>
-                </>
-              );
-            })()}
-          </section>
-        )}
+        {dbError && (() => {
+          const g = getDatabaseErrorGuidance(dbError);
+          if (g.code === "pool_exhausted") {
+            return <DbWarmingBanner errorMessage={dbError} code={g.code} />;
+          }
+          return (
+            <section className="mb-4 rounded-2xl border border-red-200/80 bg-gradient-to-b from-red-50 to-white p-5 text-red-950 shadow-sm shadow-red-900/5">
+              <h2 className="text-lg font-semibold tracking-tight">{g.title}</h2>
+              <ul className="mt-3 list-inside list-disc space-y-2 text-sm leading-relaxed text-red-950/90">
+                {g.body.map((line, i) => (
+                  <li key={i}>{line}</li>
+                ))}
+              </ul>
+              <p className="mt-4 text-sm">
+                <Link className="font-semibold text-red-900 underline decoration-red-300 underline-offset-2" href="/api/health">
+                  Check /api/health
+                </Link>{" "}
+                (hints only; no secrets exposed).
+              </p>
+              <p className="mt-3 rounded-lg bg-red-100/60 px-3 py-2 font-mono text-[11px] leading-snug text-red-900/80">
+                {dbError}
+              </p>
+            </section>
+          );
+        })()}
 
         {profileSyncDbError && !dbError && (
           <section className="mb-4 rounded-lg border border-red-300 bg-red-50 p-4 text-red-950">

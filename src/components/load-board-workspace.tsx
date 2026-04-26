@@ -7,6 +7,7 @@ import { useMemo, useState } from "react";
 import { LobBrandStrip } from "@/components/lob-brand-strip";
 import { LobSidebar, type LobSidebarStats } from "@/components/lob-sidebar";
 import { useDistanceUnitPreference } from "@/components/providers/app-providers";
+import { SavedSearchesBar } from "@/components/saved-searches-bar";
 import { SupplierPostLoadForm } from "@/components/supplier-post-load-form";
 import { LoadCard } from "@/components/load-card";
 import { EmptyState, SearchIcon, TruckIcon } from "@/components/ui/empty-state";
@@ -414,6 +415,34 @@ export function LoadBoardWorkspace({
                   </FilterChip>
                 )}
               </FilterChipGroup>
+            </div>
+          )}
+
+          {isDispatcher && actor.companyId && (
+            <div className="mb-3">
+              <SavedSearchesBar
+                ownerKey={actor.companyId}
+                currentPayload={{
+                  originQ,
+                  destQ,
+                  equipmentFilter,
+                  weightMin,
+                  weightMax,
+                  pickupFrom,
+                  pickupTo,
+                  hideBrokers,
+                }}
+                onApply={(p) => {
+                  setOriginQ(p.originQ ?? "");
+                  setDestQ(p.destQ ?? "");
+                  setEquipmentFilter(p.equipmentFilter ?? "");
+                  setWeightMin(p.weightMin ?? "");
+                  setWeightMax(p.weightMax ?? "");
+                  setPickupFrom(p.pickupFrom ?? "");
+                  setPickupTo(p.pickupTo ?? "");
+                  setHideBrokers(Boolean(p.hideBrokers));
+                }}
+              />
             </div>
           )}
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { LanePriceChip } from "@/components/lane-price-chip";
 import { LumberSpecForm } from "@/components/lumber-spec-form";
 import { RadioChoice } from "@/components/ui/radio-choice";
 import { LUMBER_EQUIPMENT } from "@/lib/lumber-equipment";
@@ -824,6 +825,17 @@ export function SupplierPostLoadForm({
                 <option value="CAD">CAD</option>
               </select>
             </label>
+            <LanePriceChip
+              originCity={originCity}
+              originState={originState}
+              originZip={originZip}
+              destinationCity={destinationCity}
+              destinationState={destinationState}
+              destinationZip={destinationZip}
+              equipmentType={equipmentType}
+              currency={currency}
+              className="self-center"
+            />
             <p className="text-xs text-zinc-500">
               Fair-market check: live DB averages when enough samples in the rolling window; otherwise your wholesaler base
               in <code className="rounded bg-zinc-100 px-1">data/market-benchmarks.json</code> (see{" "}

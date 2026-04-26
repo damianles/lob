@@ -4,6 +4,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
+import { CarrierScorecard } from "@/components/carrier-scorecard";
 import { CarrierTypeTag } from "@/components/carrier-type-tag";
 import { DispatchQrPanel } from "@/components/dispatch-qr-panel";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
@@ -13,7 +14,6 @@ import { LoadTimeline } from "@/components/load-timeline";
 import { LumberSpecPanel } from "@/components/lumber-spec-panel";
 import { prisma } from "@/lib/prisma";
 import { carrierCompanyNameForViewer } from "@/lib/carrier-visibility";
-import { equipmentLabel } from "@/lib/lumber-equipment";
 import { extractLumberSpec } from "@/lib/lumber-spec";
 import { formatMoney } from "@/lib/money";
 import {
@@ -25,16 +25,6 @@ import { carrierMayViewPostedLoad } from "@/lib/carrier-load-access";
 import { syncClerkUserToDatabase } from "@/lib/sync-clerk-user";
 
 export const dynamic = "force-dynamic";
-
-function parseTrailerJson(raw: string | null): string[] {
-  if (!raw) return [];
-  try {
-    const v = JSON.parse(raw) as unknown;
-    return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
-  } catch {
-    return [];
-  }
-}
 
 export default async function LoadDetailPage({ params }: { params: Promise<{ loadId: string }> }) {
   const { loadId } = await params;
@@ -258,80 +248,34 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
             })()}
 
             {load.booking && (isShipperOwner || isAdmin) && (
-              <section className="mt-6 rounded-lg border border-zinc-200 bg-white p-4 text-sm">
-                <h2 className="text-base font-semibold text-zinc-900">Carrier profile (post-booking)</h2>
-                <p className="mt-1 text-xs text-zinc-500">
-                  Review the transport company before the truck arrives. Data comes from their LOB carrier profile.
-                </p>
-                <dl className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <div>
-                    <dt className="text-xs font-semibold uppercase text-zinc-500">Legal name</dt>
-                    <dd className="font-medium text-zinc-900">{load.booking.carrierCompany.legalName}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs font-semibold uppercase text-zinc-500">Verification</dt>
-                    <dd className="text-zinc-800">{load.booking.carrierCompany.verificationStatus}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs font-semibold uppercase text-zinc-500">Carrier type</dt>
-                    <dd>
-                      <CarrierTypeTag
-                        carrierType={load.booking.carrierCompany.carrierType}
-                        isOwnerOperator={load.booking.carrierCompany.isOwnerOperator}
-                      />
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs font-semibold uppercase text-zinc-500">DOT</dt>
-                    <dd>{load.booking.carrierCompany.dotNumber ?? "—"}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs font-semibold uppercase text-zinc-500">MC</dt>
-                    <dd>{load.booking.carrierCompany.mcNumber ?? "—"}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs font-semibold uppercase text-zinc-500">Fleet</dt>
-                    <dd>
-                      {load.booking.carrierCompany.fleetTruckCount ?? "—"} trucks ·{" "}
-                      {load.booking.carrierCompany.fleetTrailerCount ?? "—"} trailers
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs font-semibold uppercase text-zinc-500">Equipment</dt>
-                    <dd>
-                      {parseTrailerJson(load.booking.carrierCompany.trailerEquipmentTypes)
-                        .map((c) => equipmentLabel(c))
-                        .join(", ") || "—"}
-                    </dd>
-                  </div>
-                </dl>
-                {load.booking.carrierCompany.carrierProfileBlurb && (
-                  <p className="mt-4 whitespace-pre-wrap text-zinc-700">{load.booking.carrierCompany.carrierProfileBlurb}</p>
-                )}
-                {load.booking.carrierCompany.isOwnerOperator && (
-                  <p className="mt-3 text-xs font-medium text-amber-800">Owner-operator / small fleet</p>
-                )}
-                {load.booking.carrierCompany.factoringEligible && (
-                  <p className="mt-2 text-xs text-emerald-800">
-                    Factoring-eligible carrier — may use quick-pay programs.
-                  </p>
-                )}
-                {carrierDocs.length > 0 && (
-                  <div className="mt-4 border-t border-zinc-100 pt-3">
-                    <p className="text-xs font-semibold uppercase text-zinc-500">Documents on file</p>
-                    <ul className="mt-2 space-y-1 text-xs text-zinc-700">
-                      {carrierDocs.map((d, i) => (
-                        <li key={`${d.kind}-${i}-${d.expiresAt?.toISOString() ?? ""}`}>
-                          {d.kind}
-                          {d.expiresAt
-                            ? ` · expires ${d.expiresAt.toLocaleDateString()}`
-                            : ""}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </section>
+              <div className="mt-6">
+                <div className="mb-2 flex items-center justify-between">
+                  <h2 className="text-base font-semibold text-zinc-900">Carrier scorecard</h2>
+                  <Link
+                    href={`/loads/${load.id}/rate-con`}
+                    className="rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-zinc-800"
+                  >
+                    Rate confirmation (print / PDF)
+                  </Link>
+                </div>
+                <CarrierScorecard
+                  carrier={{
+                    legalName: load.booking.carrierCompany.legalName,
+                    dotNumber: load.booking.carrierCompany.dotNumber,
+                    mcNumber: load.booking.carrierCompany.mcNumber,
+                    carrierType: load.booking.carrierCompany.carrierType,
+                    isOwnerOperator: load.booking.carrierCompany.isOwnerOperator,
+                    fleetTruckCount: load.booking.carrierCompany.fleetTruckCount,
+                    fleetTrailerCount: load.booking.carrierCompany.fleetTrailerCount,
+                    trailerEquipmentTypes: load.booking.carrierCompany.trailerEquipmentTypes,
+                    carrierProfileBlurb: load.booking.carrierCompany.carrierProfileBlurb,
+                    factoringEligible: load.booking.carrierCompany.factoringEligible,
+                    verificationStatus: load.booking.carrierCompany.verificationStatus,
+                    reliabilityScore: null,
+                  }}
+                  documents={carrierDocs}
+                />
+              </div>
             )}
 
             {load.extendedPosting != null && (
