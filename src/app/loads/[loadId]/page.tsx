@@ -4,14 +4,17 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
+import { CarrierTypeTag } from "@/components/carrier-type-tag";
 import { DispatchQrPanel } from "@/components/dispatch-qr-panel";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { LobBrandStrip } from "@/components/lob-brand-strip";
 import { LobSidebar } from "@/components/lob-sidebar";
 import { LoadTimeline } from "@/components/load-timeline";
+import { LumberSpecPanel } from "@/components/lumber-spec-panel";
 import { prisma } from "@/lib/prisma";
 import { carrierCompanyNameForViewer } from "@/lib/carrier-visibility";
 import { equipmentLabel } from "@/lib/lumber-equipment";
+import { extractLumberSpec } from "@/lib/lumber-spec";
 import { formatMoney } from "@/lib/money";
 import {
   shipperCompanyNameForViewer,
@@ -62,6 +65,7 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
               legalName: true,
               dotNumber: true,
               mcNumber: true,
+              carrierType: true,
               fleetTruckCount: true,
               fleetTrailerCount: true,
               trailerEquipmentTypes: true,
@@ -231,16 +235,27 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
               {load.booking && (
                 <div>
                   <p className="text-xs font-semibold uppercase text-zinc-500">Carrier</p>
-                  <p className="mt-1 text-zinc-900">
-                    {carrierNameVisible ? (
-                      carrierNameVisible
-                    ) : (
-                      <span className="italic text-zinc-500">Booked</span>
-                    )}
-                  </p>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <p className="text-zinc-900">
+                      {carrierNameVisible ? (
+                        carrierNameVisible
+                      ) : (
+                        <span className="italic text-zinc-500">Booked</span>
+                      )}
+                    </p>
+                    <CarrierTypeTag
+                      carrierType={load.booking.carrierCompany.carrierType}
+                      isOwnerOperator={load.booking.carrierCompany.isOwnerOperator}
+                    />
+                  </div>
                 </div>
               )}
             </div>
+
+            {(() => {
+              const lumber = extractLumberSpec(load.extendedPosting);
+              return lumber ? <LumberSpecPanel spec={lumber} className="mt-4" /> : null;
+            })()}
 
             {load.booking && (isShipperOwner || isAdmin) && (
               <section className="mt-6 rounded-lg border border-zinc-200 bg-white p-4 text-sm">
@@ -256,6 +271,15 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
                   <div>
                     <dt className="text-xs font-semibold uppercase text-zinc-500">Verification</dt>
                     <dd className="text-zinc-800">{load.booking.carrierCompany.verificationStatus}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase text-zinc-500">Carrier type</dt>
+                    <dd>
+                      <CarrierTypeTag
+                        carrierType={load.booking.carrierCompany.carrierType}
+                        isOwnerOperator={load.booking.carrierCompany.isOwnerOperator}
+                      />
+                    </dd>
                   </div>
                   <div>
                     <dt className="text-xs font-semibold uppercase text-zinc-500">DOT</dt>

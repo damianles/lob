@@ -8,6 +8,7 @@ import { DemoBanner } from "@/components/demo-banner";
 import { DeployFingerprint } from "@/components/deploy-fingerprint";
 import { AppProviders } from "@/components/providers/app-providers";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import { RoleRibbon } from "@/components/role-ribbon";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -41,6 +42,7 @@ export default function RootLayout({
             <DemoBanner />
             <DeployFingerprint />
             <LobBrandMasthead />
+            <RoleRibbon />
             <AppNav />
             {children}
             <MobileBottomNav />

@@ -117,6 +117,15 @@ a {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
+/* Hide scrollbar visuals on horizontally-scrolling rows (mobile nav, chip strips) */
+.hide-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* Focus visible styles */
 :focus-visible {
   outline: 2px solid var(--lob-navy);

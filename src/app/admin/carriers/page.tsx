@@ -1,5 +1,6 @@
 import { VerificationStatus } from "@prisma/client";
 
+import { CarrierTypeTag } from "@/components/carrier-type-tag";
 import { LobBrandStrip } from "@/components/lob-brand-strip";
 import { prisma } from "@/lib/prisma";
 import { CarrierReviewActions } from "./review-actions";
@@ -53,7 +54,12 @@ export default async function AdminCarriersPage() {
               {carriers.map((carrier) => (
                 <tr key={carrier.id} className="border-b">
                   <td className="p-3 font-medium">{carrier.legalName}</td>
-                  <td className="p-3">{carrier.carrierType}</td>
+                  <td className="p-3">
+                    <CarrierTypeTag
+                      carrierType={carrier.carrierType}
+                      isOwnerOperator={carrier.isOwnerOperator}
+                    />
+                  </td>
                   <td className="p-3">
                     {carrier.dotNumber ?? "-"} / {carrier.mcNumber ?? "-"}
                   </td>

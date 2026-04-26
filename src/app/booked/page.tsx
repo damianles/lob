@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { LoadStatus } from "@prisma/client";
 
+import { CarrierTypeTag } from "@/components/carrier-type-tag";
 import { LobBrandStrip } from "@/components/lob-brand-strip";
 import { LobSidebar } from "@/components/lob-sidebar";
 import { formatMoney } from "@/lib/money";
@@ -84,7 +85,13 @@ export default async function BookedFreightPage() {
     orderBy: [{ status: "asc" }, { updatedAt: "desc" }],
     take: 80,
     include: {
-      booking: { include: { carrierCompany: { select: { legalName: true } } } },
+      booking: {
+        include: {
+          carrierCompany: {
+            select: { legalName: true, carrierType: true, isOwnerOperator: true },
+          },
+        },
+      },
       dispatchLink: true,
       shipperCompany: { select: { legalName: true } },
     },
@@ -160,7 +167,18 @@ export default async function BookedFreightPage() {
                             ? formatMoney(Number(l.booking.agreedRateUsd), l.booking.agreedCurrency)
                             : "—"}
                         </td>
-                        <td className="max-w-[200px] truncate px-3 py-2 text-zinc-600">{counterparty ?? "—"}</td>
+                        <td className="max-w-[240px] px-3 py-2 text-zinc-600">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="truncate">{counterparty ?? "—"}</span>
+                            {(isShipperView || actor.role === "ADMIN") && l.booking && (
+                              <CarrierTypeTag
+                                carrierType={l.booking.carrierCompany.carrierType}
+                                isOwnerOperator={l.booking.carrierCompany.isOwnerOperator}
+                                compact
+                              />
+                            )}
+                          </div>
+                        </td>
                         <td className="px-3 py-2">
                           {l.dispatchLink ? (
                             <Link

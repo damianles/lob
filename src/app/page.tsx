@@ -8,6 +8,7 @@ import { prisma } from "@/lib/prisma";
 import { carrierCompanyNameForViewer } from "@/lib/carrier-visibility";
 import { shipperCompanyNameForViewer } from "@/lib/shipper-visibility";
 import { getDatabaseErrorGuidance } from "@/lib/db-connection-hints";
+import { extractLumberSpec } from "@/lib/lumber-spec";
 import { syncClerkUserToDatabase } from "@/lib/sync-clerk-user";
 
 export const dynamic = "force-dynamic";
@@ -53,10 +54,13 @@ function toSerializableLoads(loads: LoadRow[], actor: BoardActor): SerializableL
           carrierCompany: {
             legalName:
               carrierCompanyNameForViewer(l.booking.carrierCompany.legalName, l, visibilityActor) ?? "",
+            carrierType: l.booking.carrierCompany.carrierType ?? null,
+            isOwnerOperator: l.booking.carrierCompany.isOwnerOperator ?? false,
           },
         }
       : null,
     dispatchLink: l.dispatchLink,
+    lumberSpec: extractLumberSpec(l.extendedPosting),
   }));
 }
 

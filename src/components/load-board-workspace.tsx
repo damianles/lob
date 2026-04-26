@@ -47,9 +47,15 @@ export type SerializableLoad = {
     carrierCompanyId: string;
     agreedRateUsd: number;
     agreedCurrency: "USD" | "CAD";
-    carrierCompany: { legalName: string };
+    carrierCompany: {
+      legalName: string;
+      carrierType?: "ASSET_BASED" | "BROKER" | null;
+      isOwnerOperator?: boolean | null;
+    };
   };
   dispatchLink: null | { token: string; status: string };
+  /** Optional structured lumber posting payload (see lib/lumber-spec.ts). */
+  lumberSpec?: import("@/lib/lumber-spec").LumberSpec | null;
 };
 
 export type BoardActor = {
@@ -115,6 +121,7 @@ export function LoadBoardWorkspace({
   const [emrZip, setEmrZip] = useState("");
   const [emrOriginRadius, setEmrOriginRadius] = useState("");
   const [emrDestRadius, setEmrDestRadius] = useState("");
+  const [hideBrokers, setHideBrokers] = useState(false);
   const { distanceUnit, setDistanceUnit } = useDistanceUnitPreference();
 
   const isShipper = actor.role === "SHIPPER" && Boolean(actor.companyId);
@@ -130,7 +137,8 @@ export function LoadBoardWorkspace({
       postedTo ||
       pickupFrom ||
       pickupTo ||
-      emrZip,
+      emrZip ||
+      hideBrokers,
   );
 
   function clearAllFilters() {
@@ -146,6 +154,7 @@ export function LoadBoardWorkspace({
     setEmrZip("");
     setEmrOriginRadius("");
     setEmrDestRadius("");
+    setHideBrokers(false);
   }
 
   const filteredLoads = useMemo(() => {
@@ -193,6 +202,10 @@ export function LoadBoardWorkspace({
         }
       }
 
+      if (hideBrokers && l.booking?.carrierCompany?.carrierType === "BROKER") {
+        return false;
+      }
+
       return true;
     });
 
@@ -222,6 +235,7 @@ export function LoadBoardWorkspace({
     emrOriginRadius,
     emrDestRadius,
     distanceUnit,
+    hideBrokers,
   ]);
 
   const summary = useMemo(() => {
@@ -394,6 +408,11 @@ export function LoadBoardWorkspace({
                     EMR from: {emrZip}
                   </FilterChip>
                 )}
+                {hideBrokers && (
+                  <FilterChip onRemove={() => setHideBrokers(false)}>
+                    Hide brokers
+                  </FilterChip>
+                )}
               </FilterChipGroup>
             </div>
           )}
@@ -411,6 +430,20 @@ export function LoadBoardWorkspace({
                 <option value="pickupDesc">Pickup date (latest)</option>
               </select>
             </label>
+            {isShipper && (
+              <label
+                className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50"
+                title="Hide loads booked by brokers — only show asset-based carriers"
+              >
+                <input
+                  type="checkbox"
+                  className="h-3.5 w-3.5 rounded border-zinc-300 text-lob-navy focus:ring-lob-navy/30"
+                  checked={hideBrokers}
+                  onChange={(e) => setHideBrokers(e.target.checked)}
+                />
+                Hide brokers
+              </label>
+            )}
             <div className="ml-auto">
               <RadioChoice
                 label="View mode"

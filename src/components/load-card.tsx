@@ -3,11 +3,13 @@
 import Link from "next/link";
 import { useState } from "react";
 
+import { CarrierTypeTag } from "@/components/carrier-type-tag";
 import type { BoardActor, SerializableLoad } from "@/components/load-board-workspace";
 import { Badge, type BadgeVariant } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
 import { equipmentShortTag } from "@/lib/lumber-equipment";
+import { summarizeLumberSpec } from "@/lib/lumber-spec";
 import { formatMoney } from "@/lib/money";
 
 interface LoadCardProps {
@@ -73,9 +75,15 @@ export function LoadCard({
 
   const displayRate = load.booking ? load.booking.agreedRateUsd : (load.offeredRateUsd ?? null);
   const rateCurrency = load.booking ? load.booking.agreedCurrency : load.offerCurrency;
+  const specPills = summarizeLumberSpec(load.lumberSpec);
 
   return (
-    <Card hover interactive onClick={() => setExpanded((v) => !v)} className="transition-all duration-200">
+    <Card
+      hover
+      interactive
+      onClick={() => setExpanded((v) => !v)}
+      className="transition-all duration-200 border-l-4 border-l-lob-navy/70 hover:border-l-lob-navy"
+    >
       <CardBody className="py-4">
         <div className="flex items-start justify-between gap-4 mb-4">
           <div className="flex-1 min-w-0">
@@ -140,14 +148,32 @@ export function LoadCard({
           </div>
         </div>
 
+        {specPills.length > 0 && (
+          <div className="mb-3 flex flex-wrap gap-1">
+            {specPills.map((p, i) => (
+              <span
+                key={`${p}-${i}`}
+                className="inline-flex items-center rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-medium text-stone-700 ring-1 ring-stone-200"
+              >
+                {p}
+              </span>
+            ))}
+          </div>
+        )}
+
         {load.shipperCompanyName && (
           <div className="text-xs text-stone-600 mb-3">
             {isShipper ? "You posted this load" : `Shipper: ${load.shipperCompanyName}`}
           </div>
         )}
         {load.booking && (
-          <div className="text-xs text-stone-600 mb-3">
-            Carrier: {load.booking.carrierCompany.legalName || "Booked"}
+          <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-stone-600">
+            <span>Carrier: {load.booking.carrierCompany.legalName || "Booked"}</span>
+            <CarrierTypeTag
+              carrierType={load.booking.carrierCompany.carrierType}
+              isOwnerOperator={load.booking.carrierCompany.isOwnerOperator}
+              compact
+            />
           </div>
         )}
 

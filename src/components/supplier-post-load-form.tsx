@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 
+import { LumberSpecForm } from "@/components/lumber-spec-form";
 import { RadioChoice } from "@/components/ui/radio-choice";
 import { LUMBER_EQUIPMENT } from "@/lib/lumber-equipment";
+import type { LumberSpec } from "@/lib/lumber-spec";
 
 type CarrierPick = { id: string; legalName: string };
 
@@ -26,6 +28,14 @@ const emptyLoc: PuDel = {
   window: "",
   appointment: "",
 };
+
+function hasAnyLumberSpec(spec: LumberSpec): boolean {
+  return Object.values(spec).some((v) => {
+    if (v === undefined || v === null || v === "") return false;
+    if (Array.isArray(v)) return v.length > 0;
+    return true;
+  });
+}
 
 export function SupplierPostLoadForm({
   onCancel,
@@ -62,6 +72,7 @@ export function SupplierPostLoadForm({
   const [equipmentType, setEquipmentType] = useState<string>(LUMBER_EQUIPMENT[0].code);
   const [ftlLtl, setFtlLtl] = useState<"FTL" | "LTL">("FTL");
   const [weightLbs, setWeightLbs] = useState("");
+  const [lumber, setLumber] = useState<LumberSpec>({});
   const [ltlPallets, setLtlPallets] = useState("");
   const [ltlPieces, setLtlPieces] = useState("");
   const [ltlLengthFt, setLtlLengthFt] = useState("");
@@ -329,6 +340,7 @@ export function SupplierPostLoadForm({
             parsNumber: parsRequired ? parsNumber.trim() : undefined,
           }
         : undefined,
+      lumber: hasAnyLumberSpec(lumber) ? lumber : undefined,
     };
 
     const tierAssignments: { carrierCompanyId: string; tier: number }[] = [];
@@ -570,6 +582,8 @@ export function SupplierPostLoadForm({
             </div>
           )}
         </section>
+
+        <LumberSpecForm value={lumber} onChange={setLumber} />
 
         <section className="rounded border border-emerald-200 bg-white/90 p-3">
           <h4 className="text-xs font-bold uppercase tracking-wide text-emerald-900">Cleaning & securement</h4>

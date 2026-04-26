@@ -64,6 +64,7 @@ export async function GET() {
               id: true,
               legalName: true,
               carrierType: true,
+              isOwnerOperator: true,
               reliabilityScore: true,
             },
           },
@@ -112,6 +113,7 @@ export async function GET() {
         legalName: visibleShipper ?? "",
       },
       booking: bookingMasked,
+      extendedPosting: row.extendedPosting ?? null,
     };
   });
 
