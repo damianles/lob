@@ -1,8 +1,10 @@
 # LOB Web App (MVP Foundation)
 
-## Deploy looks old on Vercel?
+## Get changes live on Vercel (short version)
 
-**→ Open [`PUSH_AND_VERCEL.md`](./PUSH_AND_VERCEL.md)** — push to GitHub, Vercel **Root Directory empty**, and **automatic deploys (CD)** on every push to `main`. If the UI still looks old, hard-refresh (Cmd+Shift+R) and check the deployment SHA matches `git log -1`.
+**→ [`SHIP.md`](./SHIP.md)** — `cd` to **this** folder (the project root in Git), commit, `git push origin main`, wait for the build.
+
+*Full checklist / old notes: [`PUSH_AND_VERCEL.md`](./PUSH_AND_VERCEL.md)*
 
 ---
 

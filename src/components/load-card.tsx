@@ -82,7 +82,7 @@ export function LoadCard({
       hover
       interactive
       onClick={() => setExpanded((v) => !v)}
-      className="transition-all duration-200 border-l-4 border-l-lob-navy/70 hover:border-l-lob-navy"
+      className="w-full min-w-0 max-w-full transition-all duration-200 border-l-4 border-l-lob-navy/70 hover:border-l-lob-navy"
     >
       <CardBody className="py-4">
         <div className="flex items-start justify-between gap-4 mb-4">

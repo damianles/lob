@@ -1,6 +1,13 @@
 @import "tailwindcss";
 
 /* LOB brand — aligned to primary logo (navy field, white type, honey-oak accent) */
+/*
+  Stacking (Tailwind z-*):
+  - z-50: primary shell chrome (AppNav, mobile bottom nav) — sticky/fixed to viewport edges
+  - z-[60]: FAB and other “always visible” floaters that must sit above the mobile bottom bar
+  - z-[100]: transient menus over the shell (e.g. admin “View as” while open) so they are not covered by the nav
+*/
+
 :root {
   --lob-navy: #001233;
   --lob-navy-hover: #000a1f;

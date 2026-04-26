@@ -19,7 +19,7 @@ export function FloatingActionButton({
     <button
       onClick={onClick}
       className={`
-        fixed bottom-20 right-4 z-40
+        fixed bottom-20 right-4 z-[60]
         lg:hidden
         flex items-center gap-2
         ${label ? "pl-5 pr-4 py-3.5 rounded-full" : "w-14 h-14 rounded-full justify-center"}

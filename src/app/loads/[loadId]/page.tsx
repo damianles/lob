@@ -329,6 +329,8 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
                   pickupUrl={`${baseUrl}/facility/pickup/${load.dispatchLink.token}`}
                   deliveryUrl={`${baseUrl}/facility/delivery/${load.dispatchLink.token}`}
                   driverUrl={`${baseUrl}/driver/${load.dispatchLink.token}`}
+                  pickupCode={load.uniquePickupCode}
+                  bolStripHref={`/loads/${load.id}/bol-strip`}
                 />
               </div>
             )}

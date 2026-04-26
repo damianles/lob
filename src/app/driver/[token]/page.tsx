@@ -61,6 +61,7 @@ export default async function DriverPage({
         pickupUrl={`${baseUrl}/facility/pickup/${dispatch.token}`}
         deliveryUrl={`${baseUrl}/facility/delivery/${dispatch.token}`}
         driverUrl={`${baseUrl}/driver/${dispatch.token}`}
+        pickupCode={dispatch.load.uniquePickupCode}
       />
 
       <DriverActions
