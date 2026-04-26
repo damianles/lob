@@ -33,7 +33,7 @@ export function LobBrandMasthead() {
       <div className="mx-auto hidden max-w-[1680px] items-center px-5 py-3 sm:flex sm:px-8 sm:py-3.5">
         <Link
           href="/"
-          className="inline-flex max-w-[min(94vw,560px)] shrink-0 items-center py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lob-navy/20 focus-visible:ring-offset-2"
+          className="inline-flex max-w-[min(94vw,640px)] shrink-0 items-center py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lob-navy/20 focus-visible:ring-offset-2"
           aria-label={`${BRAND_PRODUCT_NAME} — home`}
         >
           <Image
@@ -42,8 +42,11 @@ export function LobBrandMasthead() {
             width={LOB_BRAND_LOCKUP_WIDTH}
             height={LOB_BRAND_LOCKUP_HEIGHT}
             priority
-            sizes="(max-width: 640px) 94vw, 560px"
-            className="h-auto max-h-[5.25rem] w-auto max-w-full object-contain object-left drop-shadow-[0_1px_1px_rgba(0,18,51,0.04)] sm:max-h-[6.25rem] lg:max-h-[6.75rem]"
+            sizes="(max-width: 640px) 94vw, 640px"
+            // The approved horizontal lockup PNG (1024×799) has substantial
+            // top/bottom whitespace inside the canvas, so we let the image
+            // run a bit taller than the old square lockup to compensate.
+            className="h-auto max-h-[5.5rem] w-auto max-w-full object-contain object-left drop-shadow-[0_1px_1px_rgba(0,18,51,0.04)] sm:max-h-[7rem] lg:max-h-[8rem]"
           />
         </Link>
       </div>

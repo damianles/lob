@@ -2,6 +2,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
+import { AdminViewAsBar } from "@/components/admin-view-as-bar";
 import { AppNav } from "@/components/app-nav";
 import { LobBrandMasthead } from "@/components/lob-brand-masthead";
 import { DemoBanner } from "@/components/demo-banner";
@@ -42,6 +43,7 @@ export default function RootLayout({
             <DemoBanner />
             <DeployFingerprint />
             <LobBrandMasthead />
+            <AdminViewAsBar />
             <RoleRibbon />
             <AppNav />
             {children}

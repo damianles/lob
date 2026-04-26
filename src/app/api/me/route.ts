@@ -10,8 +10,11 @@ export async function GET() {
     return NextResponse.json({
       signedIn: false,
       role: null,
+      realRole: null,
       companyId: null,
       company: null,
+      simulated: false,
+      viewAs: null,
     });
   }
 
@@ -43,10 +46,41 @@ export async function GET() {
     }
   }
 
+  // When admin is in view-as mode, override the surface-level company traits
+  // so the client UI reflects the simulated perspective (Mill vs Wholesaler,
+  // Asset vs Broker, Owner-op flag, verified state).
+  let projectedCompany = company;
+  if (actor.simulated && actor.viewAs && company) {
+    projectedCompany = {
+      ...company,
+      supplierKind:
+        actor.viewAs.role === "SHIPPER"
+          ? actor.viewAs.supplierKind ?? company.supplierKind
+          : null,
+      carrierType:
+        actor.viewAs.role === "DISPATCHER" || actor.viewAs.role === "DRIVER"
+          ? actor.viewAs.carrierType ?? company.carrierType
+          : null,
+      isOwnerOperator:
+        actor.viewAs.role === "DISPATCHER" || actor.viewAs.role === "DRIVER"
+          ? Boolean(actor.viewAs.isOwnerOperator)
+          : false,
+      verificationStatus:
+        typeof actor.viewAs.verified === "boolean"
+          ? actor.viewAs.verified
+            ? "APPROVED"
+            : "PENDING"
+          : company.verificationStatus,
+    };
+  }
+
   return NextResponse.json({
     signedIn: true,
     role: actor.role,
+    realRole: actor.realRole,
     companyId: actor.companyId,
-    company,
+    company: projectedCompany,
+    simulated: actor.simulated,
+    viewAs: actor.viewAs,
   });
 }

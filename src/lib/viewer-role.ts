@@ -24,11 +24,24 @@ export type ViewerRole = {
   carrierType: CarrierBusinessType | null;
   isOwnerOperator: boolean;
   verified: boolean;
+  /** True when an admin is currently simulating a non-admin role for UX evaluation. */
+  simulated: boolean;
+  /** The admin's real role kind — only differs from `kind` when simulated. */
+  realKind: ViewerKind;
+};
+
+export type ViewAsApiPayload = {
+  role: "SHIPPER" | "DISPATCHER" | "DRIVER" | "ADMIN";
+  supplierKind?: SupplierKind | null;
+  carrierType?: CarrierBusinessType | null;
+  isOwnerOperator?: boolean;
+  verified?: boolean;
 };
 
 export type MeApiResponse = {
   signedIn: boolean;
   role: "SHIPPER" | "DISPATCHER" | "DRIVER" | "ADMIN" | null;
+  realRole: "SHIPPER" | "DISPATCHER" | "DRIVER" | "ADMIN" | null;
   companyId: string | null;
   company: {
     id: string;
@@ -38,7 +51,16 @@ export type MeApiResponse = {
     isOwnerOperator: boolean;
     verificationStatus: "PENDING" | "APPROVED" | "REJECTED";
   } | null;
+  simulated: boolean;
+  viewAs: ViewAsApiPayload | null;
 };
+
+function kindFromRole(role: MeApiResponse["role"]): ViewerKind {
+  if (role === "ADMIN") return "ADMIN";
+  if (role === "SHIPPER") return "SHIPPER";
+  if (role === "DISPATCHER" || role === "DRIVER") return "CARRIER";
+  return "GUEST";
+}
 
 export function deriveViewerRole(me: MeApiResponse | null | undefined): ViewerRole {
   if (!me || !me.signedIn) {
@@ -52,11 +74,15 @@ export function deriveViewerRole(me: MeApiResponse | null | undefined): ViewerRo
       carrierType: null,
       isOwnerOperator: false,
       verified: false,
+      simulated: false,
+      realKind: "GUEST",
     };
   }
 
   const company = me.company;
   const verified = company?.verificationStatus === "APPROVED";
+  const simulated = Boolean(me.simulated);
+  const realKind = kindFromRole(me.realRole ?? me.role);
 
   if (me.role === "ADMIN") {
     return {
@@ -69,6 +95,8 @@ export function deriveViewerRole(me: MeApiResponse | null | undefined): ViewerRo
       carrierType: company?.carrierType ?? null,
       isOwnerOperator: company?.isOwnerOperator ?? false,
       verified,
+      simulated,
+      realKind,
     };
   }
 
@@ -88,6 +116,8 @@ export function deriveViewerRole(me: MeApiResponse | null | undefined): ViewerRo
       carrierType: null,
       isOwnerOperator: false,
       verified,
+      simulated,
+      realKind,
     };
   }
 
@@ -112,6 +142,8 @@ export function deriveViewerRole(me: MeApiResponse | null | undefined): ViewerRo
       carrierType: ct,
       isOwnerOperator: oo,
       verified,
+      simulated,
+      realKind,
     };
   }
 
@@ -125,6 +157,8 @@ export function deriveViewerRole(me: MeApiResponse | null | undefined): ViewerRo
     carrierType: null,
     isOwnerOperator: false,
     verified,
+    simulated,
+    realKind,
   };
 }
 
