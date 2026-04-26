@@ -158,6 +158,13 @@ model User {
 model Load {
   id                    String                    @id @default(cuid())
   referenceNumber       String                    @unique
+  /**
+   * Shipper-supplied external identifier (TMS load id, mill ticket, PO, etc.).
+   * Optional, but unique per shipper company when present — gives bulk
+   * uploads safe idempotency: re-running the same CSV won't double-post,
+   * and integrators can use it as an upsert key.
+   */
+  externalRef           String?
   originCity            String
   originState           String
   originZip             String
@@ -187,6 +194,7 @@ model Load {
    * ---- First-class lumber spec columns (mirrored from extendedPosting.lumber) ----
    */
   /**
+   * /**
    * /** DIMENSIONAL | BOARDS | TIMBERS | PANELS | ENGINEERED | BUNDLES | POLES | PELLETS | CHIPS | MILLWORK | OTHER
    */
   lumberCategory         String?
@@ -236,10 +244,12 @@ model Load {
   carrierTiers        LoadCarrierTier[]
   excludedCarriers    LoadCarrierExclusion[] @relation("LoadExcludesCarrier")
 
+  @@unique([shipperCompanyId, externalRef], name: "Load_shipper_externalRef_unique")
   @@index([lumberSpecies])
   @@index([lumberPanelType])
   @@index([lumberCategory])
   @@index([originState, destinationState, requestedPickupAt])
+  @@index([shipperCompanyId, createdAt])
 }
 
 /**

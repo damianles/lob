@@ -3,7 +3,7 @@ import { LoadCarrierVisibilityMode, Prisma, RateObservationSource } from "@prism
 import { NextResponse } from "next/server";
 
 import { canonicalCityKey } from "@/lib/city-canonical";
-import { parseAllRows, parseCsv, type BulkRowResult } from "@/lib/csv-bulk-load";
+import { BULK_MAX_ROWS, parseAllRows, parseCsv, type BulkRowResult } from "@/lib/csv-bulk-load";
 import {
   findLaneBenchmark,
   normalizeEquipmentForBenchmark,
@@ -59,6 +59,40 @@ export async function POST(req: Request) {
   }
 
   const parsed = parseAllRows(rows);
+
+  // Cross-upload idempotency: any externalRef already used by this shipper
+  // shouldn't be written twice. Mark conflicting rows as failed up front.
+  const wantedRefs = parsed
+    .filter((r): r is Extract<BulkRowResult, { ok: true }> => r.ok && Boolean(r.data.externalRef))
+    .map((r) => r.data.externalRef as string);
+
+  if (wantedRefs.length) {
+    const existing = await prisma.load.findMany({
+      where: {
+        shipperCompanyId: actor.companyId!,
+        externalRef: { in: wantedRefs },
+      },
+      select: { externalRef: true },
+    });
+    const taken = new Set(existing.map((e) => e.externalRef!));
+    if (taken.size) {
+      for (let i = 0; i < parsed.length; i++) {
+        const r = parsed[i];
+        if (!r.ok) continue;
+        if (r.data.externalRef && taken.has(r.data.externalRef)) {
+          parsed[i] = {
+            ok: false,
+            rowIndex: r.rowIndex,
+            errors: [
+              `externalRef "${r.data.externalRef}" already used by an earlier load — re-upload skipped (idempotent).`,
+            ],
+            raw: rows[i] ?? {},
+          };
+        }
+      }
+    }
+  }
+
   const validRows = parsed.filter((r): r is Extract<BulkRowResult, { ok: true }> => r.ok);
   const invalidRows = parsed.filter((r): r is Extract<BulkRowResult, { ok: false }> => !r.ok);
 
@@ -68,6 +102,8 @@ export async function POST(req: Request) {
       totalRows: parsed.length,
       validRows: validRows.length,
       invalidRows: invalidRows.length,
+      maxRows: BULK_MAX_ROWS,
+      truncated: rows.length > BULK_MAX_ROWS,
       results: parsed,
     });
   }
@@ -131,6 +167,7 @@ export async function POST(req: Request) {
       const row = await prisma.load.create({
         data: {
           referenceNumber: `LOB-${randomUUID().slice(0, 8).toUpperCase()}`,
+          externalRef: p.externalRef ?? null,
           originCity: p.originCity,
           originState: p.originState.toUpperCase(),
           originZip: p.originZip,
@@ -177,10 +214,20 @@ export async function POST(req: Request) {
         referenceNumber: row.referenceNumber,
       });
     } catch (e) {
+      let message = "Unknown DB error";
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+        // Unique constraint on (shipperCompanyId, externalRef) — race with a
+        // concurrent upload. Treat as idempotency hit, not a hard failure.
+        message = p.externalRef
+          ? `externalRef "${p.externalRef}" already exists for this shipper (idempotent skip)`
+          : "Duplicate row caught by DB unique constraint";
+      } else if (e instanceof Error) {
+        message = e.message;
+      }
       results.push({
         ok: false,
         rowIndex: v.rowIndex,
-        errors: [e instanceof Error ? e.message : "Unknown DB error"],
+        errors: [message],
       });
     }
   }

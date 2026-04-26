@@ -3,6 +3,8 @@ import { z } from "zod";
 import { LUMBER_EQUIPMENT_CODES } from "@/lib/lumber-equipment";
 
 export const createLoadSchema = z.object({
+  /** Shipper-supplied idempotency key (TMS load id, PO, mill ticket). */
+  externalRef: z.string().trim().max(120).optional(),
   originCity: z.string().min(2),
   originState: z.string().min(2).max(2),
   /** US state or CA province code (2 letters). */

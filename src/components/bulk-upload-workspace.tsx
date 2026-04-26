@@ -1,12 +1,18 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
+
+import { BULK_HEADER_ROW, BULK_MAX_ROWS } from "@/lib/csv-bulk-load";
 
 type ValidateResponse = {
   mode: "validate";
   totalRows: number;
   validRows: number;
   invalidRows: number;
+  /** Hard upload cap (overflow rows are returned as failed). */
+  maxRows?: number;
+  /** True when the source CSV had more than maxRows; only the first maxRows were processed. */
+  truncated?: boolean;
   results: Array<
     | { ok: true; rowIndex: number; data: Record<string, unknown> }
     | { ok: false; rowIndex: number; errors: string[]; raw: Record<string, string> }
@@ -35,6 +41,21 @@ export function BulkUploadWorkspace() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
+
+  const errorCsvUrl = useMemo<string | null>(() => {
+    if (!validation || validation.invalidRows === 0) return null;
+    const headers = [...BULK_HEADER_ROW, "_errors"];
+    const escape = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+    const lines: string[] = [headers.map(escape).join(",")];
+    for (const r of validation.results) {
+      if (r.ok) continue;
+      const cells = BULK_HEADER_ROW.map((h) => escape(r.raw?.[h] ?? ""));
+      cells.push(escape(r.errors.join(" · ")));
+      lines.push(cells.join(","));
+    }
+    const blob = new Blob([`${lines.join("\n")}\n`], { type: "text/csv;charset=utf-8" });
+    return URL.createObjectURL(blob);
+  }, [validation]);
 
   const handleFile = useCallback(async (file: File) => {
     setError(null);
@@ -176,9 +197,31 @@ export function BulkUploadWorkspace() {
             Validation results · {validation.validRows} valid / {validation.invalidRows} invalid (of{" "}
             {validation.totalRows})
           </h3>
+          {validation.truncated && (
+            <div className="mt-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              This file is larger than the {validation.maxRows ?? BULK_MAX_ROWS}-row upload cap. Rows past the cap were
+              flagged as failed — split the file and re-upload the rest.
+            </div>
+          )}
           {validation.invalidRows > 0 && (
             <div className="mt-2 rounded-lg border border-rose-200 bg-rose-50/50 p-3">
-              <h4 className="text-xs font-semibold uppercase tracking-wide text-rose-900">Errors per row</h4>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h4 className="text-xs font-semibold uppercase tracking-wide text-rose-900">Errors per row</h4>
+                {errorCsvUrl && (
+                  <a
+                    href={errorCsvUrl}
+                    download={`${(filename || "loads").replace(/\.csv$/i, "")}_errors.csv`}
+                    className="rounded-md bg-rose-700 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-rose-800"
+                    title="Download a CSV containing only the failed rows + the reason. Fix the cells and re-upload to retry."
+                  >
+                    ↓ Download errors-only CSV
+                  </a>
+                )}
+              </div>
+              <p className="mt-1 text-[11px] text-rose-900/80">
+                Open the errors-only CSV in Excel/Numbers, fix the rows, save, and re-upload. The rest of the file is
+                already validated — you only need to retry the failures.
+              </p>
               <ul className="mt-2 max-h-72 space-y-1 overflow-y-auto text-xs">
                 {validation.results
                   .filter((r): r is Extract<ValidateResponse["results"][number], { ok: false }> => !r.ok)

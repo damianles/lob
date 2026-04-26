@@ -230,10 +230,13 @@ export async function POST(req: Request) {
   const lumberSpec = extractLumberSpec(payload.extendedPosting);
   const lumberColumns = lumberSpecToLoadColumns(lumberSpec);
 
-  const load = await prisma.$transaction(async (tx) => {
+  let load;
+  try {
+    load = await prisma.$transaction(async (tx) => {
     const row = await tx.load.create({
       data: {
         referenceNumber: `LOB-${randomUUID().slice(0, 8).toUpperCase()}`,
+        externalRef: payload.externalRef ? payload.externalRef : null,
         originCity: payload.originCity,
         originState: payload.originState.toUpperCase(),
         originZip: payload.originZip,
@@ -294,7 +297,22 @@ export async function POST(req: Request) {
     }
 
     return row;
-  });
+    });
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      // (shipperCompanyId, externalRef) unique violation — friendly idempotency message.
+      return NextResponse.json(
+        {
+          error:
+            payload.externalRef
+              ? `externalRef "${payload.externalRef}" already exists for this shipper. Reuse the existing load or change the reference.`
+              : "Duplicate key violation.",
+        },
+        { status: 409 },
+      );
+    }
+    throw e;
+  }
 
   return NextResponse.json({ data: load }, { status: 201 });
 }

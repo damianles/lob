@@ -6,6 +6,7 @@ import { BoardFootHelper } from "@/components/board-foot-helper";
 import { LanePriceChip } from "@/components/lane-price-chip";
 import { LoadTemplatesPanel, type LoadTemplate } from "@/components/load-templates-panel";
 import { LumberSpecForm } from "@/components/lumber-spec-form";
+import { RecentPostsPicker } from "@/components/recent-posts-picker";
 import { RadioChoice } from "@/components/ui/radio-choice";
 import { LUMBER_EQUIPMENT } from "@/lib/lumber-equipment";
 import type { LumberSpec } from "@/lib/lumber-spec";
@@ -240,6 +241,27 @@ export function SupplierPostLoadForm({
     setDeliveries((rows) => rows.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
   }
 
+  /**
+   * Shared "apply a template-shaped payload to the form" helper, reused by
+   * the saved-template picker and the recent-posts picker so both have
+   * identical behavior.
+   */
+  function applyTemplate(t: LoadTemplate) {
+    if (t.originCity != null) setOriginCity(t.originCity);
+    if (t.originState != null) setOriginState(t.originState);
+    if (t.originZip != null) setOriginZip(t.originZip);
+    if (t.destinationCity != null) setDestinationCity(t.destinationCity);
+    if (t.destinationState != null) setDestinationState(t.destinationState);
+    if (t.destinationZip != null) setDestinationZip(t.destinationZip);
+    if (t.equipmentType) setEquipmentType(t.equipmentType);
+    if (t.weightLbs != null) setWeightLbs(String(t.weightLbs));
+    setIsRush(Boolean(t.isRush));
+    if (t.defaultRateUsd != null) setRateUsd(String(t.defaultRateUsd));
+    if (t.defaultCurrency) setCurrency(t.defaultCurrency);
+    if (t.notes != null) setNotes(t.notes);
+    if (t.lumberSpec) setLumber(t.lumberSpec);
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
@@ -411,22 +433,9 @@ export function SupplierPostLoadForm({
             notes,
             lumber,
           })}
-          onLoad={(t: LoadTemplate) => {
-            if (t.originCity != null) setOriginCity(t.originCity);
-            if (t.originState != null) setOriginState(t.originState);
-            if (t.originZip != null) setOriginZip(t.originZip);
-            if (t.destinationCity != null) setDestinationCity(t.destinationCity);
-            if (t.destinationState != null) setDestinationState(t.destinationState);
-            if (t.destinationZip != null) setDestinationZip(t.destinationZip);
-            if (t.equipmentType) setEquipmentType(t.equipmentType);
-            if (t.weightLbs != null) setWeightLbs(String(t.weightLbs));
-            setIsRush(Boolean(t.isRush));
-            if (t.defaultRateUsd != null) setRateUsd(String(t.defaultRateUsd));
-            if (t.defaultCurrency) setCurrency(t.defaultCurrency);
-            if (t.notes != null) setNotes(t.notes);
-            if (t.lumberSpec) setLumber(t.lumberSpec);
-          }}
+          onLoad={applyTemplate}
         />
+        <RecentPostsPicker onLoad={applyTemplate} />
         <section className="rounded border border-emerald-200 bg-white/90 p-3">
           <h4 className="text-xs font-bold uppercase tracking-wide text-emerald-900">Basic</h4>
           <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
