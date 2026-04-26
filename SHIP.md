@@ -22,4 +22,6 @@ Wait ~1–2 minutes, then open your Vercel URL. Hard refresh: **Cmd+Shift+R** if
 - **Auth errors on push?** Use GitHub CLI (`gh auth login`) or SSH keys for `git@github.com:...`
 - **Env / DB:** see `DEPLOY.md`.
 
+**Excel / XLSX → lane benchmarks and analytics (two steps: JSON build + optional DB import):** [`docs/analytics-excel-data.md`](./docs/analytics-excel-data.md)
+
 Longer version (older notes): `PUSH_AND_VERCEL.md`.
