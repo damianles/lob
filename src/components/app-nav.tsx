@@ -21,6 +21,7 @@ const signedInLinks = [
 const adminLinks = [
   { href: "/admin/test-lab", label: "Test lab" },
   { href: "/admin/carriers", label: "Carriers" },
+  { href: "/admin/suppliers", label: "Suppliers" },
   { href: "/admin/companies", label: "Companies" },
 ];
 

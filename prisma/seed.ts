@@ -8,6 +8,7 @@ async function main() {
     update: {
       analyticsSubscriber: true,
       supplierKind: SupplierKind.MILL,
+      verificationStatus: VerificationStatus.APPROVED,
     },
     create: {
       legalName: "North Ridge Lumber",

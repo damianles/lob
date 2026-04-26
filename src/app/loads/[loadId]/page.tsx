@@ -278,7 +278,7 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
               </div>
             )}
 
-            {load.extendedPosting != null && (
+            {load.extendedPosting != null && (isShipperOwner || isAdmin || isBookedCarrier) && (
               <details className="mt-4 rounded-lg border border-zinc-200 bg-white p-4 text-sm">
                 <summary className="cursor-pointer font-medium text-zinc-900">Full post details (supplier)</summary>
                 <pre className="mt-2 max-h-80 overflow-auto whitespace-pre-wrap break-words text-xs text-zinc-700">

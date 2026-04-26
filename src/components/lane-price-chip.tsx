@@ -2,14 +2,19 @@
 
 import { useEffect, useState } from "react";
 
+import { formatMoney } from "@/lib/money";
+
 type Quote = {
   match: boolean;
   reason?: string;
+  offerCurrency?: "USD" | "CAD";
+  avgRate?: number;
   avgUsd?: number;
   sampleCount?: number | null;
   matchLevel?: "zip" | "city" | "state";
   windowDays?: number | null;
   yoyChangePct?: number | null;
+  prevYearAvg?: number | null;
   prevYearAvgUsd?: number | null;
 };
 
@@ -26,8 +31,11 @@ type Props = {
   className?: string;
 };
 
-function formatUsd(n: number): string {
-  return n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+function formatLaneAvg(q: Quote): string {
+  const n = q.avgRate ?? q.avgUsd;
+  if (n == null || !Number.isFinite(n)) return "—";
+  const c = (q.offerCurrency ?? "USD") as "USD" | "CAD";
+  return formatMoney(n, c);
 }
 
 function debounce<T extends (...args: unknown[]) => void>(fn: T, ms: number) {
@@ -79,6 +87,7 @@ export function LanePriceChip({
         destinationState,
         destinationZip,
         equipmentType,
+        offerCurrency: currency,
       });
 
       setLoading(true);
@@ -98,6 +107,7 @@ export function LanePriceChip({
     destinationState,
     destinationZip,
     equipmentType,
+    currency,
   ]);
 
   if (!quote && !loading) return null;
@@ -113,7 +123,7 @@ export function LanePriceChip({
     );
   }
 
-  if (!quote || !quote.match || quote.avgUsd == null) {
+  if (!quote || !quote.match || (quote.avgRate == null && quote.avgUsd == null)) {
     return (
       <div
         className={`inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-3 py-1.5 text-[11px] text-stone-500 ${className ?? ""}`}
@@ -143,11 +153,8 @@ export function LanePriceChip({
     >
       <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
       <span>Lane avg:</span>
-      <span className="font-semibold tabular-nums">{formatUsd(quote.avgUsd)}</span>
+      <span className="font-semibold tabular-nums">{formatLaneAvg(quote)}</span>
       {yoyLabel && <span className={`tabular-nums ${yoyColor}`}>{yoyLabel}</span>}
-      {currency === "CAD" && (
-        <span className="text-emerald-800/70">(USD reference; convert via your CAD↔USD)</span>
-      )}
       <span className="text-emerald-800/70">{matchSuffix}</span>
     </div>
   );

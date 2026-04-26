@@ -41,7 +41,10 @@ function toSerializableLoads(loads: LoadRow[], actor: BoardActor): SerializableL
     isRush: l.isRush,
     status: l.status,
     uniquePickupCode: l.uniquePickupCode,
-    shipperCompanyId: l.shipperCompanyId,
+    shipperCompanyId:
+      (visibilityActor.role === "DISPATCHER" || visibilityActor.role === "DRIVER") && l.status === LoadStatus.POSTED
+        ? null
+        : l.shipperCompanyId,
     shipperCompanyName: shipperCompanyNameForViewer(l.shipperCompany.legalName, l, visibilityActor),
     offerCurrency: l.offerCurrency,
     offeredRateUsd: l.offeredRateUsd != null ? Number(l.offeredRateUsd) : null,

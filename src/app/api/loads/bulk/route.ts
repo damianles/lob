@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { LoadCarrierVisibilityMode, Prisma, RateObservationSource } from "@prisma/client";
+import { LoadCarrierVisibilityMode, Prisma, RateObservationSource, VerificationStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 
 import { canonicalCityKey } from "@/lib/city-canonical";
@@ -7,8 +7,7 @@ import { BULK_MAX_ROWS, parseAllRows, parseCsv, type BulkRowResult } from "@/lib
 import {
   findLaneBenchmark,
   normalizeEquipmentForBenchmark,
-  offeredAmountUsdEquivalent,
-  validateOfferedRateAgainstBenchmark,
+  validateOfferedRateFloor,
   zip5ForBenchmark,
 } from "@/lib/market-rate-lane";
 import { parseRequestedPickupAt } from "@/lib/parse-pickup-date";
@@ -36,6 +35,17 @@ export async function POST(req: Request) {
   }
   if (actor.role !== "SHIPPER") {
     return NextResponse.json({ error: "Only supplier accounts can post loads." }, { status: 403 });
+  }
+
+  const companyRow = await prisma.company.findUnique({
+    where: { id: actor.companyId! },
+    select: { verificationStatus: true },
+  });
+  if (companyRow?.verificationStatus !== VerificationStatus.APPROVED) {
+    return NextResponse.json(
+      { error: "Your company must be approved by LOB before bulk posting." },
+      { status: 403 },
+    );
   }
 
   const url = new URL(req.url);
@@ -131,7 +141,7 @@ export async function POST(req: Request) {
       continue;
     }
 
-    const rateCheck = await validateOfferedRateAgainstBenchmark({
+    const rateCheck = await validateOfferedRateFloor({
       originState: p.originState,
       destinationState: p.destinationState,
       originZip: p.originZip,
@@ -139,7 +149,7 @@ export async function POST(req: Request) {
       originCity: p.originCity,
       destinationCity: p.destinationCity,
       equipmentType: p.equipmentType,
-      offeredRateUsd: p.offeredRateUsd,
+      offeredRate: p.offeredRateUsd,
       offerCurrency: p.offerCurrency,
     });
     if (!rateCheck.ok) {
@@ -155,10 +165,11 @@ export async function POST(req: Request) {
       p.equipmentType,
       p.originCity,
       p.destinationCity,
+      p.offerCurrency,
     );
     const marketRateUsd =
       hit?.row.benchmarkAvgUsd != null ? new Prisma.Decimal(hit.row.benchmarkAvgUsd) : undefined;
-    const rateUsdEq = offeredAmountUsdEquivalent(p.offeredRateUsd, p.offerCurrency);
+    const rateNative = p.offeredRateUsd;
 
     const lumberSpec = extractLumberSpec(p.extendedPosting);
     const lumberColumns = lumberSpecToLoadColumns(lumberSpec);
@@ -200,7 +211,7 @@ export async function POST(req: Request) {
               originZip5: zip5ForBenchmark(p.originZip),
               destZip5: zip5ForBenchmark(p.destinationZip),
               equipmentNorm: normalizeEquipmentForBenchmark(p.equipmentType),
-              rateUsd: new Prisma.Decimal(rateUsdEq.toFixed(2)),
+              rateUsd: new Prisma.Decimal(rateNative.toFixed(2)),
               offerCurrency: p.offerCurrency,
               source: RateObservationSource.APP,
             },

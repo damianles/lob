@@ -42,7 +42,8 @@ export type SerializableLoad = {
   isRush: boolean;
   status: string;
   uniquePickupCode: string | null;
-  shipperCompanyId: string;
+  /** Hidden (null) for carriers browsing open loads — prevents correlating posts. */
+  shipperCompanyId: string | null;
   /** Mill / wholesaler name; null when hidden from this viewer until their carrier books. */
   shipperCompanyName: string | null;
   offerCurrency: "USD" | "CAD";

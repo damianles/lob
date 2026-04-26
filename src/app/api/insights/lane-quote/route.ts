@@ -1,23 +1,13 @@
+import { OfferCurrency } from "@prisma/client";
 import { NextResponse } from "next/server";
 
+import { inferOfferCurrency } from "@/lib/lane-currency";
 import { findLaneBenchmark } from "@/lib/market-rate-lane";
 import { prisma } from "@/lib/prisma";
 
 /**
  * Quick price context for the supplier post-load form.
- * Returns the rolling 30-day average (or whatever LOB_BENCHMARK_WINDOW_DAYS is)
- * plus a year-over-year delta computed from `LaneRateObservation`.
- *
- * Query string (all required for a real answer):
- *   originState, originZip, originCity
- *   destinationState, destinationZip, destinationCity
- *   equipmentType
- *
- * Response shape:
- *   { match: boolean, avgUsd?: number, sampleCount?: number,
- *     matchLevel?: "zip" | "city" | "state",
- *     yoyChangePct?: number | null, prevYearAvgUsd?: number | null,
- *     windowDays?: number }
+ * Returns the rolling average in the same currency as the offer (USD or CAD for CA–CA).
  */
 export async function GET(req: Request) {
   const u = new URL(req.url);
@@ -28,6 +18,11 @@ export async function GET(req: Request) {
   const destinationZip = (u.searchParams.get("destinationZip") || "").trim();
   const destinationCity = (u.searchParams.get("destinationCity") || "").trim();
   const equipmentType = (u.searchParams.get("equipmentType") || "").trim();
+  const offerCurrencyParam = (u.searchParams.get("offerCurrency") || "").trim().toUpperCase();
+  const offerCurrency: "USD" | "CAD" =
+    offerCurrencyParam === "CAD" || offerCurrencyParam === "USD"
+      ? (offerCurrencyParam as "USD" | "CAD")
+      : inferOfferCurrency(originState, destinationState);
 
   if (
     originState.length < 2 ||
@@ -48,6 +43,7 @@ export async function GET(req: Request) {
       equipmentType,
       originCity || undefined,
       destinationCity || undefined,
+      offerCurrency,
     );
 
     if (!hit) {
@@ -56,14 +52,16 @@ export async function GET(req: Request) {
 
     const oSt = originState.toUpperCase().slice(0, 2);
     const dSt = destinationState.toUpperCase().slice(0, 2);
+    const curEnum = offerCurrency === "CAD" ? "CAD" : "USD";
 
     let yoyChangePct: number | null = null;
-    let prevYearAvgUsd: number | null = null;
+    let prevYearAvg: number | null = null;
 
     try {
       const now = Date.now();
       const oneYearAgo = new Date(now - 365 * 86400000);
       const twoYearsAgo = new Date(now - 730 * 86400000);
+      const cur: OfferCurrency = offerCurrency === "CAD" ? OfferCurrency.CAD : OfferCurrency.USD;
 
       const prevYearRows = await prisma.$queryRaw<{ avg: number | null; n: number }[]>`
         SELECT AVG("rateUsd")::float AS avg, COUNT(*)::int AS n
@@ -72,24 +70,29 @@ export async function GET(req: Request) {
           AND "observedAt" <  ${oneYearAgo}
           AND "originState" = ${oSt}
           AND "destState"   = ${dSt}
+          AND "offerCurrency" = ${cur}::"OfferCurrency"
       `;
       const prev = prevYearRows[0];
       if (prev && prev.n > 0 && prev.avg && prev.avg > 0) {
-        prevYearAvgUsd = prev.avg;
+        prevYearAvg = prev.avg;
         yoyChangePct = ((hit.row.benchmarkAvgUsd - prev.avg) / prev.avg) * 100;
       }
     } catch {
-      // Silently degrade; pricing chip stays useful even without YoY.
+      // Degrade; chip still works without YoY
     }
 
     return NextResponse.json({
       match: true,
-      avgUsd: hit.row.benchmarkAvgUsd,
+      offerCurrency: curEnum,
+      avgRate: hit.row.benchmarkAvgUsd,
       sampleCount: hit.row.sampleCount ?? null,
       matchLevel: hit.matchLevel,
       windowDays: hit.row.windowDays ?? null,
       yoyChangePct,
-      prevYearAvgUsd,
+      prevYearAvg,
+      // Legacy
+      avgUsd: hit.row.benchmarkAvgUsd,
+      prevYearAvgUsd: prevYearAvg,
     });
   } catch (e) {
     return NextResponse.json(

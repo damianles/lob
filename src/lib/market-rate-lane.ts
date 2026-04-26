@@ -1,8 +1,10 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
+import { OfferCurrency } from "@prisma/client";
 import { canonicalCityKey } from "@/lib/city-canonical";
 import { equipmentShortTag } from "@/lib/lumber-equipment";
+import { inferOfferCurrency } from "@/lib/lane-currency";
 import { prisma } from "@/lib/prisma";
 
 export type BenchmarkRow = {
@@ -13,7 +15,12 @@ export type BenchmarkRow = {
   originZip?: string;
   destinationZip?: string;
   equipmentType: string;
+  /**
+   * Average rate in the lane, in `rateCurrency` (USD or CAD). Legacy name kept for callers.
+   */
   benchmarkAvgUsd: number;
+  /** When set, `benchmarkAvgUsd` is in this currency (static file rows are always USD). */
+  rateCurrency?: "USD" | "CAD";
   sampleCount?: number;
   windowDays?: number;
   notes?: string;
@@ -36,11 +43,18 @@ export function benchmarkWindowDays(): number {
 
 /**
  * Minimum posted observations in the rolling DB window before we trust DB over
- * `data/market-benchmarks.json` (wholesaler base). Below this, the static file wins at each match level (zip → city → state).
+ * `data/market-benchmarks.json` (wholesaler base). Also used to skip the 30% floor
+ * on low-sample lanes.
  */
 export function minSamplesForDbBenchmark(): number {
   const n = Number(process.env.LOB_MIN_SAMPLES_FOR_DB_BENCHMARK ?? "5");
   return Number.isFinite(n) && n >= 0 ? Math.min(Math.floor(n), 10000) : 5;
+}
+
+/** Max discount from rolling average: default 0.3 → floor at 70% of average. No ceiling. */
+function maxDiscountFraction(): number {
+  const n = Number(process.env.LOB_MAX_RATE_DISCOUNT_FROM_AVG ?? "0.3");
+  return Number.isFinite(n) && n >= 0 && n < 1 ? n : 0.3;
 }
 
 function benchmarkCutoff(): Date {
@@ -49,6 +63,10 @@ function benchmarkCutoff(): Date {
 
 function normalizeState(s: string): string {
   return s.trim().toUpperCase().slice(0, 2);
+}
+
+function offCurEnum(offerCurrency: "USD" | "CAD"): OfferCurrency {
+  return offerCurrency === "CAD" ? OfferCurrency.CAD : OfferCurrency.USD;
 }
 
 export function normalizeEquipmentForBenchmark(eq: string): string {
@@ -79,6 +97,7 @@ function syntheticRow(
   n: number,
   matchLevel: LaneMatch["matchLevel"],
   partial: Partial<BenchmarkRow>,
+  rateCurrency: "USD" | "CAD",
 ): BenchmarkRow {
   return {
     originState: partial.originState ?? "",
@@ -89,6 +108,7 @@ function syntheticRow(
     destinationZip: partial.destinationZip,
     equipmentType: partial.equipmentType ?? "*",
     benchmarkAvgUsd: Math.round(avg),
+    rateCurrency,
     sampleCount: n,
     windowDays: benchmarkWindowDays(),
     notes: `Rolling ${benchmarkWindowDays()}d average from ${n} posted rate(s) in LOB (APP + spreadsheet import).`,
@@ -102,8 +122,10 @@ async function dbAggregateZip(
   oz: string,
   dz: string,
   eqNorm: string,
+  offerCurrency: "USD" | "CAD",
 ): Promise<{ avg: number; n: number } | null> {
   if (oz.length < 3 || dz.length < 3) return null;
+  const c = offCurEnum(offerCurrency);
   const rows = await prisma.$queryRaw<{ avg: number | null; n: number }[]>`
     SELECT AVG("rateUsd")::float AS avg, COUNT(*)::int AS n
     FROM "LaneRateObservation"
@@ -115,6 +137,7 @@ async function dbAggregateZip(
       AND "originZip5" != ''
       AND "destZip5" != ''
       AND ("equipmentNorm" = '*' OR "equipmentNorm" = ${eqNorm})
+      AND "offerCurrency" = ${c}::"OfferCurrency"
   `;
   const r = rows[0];
   if (!r || r.n === 0 || r.avg == null) return null;
@@ -128,7 +151,9 @@ async function dbAggregateCity(
   oc: string,
   dc: string,
   eqNorm: string,
+  offerCurrency: "USD" | "CAD",
 ): Promise<{ avg: number; n: number } | null> {
+  const c = offCurEnum(offerCurrency);
   const rows = await prisma.$queryRaw<{ avg: number | null; n: number }[]>`
     SELECT AVG("rateUsd")::float AS avg, COUNT(*)::int AS n
     FROM "LaneRateObservation"
@@ -138,6 +163,7 @@ async function dbAggregateCity(
       AND "originCityCanon" = ${oc}
       AND "destCityCanon" = ${dc}
       AND ("equipmentNorm" = '*' OR "equipmentNorm" = ${eqNorm})
+      AND "offerCurrency" = ${c}::"OfferCurrency"
   `;
   const r = rows[0];
   if (!r || r.n === 0 || r.avg == null) return null;
@@ -149,7 +175,9 @@ async function dbAggregateState(
   oSt: string,
   dSt: string,
   eqNorm: string,
+  offerCurrency: "USD" | "CAD",
 ): Promise<{ avg: number; n: number } | null> {
+  const c = offCurEnum(offerCurrency);
   const rows = await prisma.$queryRaw<{ avg: number | null; n: number }[]>`
     SELECT AVG("rateUsd")::float AS avg, COUNT(*)::int AS n
     FROM "LaneRateObservation"
@@ -157,6 +185,7 @@ async function dbAggregateState(
       AND "originState" = ${oSt}
       AND "destState" = ${dSt}
       AND ("equipmentNorm" = '*' OR "equipmentNorm" = ${eqNorm})
+      AND "offerCurrency" = ${c}::"OfferCurrency"
   `;
   const r = rows[0];
   if (!r || r.n === 0 || r.avg == null) return null;
@@ -171,7 +200,12 @@ function findLaneBenchmarkFile(
   equipmentType: string,
   originCity?: string,
   destinationCity?: string,
+  /** `market-benchmarks.json` rates are in USD. Skip for CAD posts. */
+  _offerCurrency: "USD" | "CAD" = "USD",
 ): LaneMatch | null {
+  if (_offerCurrency === "CAD") {
+    return null;
+  }
   const oSt = normalizeState(originState);
   const dSt = normalizeState(destinationState);
   const oZip = originZip.replace(/\D/g, "").slice(0, 5);
@@ -186,7 +220,7 @@ function findLaneBenchmarkFile(
       r.destinationZip.replace(/\D/g, "").slice(0, 5) === dZip &&
       rowMatchesEquipment(r, equipmentType),
   );
-  if (zipHit) return { row: zipHit, matchLevel: "zip" };
+  if (zipHit) return { row: { ...zipHit, rateCurrency: "USD" }, matchLevel: "zip" };
 
   const oc = originCity ? normalizeCityForFileMatch(originCity) : "";
   const dc = destinationCity ? normalizeCityForFileMatch(destinationCity) : "";
@@ -201,7 +235,7 @@ function findLaneBenchmarkFile(
         normalizeState(r.destinationState) === dSt &&
         rowMatchesEquipment(r, equipmentType),
     );
-    if (cityHit) return { row: cityHit, matchLevel: "city" };
+    if (cityHit) return { row: { ...cityHit, rateCurrency: "USD" }, matchLevel: "city" };
   }
 
   const stateHit = rows.find(
@@ -212,11 +246,16 @@ function findLaneBenchmarkFile(
       normalizeState(r.destinationState) === dSt &&
       rowMatchesEquipment(r, equipmentType),
   );
-  if (stateHit) return { row: stateHit, matchLevel: "state" };
+  if (stateHit) return { row: { ...stateHit, rateCurrency: "USD" }, matchLevel: "state" };
 
   return null;
 }
 
+/**
+ * Resolves a lane price benchmark. DB observations are split by `offerCurrency`
+ * so Canadian domestic averages stay in CAD, US in USD. Pass `offerCurrency` or
+ * it is inferred from origin/destination (CA–CA = CAD, else USD).
+ */
 export async function findLaneBenchmark(
   originState: string,
   destinationState: string,
@@ -225,19 +264,20 @@ export async function findLaneBenchmark(
   equipmentType: string,
   originCity?: string,
   destinationCity?: string,
+  offerCurrency?: "USD" | "CAD",
 ): Promise<LaneMatch | null> {
-  const cutoff = benchmarkCutoff();
   const oSt = normalizeState(originState);
   const dSt = normalizeState(destinationState);
+  const ccy = offerCurrency ?? inferOfferCurrency(originState, destinationState);
+  const cutoff = benchmarkCutoff();
   const oz = zip5ForBenchmark(originZip);
   const dz = zip5ForBenchmark(destinationZip);
   const eqNorm = normalizeEquipmentForBenchmark(equipmentType);
   const oc = originCity ? canonicalCityKey(originCity) : "";
   const dc = destinationCity ? canonicalCityKey(destinationCity) : "";
-
   const minN = minSamplesForDbBenchmark();
 
-  const zipDb = await dbAggregateZip(cutoff, oSt, dSt, oz, dz, eqNorm);
+  const zipDb = await dbAggregateZip(cutoff, oSt, dSt, oz, dz, eqNorm, ccy);
   if (zipDb && zipDb.n >= minN) {
     return {
       row: syntheticRow(zipDb.avg, zipDb.n, "zip", {
@@ -246,13 +286,13 @@ export async function findLaneBenchmark(
         originZip: oz,
         destinationZip: dz,
         equipmentType: eqNorm,
-      }),
+      }, ccy),
       matchLevel: "zip",
     };
   }
 
   if (oc && dc) {
-    const cityDb = await dbAggregateCity(cutoff, oSt, dSt, oc, dc, eqNorm);
+    const cityDb = await dbAggregateCity(cutoff, oSt, dSt, oc, dc, eqNorm, ccy);
     if (cityDb && cityDb.n >= minN) {
       return {
         row: syntheticRow(cityDb.avg, cityDb.n, "city", {
@@ -261,20 +301,20 @@ export async function findLaneBenchmark(
           originCity: oc,
           destinationCity: dc,
           equipmentType: eqNorm,
-        }),
+        }, ccy),
         matchLevel: "city",
       };
     }
   }
 
-  const stateDb = await dbAggregateState(cutoff, oSt, dSt, eqNorm);
+  const stateDb = await dbAggregateState(cutoff, oSt, dSt, eqNorm, ccy);
   if (stateDb && stateDb.n >= minN) {
     return {
       row: syntheticRow(stateDb.avg, stateDb.n, "state", {
         originState: oSt,
         destinationState: dSt,
         equipmentType: eqNorm,
-      }),
+      }, ccy),
       matchLevel: "state",
     };
   }
@@ -287,6 +327,7 @@ export async function findLaneBenchmark(
     equipmentType,
     originCity,
     destinationCity,
+    ccy,
   );
 }
 
@@ -301,6 +342,74 @@ export function offeredAmountUsdEquivalent(amount: number, currency: "USD" | "CA
   return amount * mult;
 }
 
+/**
+ * For posts: do not go more than 30% below the rolling average for this lane
+ * and currency, when the DB has at least 5 samples at zip → city → state
+ * (same order as the benchmark chip). No upper limit. If fewer than 5, allow any rate.
+ */
+export async function validateOfferedRateFloor(args: {
+  originState: string;
+  destinationState: string;
+  originZip: string;
+  destinationZip: string;
+  originCity?: string;
+  destinationCity?: string;
+  equipmentType: string;
+  /** Native offer amount; same currency as offerCurrency (column name is legacy "Usd"). */
+  offeredRate: number;
+  offerCurrency: "USD" | "CAD";
+}): Promise<RateBandCheck> {
+  const ccy = args.offerCurrency ?? "USD";
+  const cutoff = benchmarkCutoff();
+  const oSt = normalizeState(args.originState);
+  const dSt = normalizeState(args.destinationState);
+  const oz = zip5ForBenchmark(args.originZip);
+  const dz = zip5ForBenchmark(args.destinationZip);
+  const eqNorm = normalizeEquipmentForBenchmark(args.equipmentType);
+  const oc = args.originCity ? canonicalCityKey(args.originCity) : "";
+  const dc = args.destinationCity ? canonicalCityKey(args.destinationCity) : "";
+  const need = minSamplesForDbBenchmark();
+  const floorMult = 1 - maxDiscountFraction();
+
+  const zip = await dbAggregateZip(cutoff, oSt, dSt, oz, dz, eqNorm, ccy);
+  if (zip && zip.n >= need) {
+    const min = floorMult * zip.avg;
+    if (args.offeredRate < min) {
+      return {
+        ok: false,
+        message: `Offered rate is too low for this lane: must be at least ${Math.floor(floorMult * 100)}% of the ${benchmarkWindowDays()}-day average (≈ ${ccy} ${min.toFixed(0)}) based on ${zip.n} comparable load(s) in the same currency.`,
+      };
+    }
+    return { ok: true };
+  }
+  if (oc && dc) {
+    const city = await dbAggregateCity(cutoff, oSt, dSt, oc, dc, eqNorm, ccy);
+    if (city && city.n >= need) {
+      const min = floorMult * city.avg;
+      if (args.offeredRate < min) {
+        return {
+          ok: false,
+          message: `Offered rate is too low for this lane: must be at least ${Math.floor(floorMult * 100)}% of the ${benchmarkWindowDays()}-day average (≈ ${ccy} ${min.toFixed(0)}) based on ${city.n} comparable load(s) in the same currency.`,
+        };
+      }
+      return { ok: true };
+    }
+  }
+  const st = await dbAggregateState(cutoff, oSt, dSt, eqNorm, ccy);
+  if (st && st.n >= need) {
+    const min = floorMult * st.avg;
+    if (args.offeredRate < min) {
+      return {
+        ok: false,
+        message: `Offered rate is too low: must be at least ${Math.floor(floorMult * 100)}% of the ${benchmarkWindowDays()}-day ${oSt}→${dSt} average (≈ ${ccy} ${min.toFixed(0)}) based on ${st.n} comparable load(s) in the same currency.`,
+      };
+    }
+    return { ok: true };
+  }
+  return { ok: true };
+}
+
+/** @deprecated use validateOfferedRateFloor; kept to avoid surprise during refactors. */
 export async function validateOfferedRateAgainstBenchmark(args: {
   originState: string;
   destinationState: string;
@@ -312,62 +421,11 @@ export async function validateOfferedRateAgainstBenchmark(args: {
   offeredRateUsd: number;
   offerCurrency?: "USD" | "CAD";
 }): Promise<RateBandCheck> {
-  const currency = args.offerCurrency ?? "USD";
-  const offeredUsdEq = offeredAmountUsdEquivalent(args.offeredRateUsd, currency);
-
-  const hit = await findLaneBenchmark(
-    args.originState,
-    args.destinationState,
-    args.originZip,
-    args.destinationZip,
-    args.equipmentType,
-    args.originCity,
-    args.destinationCity,
-  );
-
-  const minDefault = Number(process.env.LOB_DEFAULT_MIN_RATE_USD ?? "300");
-  const maxDefault = Number(process.env.LOB_DEFAULT_MAX_RATE_USD ?? "50000");
-
-  if (!hit) {
-    const min = Number.isFinite(minDefault) ? minDefault : 300;
-    const max = Number.isFinite(maxDefault) ? maxDefault : 50000;
-    if (offeredUsdEq >= min && offeredUsdEq <= max) {
-      return { ok: true };
-    }
-    return {
-      ok: false,
-      message: `No lane benchmark for this OD/equipment in the live window or in data/market-benchmarks.json (base table). Allowed fallback range is ~$${min}–$${max} USD equivalent (set LOB_DEFAULT_MIN_RATE_USD / LOB_DEFAULT_MAX_RATE_USD or extend the base file). Offered: ${currency} ${args.offeredRateUsd}.`,
-    };
-  }
-
-  const avg = hit.row.benchmarkAvgUsd;
-  const n = hit.row.sampleCount ?? 10;
-  const thin = n < minSamplesForDbBenchmark();
-  const fromLiveDb = (hit.row.notes ?? "").includes("Rolling");
-  const lowPct = !thin ? 0.7 : 0.5;
-  const highPct = !thin ? 1.3 : 1.5;
-  const min = avg * lowPct;
-  const max = avg * highPct;
-
-  if (offeredUsdEq < min || offeredUsdEq > max) {
-    const benchmarkLabel = fromLiveDb
-      ? !thin
-        ? `${benchmarkWindowDays()}-day live`
-        : "live (thin)"
-      : !thin
-        ? "base lane"
-        : "base lane (thin reference)";
-    const sampleNote = thin
-      ? `, ${n} sample(s)${fromLiveDb ? "" : " in static table"}`
-      : "";
-    return {
-      ok: false,
-      thinLane: thin,
-      message: `Rate must stay within ${Math.round(lowPct * 100)}–${Math.round(highPct * 100)}% of the ${benchmarkLabel} average (USD ${avg.toLocaleString()}${sampleNote}). ${currency === "CAD" ? `Checked using USD equivalent of your CAD rate (LOB_CAD_TO_USD_RATE). ` : ""}Allowed USD equivalent: $${Math.ceil(min)}–$${Math.floor(max)}.`,
-    };
-  }
-
-  return { ok: true };
+  return validateOfferedRateFloor({
+    ...args,
+    offerCurrency: args.offerCurrency ?? "USD",
+    offeredRate: args.offeredRateUsd,
+  });
 }
 
 export async function listThinLanes(): Promise<{ lane: string; sampleCount: number; equipmentType: string }[]> {
@@ -414,4 +472,3 @@ export async function listThinLanes(): Promise<{ lane: string; sampleCount: numb
 
   return [...fromDb, ...fromFile];
 }
-

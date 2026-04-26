@@ -1,3 +1,4 @@
+import { VerificationStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -116,6 +117,17 @@ export async function POST(req: Request) {
   }
   if (actor.role !== "DISPATCHER") {
     return NextResponse.json({ error: "Only carrier (transport) accounts can post capacity." }, { status: 403 });
+  }
+
+  const co = await prisma.company.findUnique({
+    where: { id: actor.companyId },
+    select: { verificationStatus: true },
+  });
+  if (co?.verificationStatus !== VerificationStatus.APPROVED) {
+    return NextResponse.json(
+      { error: "Your carrier company must be approved before posting capacity on the board." },
+      { status: 403 },
+    );
   }
 
   const body = await req.json();

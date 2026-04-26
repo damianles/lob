@@ -81,7 +81,7 @@ export async function POST(req: Request) {
       supplierKind: payload.role === "SHIPPER" ? payload.supplierKind : undefined,
       verificationStatus:
         payload.role === "SHIPPER"
-          ? VerificationStatus.APPROVED
+          ? VerificationStatus.PENDING
           : autoApproveCarriers
             ? VerificationStatus.APPROVED
             : VerificationStatus.PENDING,

@@ -5,8 +5,7 @@ import { NextResponse } from "next/server";
 import { canonicalCityKey } from "@/lib/city-canonical";
 import {
   findLaneBenchmark,
-  offeredAmountUsdEquivalent,
-  validateOfferedRateAgainstBenchmark,
+  validateOfferedRateFloor,
   zip5ForBenchmark,
   normalizeEquipmentForBenchmark,
 } from "@/lib/market-rate-lane";
@@ -107,14 +106,31 @@ export async function GET() {
           },
         }
       : null;
+    const isCarrier = visibilityActor.role === "DISPATCHER" || visibilityActor.role === "DRIVER";
+    const isThisBookedCarrier =
+      Boolean(visibilityActor.companyId && row.booking && row.booking.carrierCompanyId === visibilityActor.companyId);
+    const redactPii = isCarrier && row.status === LoadStatus.POSTED && !isThisBookedCarrier;
+
+    let ext: unknown = row.extendedPosting ?? null;
+    if (redactPii) {
+      if (ext && typeof ext === "object" && !Array.isArray(ext)) {
+        const lumber = extractLumberSpec(ext);
+        const keys = lumber && typeof lumber === "object" ? Object.keys(lumber) : [];
+        ext = keys.length > 0 ? { lumber } : null;
+      } else {
+        ext = null;
+      }
+    }
+
     return {
       ...row,
+      shipperCompanyId: (redactPii ? null : row.shipperCompanyId) as string | null,
       shipperCompany: {
-        ...row.shipperCompany,
+        id: redactPii ? "" : row.shipperCompany.id,
         legalName: visibleShipper ?? "",
       },
       booking: bookingMasked,
-      extendedPosting: row.extendedPosting ?? null,
+      extendedPosting: ext,
     };
   });
 
@@ -134,6 +150,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Only supplier accounts can post loads." }, { status: 403 });
   }
 
+  const companyRow = await prisma.company.findUnique({
+    where: { id: actor.companyId! },
+    select: { verificationStatus: true },
+  });
+  if (companyRow?.verificationStatus !== VerificationStatus.APPROVED) {
+    return NextResponse.json(
+      { error: "Your company must be approved by LOB before you can post loads. Check with support if you are still pending." },
+      { status: 403 },
+    );
+  }
+
   const body = await req.json();
   const parsed = createLoadSchema.safeParse(body);
   if (!parsed.success) {
@@ -146,7 +173,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid requestedPickupAt (use YYYY-MM-DD or ISO datetime)." }, { status: 400 });
   }
 
-  const rateCheck = await validateOfferedRateAgainstBenchmark({
+  const rateCheck = await validateOfferedRateFloor({
     originState: payload.originState,
     destinationState: payload.destinationState,
     originZip: payload.originZip,
@@ -154,7 +181,7 @@ export async function POST(req: Request) {
     originCity: payload.originCity,
     destinationCity: payload.destinationCity,
     equipmentType: payload.equipmentType,
-    offeredRateUsd: payload.offeredRateUsd,
+    offeredRate: payload.offeredRateUsd,
     offerCurrency: payload.offerCurrency,
   });
 
@@ -170,12 +197,13 @@ export async function POST(req: Request) {
     payload.equipmentType,
     payload.originCity,
     payload.destinationCity,
+    payload.offerCurrency,
   );
 
   const marketRateUsd =
     hit?.row.benchmarkAvgUsd != null ? new Prisma.Decimal(hit.row.benchmarkAvgUsd) : undefined;
 
-  const rateUsdEq = offeredAmountUsdEquivalent(payload.offeredRateUsd, payload.offerCurrency);
+  const rateNative = payload.offeredRateUsd;
 
   const visibilityMode =
     payload.carrierVisibilityMode === "TIER_ASSIGNED"
@@ -269,7 +297,7 @@ export async function POST(req: Request) {
             originZip5: zip5ForBenchmark(payload.originZip),
             destZip5: zip5ForBenchmark(payload.destinationZip),
             equipmentNorm: normalizeEquipmentForBenchmark(payload.equipmentType),
-            rateUsd: new Prisma.Decimal(rateUsdEq.toFixed(2)),
+            rateUsd: new Prisma.Decimal(rateNative.toFixed(2)),
             offerCurrency: payload.offerCurrency,
             source: RateObservationSource.APP,
           },

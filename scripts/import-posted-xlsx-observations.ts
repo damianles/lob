@@ -1,12 +1,15 @@
 /**
- * Import posted-load rows into LaneRateObservation for rolling DB benchmarks.
- * Uses canonicalCityKey (Ft/Fort etc.). Optional posted-date column; else --as-of or today UTC.
+ * Import posted-load rows from the wholesaler XLSX into LaneRateObservation
+ * for rolling DB benchmarks (lane analytics, post form, rate floor).
  *
  *   npx tsx scripts/import-posted-xlsx-observations.ts /path/to.xlsx [--replace-import] [--as-of=YYYY-MM-DD]
  *
  * --replace-import: DELETE all observations where source = IMPORT, then insert (safe re-run).
+ *
+ * Sheets: POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS
+ * Headers: Origin City, Destination City, Amount (CAD for Canada–Canada, native amount in rateUsd).
  */
-import { readFileSync, existsSync } from "node:fs";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -14,55 +17,13 @@ import { OfferCurrency, Prisma, RateObservationSource } from "@prisma/client";
 import XLSX from "xlsx";
 
 import { canonicalCityKey } from "../src/lib/city-canonical";
+import { inferOfferCurrency, parsePostedLocationCell } from "../src/lib/lane-currency";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, "..");
 
-function loadEnvCadRate(): number {
-  for (const name of [".env.local", ".env"]) {
-    const p = path.join(root, name);
-    if (!existsSync(p)) continue;
-    for (const line of readFileSync(p, "utf-8").split("\n")) {
-      const t = line.trim();
-      if (t.startsWith("LOB_CAD_TO_USD_RATE=")) {
-        const v = Number(t.split("=")[1]?.replace(/['"]/g, "").trim());
-        if (Number.isFinite(v)) return v;
-      }
-    }
-  }
-  return Number(process.env.LOB_CAD_TO_USD_RATE ?? "0.73");
-}
-
-const CA_PROVINCES = new Set([
-  "AB",
-  "BC",
-  "MB",
-  "NB",
-  "NL",
-  "NS",
-  "NT",
-  "NU",
-  "ON",
-  "PE",
-  "QC",
-  "SK",
-  "YT",
-]);
-
-const MIN_USD = 150;
-const MAX_USD = 80000;
-
-function parseLocation(raw: unknown) {
-  const t = String(raw ?? "").trim().replace(/\s+/g, " ");
-  if (!t) return null;
-  const idx = t.lastIndexOf("_");
-  if (idx <= 0) return null;
-  const city = t.slice(0, idx).trim();
-  let st = t.slice(idx + 1).trim().toUpperCase();
-  if (st.length > 2) st = st.slice(0, 2);
-  if (city.length < 2 || st.length !== 2) return null;
-  return { city, state: st };
-}
+const MIN_RATE = 50;
+const MAX_RATE = 120_000;
 
 function parseAmount(v: unknown): number | null {
   if (v == null || v === "") return null;
@@ -70,12 +31,6 @@ function parseAmount(v: unknown): number | null {
   const s = String(v).replace(/[$,]/g, "").replace(/\s*CAD\s*/gi, "").replace(/\s*USD\s*/gi, "").trim();
   const n = Number(s);
   return Number.isFinite(n) && n > 0 ? n : null;
-}
-
-function toUsd(amount: number, originState: string, destState: string, cadToUsd: number): number {
-  const ca = CA_PROVINCES.has(originState) && CA_PROVINCES.has(destState);
-  if (ca) return amount * cadToUsd;
-  return amount;
 }
 
 function cellToDate(val: unknown, fallback: Date): Date {
@@ -108,29 +63,34 @@ function parseArgs() {
 
 async function main() {
   const { prisma } = await import("../src/lib/prisma");
-  const cadToUsd = loadEnvCadRate();
   const { replaceImport, asOf, pathArg } = parseArgs();
-  const xlsxPath =
-    pathArg || path.join(process.env.HOME ?? "", "Downloads", "WholeSaler_Trucker_Lists.xlsx");
-
-  if (!existsSync(xlsxPath)) {
-    console.error("File not found:", xlsxPath);
+  const primary = pathArg || path.join(root, "data", "lane-imports", "WholeSaler_Trucker_Lists.xlsx");
+  const fallbackDl = path.join(process.env.HOME ?? "", "Downloads", "WholeSaler_Trucker_Lists.xlsx");
+  const xlsxPathFinal = existsSync(primary) ? primary : existsSync(fallbackDl) ? fallbackDl : null;
+  if (!xlsxPathFinal) {
+    // eslint-disable-next-line no-console
+    console.error("XLSX not found. Tried:", primary, "and", fallbackDl);
     process.exit(1);
+  }
+  if (xlsxPathFinal === fallbackDl && !pathArg) {
+    // eslint-disable-next-line no-console
+    console.log("Using:", xlsxPathFinal);
   }
 
   const defaultObserved = asOf ?? new Date();
 
-  const wb = XLSX.readFile(xlsxPath, { cellDates: true });
-  const sheetNames = [
-    "POSTED_LOADS_BY_BUYER",
-    "POSTED_LOADS_BY_MILL",
-    "POSTED_LOADS_BY_SHIPPERS",
-  ];
+  const wb = XLSX.readFile(xlsxPathFinal, { cellDates: true });
+  const sheetNames = ["POSTED_LOADS_BY_BUYER", "POSTED_LOADS_BY_MILL", "POSTED_LOADS_BY_SHIPPERS"];
 
   const rows: Prisma.LaneRateObservationCreateManyInput[] = [];
+  const dedup = new Set<string>();
 
   for (const name of sheetNames) {
-    if (!wb.SheetNames.includes(name)) continue;
+    if (!wb.SheetNames.includes(name)) {
+      // eslint-disable-next-line no-console
+      console.warn("[skip] sheet not in workbook:", name);
+      continue;
+    }
     const sh = wb.Sheets[name];
     const matrix = XLSX.utils.sheet_to_json(sh, { defval: "", header: 1 }) as unknown[][];
     if (!matrix.length) continue;
@@ -144,36 +104,43 @@ async function main() {
       ),
     };
     if (idx.origin < 0 || idx.dest < 0 || idx.amount < 0) {
+      // eslint-disable-next-line no-console
       console.warn(`[skip ${name}] bad header`, header);
       continue;
     }
 
     for (let r = 1; r < matrix.length; r++) {
       const row = matrix[r] as unknown[];
-      const o = parseLocation(row[idx.origin]);
-      const d = parseLocation(row[idx.dest]);
+      const o = parsePostedLocationCell(row[idx.origin]);
+      const d = parsePostedLocationCell(row[idx.dest]);
       const amt = parseAmount(row[idx.amount]);
       if (!o || !d || amt == null) continue;
 
+      if (amt < MIN_RATE || amt > MAX_RATE) continue;
+
+      const offerCurrency = inferOfferCurrency(o.state, d.state);
+
       const observedAt =
         idx.date >= 0 ? cellToDate(row[idx.date], defaultObserved) : defaultObserved;
+      const day = observedAt.toISOString().slice(0, 10);
 
-      const rateNative = amt;
-      const offerCurrency = CA_PROVINCES.has(o.state) && CA_PROVINCES.has(d.state) ? "CAD" : "USD";
-      const rateUsd = toUsd(rateNative, o.state, d.state, cadToUsd);
-      if (rateUsd < MIN_USD || rateUsd > MAX_USD) continue;
+      const canonO = canonicalCityKey(o.city);
+      const canonD = canonicalCityKey(d.city);
+      const dedupKey = `${canonO}|${o.state}|${canonD}|${d.state}|${amt.toFixed(2)}|${day}`;
+      if (dedup.has(dedupKey)) continue;
+      dedup.add(dedupKey);
 
       rows.push({
         observedAt,
         originState: o.state,
         destState: d.state,
-        originCityCanon: canonicalCityKey(o.city),
-        destCityCanon: canonicalCityKey(d.city),
+        originCityCanon: canonO,
+        destCityCanon: canonD,
         originZip5: "",
         destZip5: "",
         equipmentNorm: "*",
-        rateUsd: new Prisma.Decimal(rateUsd.toFixed(2)),
-        offerCurrency: offerCurrency === "CAD" ? OfferCurrency.CAD : OfferCurrency.USD,
+        rateUsd: new Prisma.Decimal(amt.toFixed(2)),
+        offerCurrency: (offerCurrency === "CAD" ? OfferCurrency.CAD : OfferCurrency.USD),
         source: RateObservationSource.IMPORT,
       });
     }
@@ -183,6 +150,7 @@ async function main() {
     const del = await prisma.laneRateObservation.deleteMany({
       where: { source: RateObservationSource.IMPORT },
     });
+    // eslint-disable-next-line no-console
     console.log(`Removed ${del.count} prior IMPORT observations.`);
   }
 
@@ -192,11 +160,13 @@ async function main() {
     await prisma.laneRateObservation.createMany({ data: chunk });
   }
 
-  console.log(`Inserted ${rows.length} IMPORT observations.`);
+  // eslint-disable-next-line no-console
+  console.log(`Inserted ${rows.length} distinct IMPORT lane observations (deduped by lane+amount+day).`);
   await prisma.$disconnect();
 }
 
 main().catch((e) => {
+  // eslint-disable-next-line no-console
   console.error(e);
   process.exit(1);
 });
