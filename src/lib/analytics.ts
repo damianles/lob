@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 
 import marketBenchmarks from "../../data/market-benchmarks.json";
+import { canonicalCityKey } from "@/lib/city-canonical";
 import { prisma } from "@/lib/prisma";
 
 type BenchmarkRow = {
@@ -9,7 +10,96 @@ type BenchmarkRow = {
   equipmentType: string;
   benchmarkAvgUsd: number;
   notes?: string;
+  /** When set, the benchmark is for this specific city pair; matching bookings must use the same cities. */
+  originCity?: string;
+  destinationCity?: string;
+  sampleCount?: number;
 };
+
+export type SpreadsheetBenchmarkViewRow = {
+  originState: string;
+  destinationState: string;
+  equipmentType: string;
+  benchmarkAvgUsd: number;
+  yourBookedAvgUsd: number | null;
+  bookingCount: number;
+  deltaVsBenchmarkPct: number | null;
+  /** What to show instead of only "AB → AB" — includes cities when the row is city-pair. */
+  laneLabel: string;
+  benchmarkScope: "state" | "city";
+  sourceSampleCount: number | null;
+  rowKey: string;
+};
+
+function equipmentMatchesBenchmark(benchEq: string, loadEq: string): boolean {
+  const b = (benchEq || "*").trim().toLowerCase();
+  if (b === "*" || b === "any") return true;
+  return (loadEq || "").toLowerCase() === b;
+}
+
+/**
+ * A spreadsheet benchmark may be state-only (all city pairs in sheet rolled to one $)
+ * or a specific city pair. Bookings must match that granularity.
+ */
+function bookingMatchesSpreadsheetRow(
+  b: BenchmarkRow,
+  x: {
+    load: {
+      originCity: string;
+      originState: string;
+      destinationCity: string;
+      destinationState: string;
+      equipmentType: string;
+    };
+  },
+): boolean {
+  if (!equipmentMatchesBenchmark(b.equipmentType, x.load.equipmentType)) return false;
+  if (x.load.originState.toUpperCase() !== b.originState.toUpperCase()) return false;
+  if (x.load.destinationState.toUpperCase() !== b.destinationState.toUpperCase()) return false;
+  if (b.originCity && b.destinationCity) {
+    return (
+      canonicalCityKey(x.load.originCity) === canonicalCityKey(b.originCity) &&
+      canonicalCityKey(x.load.destinationCity) === canonicalCityKey(b.destinationCity)
+    );
+  }
+  return true;
+}
+
+function laneLabelForBenchmark(b: BenchmarkRow): string {
+  if (b.originCity && b.destinationCity) {
+    return `${b.originCity} → ${b.destinationCity} · ${b.originState}–${b.destinationState}`;
+  }
+  return `${b.originState} → ${b.destinationState} (all city pairs in source sheet, provincial aggregate)`;
+}
+
+function rowKeyForBenchmark(b: BenchmarkRow): string {
+  if (b.originCity && b.destinationCity) {
+    return `c:${canonicalCityKey(b.originCity)}|${b.originState}|${canonicalCityKey(b.destinationCity)}|${b.destinationState}|${b.benchmarkAvgUsd}`;
+  }
+  return `s:${b.originState}|${b.destinationState}|${b.equipmentType}`;
+}
+
+function toSpreadsheetView(
+  b: BenchmarkRow,
+  rows: {
+    yourBookedAvgUsd: number | null;
+    bookingCount: number;
+    deltaVsBenchmarkPct: number | null;
+  },
+  scope: "state" | "city",
+): SpreadsheetBenchmarkViewRow {
+  return {
+    originState: b.originState,
+    destinationState: b.destinationState,
+    equipmentType: b.equipmentType,
+    benchmarkAvgUsd: b.benchmarkAvgUsd,
+    laneLabel: laneLabelForBenchmark(b),
+    benchmarkScope: scope,
+    sourceSampleCount: typeof b.sampleCount === "number" ? b.sampleCount : null,
+    rowKey: rowKeyForBenchmark(b),
+    ...rows,
+  };
+}
 
 export type AnalyticsPeriod = "week" | "30d" | "60d" | "90d" | "yoy";
 
@@ -380,28 +470,36 @@ export async function getAnalyticsOverview(scope: ActorScope, filters: Analytics
     .sort((a, b) => b.count - a.count);
 
   const benchmarks = marketBenchmarks as BenchmarkRow[];
-  const spreadsheetBenchmarks = benchmarks.map((b) => {
-    const matching = bookings.filter(
-      (x) =>
-        x.load.originState.toUpperCase() === b.originState.toUpperCase() &&
-        x.load.destinationState.toUpperCase() === b.destinationState.toUpperCase() &&
-        x.load.equipmentType.toLowerCase() === b.equipmentType.toLowerCase(),
-    );
-    const yourAvg =
-      matching.length === 0
-        ? null
-        : matching.reduce((s, x) => s + Number(x.agreedRateUsd), 0) / matching.length;
-    return {
-      originState: b.originState,
-      destinationState: b.destinationState,
-      equipmentType: b.equipmentType,
-      benchmarkAvgUsd: b.benchmarkAvgUsd,
-      yourBookedAvgUsd: yourAvg,
-      bookingCount: matching.length,
-      deltaVsBenchmarkPct:
-        yourAvg == null ? null : ((yourAvg - b.benchmarkAvgUsd) / b.benchmarkAvgUsd) * 100,
-    };
-  });
+
+  function mapSpreadsheetList(list: BenchmarkRow[], scope: "state" | "city"): SpreadsheetBenchmarkViewRow[] {
+    const out = list.map((b) => {
+      const matching = bookings.filter((x) => bookingMatchesSpreadsheetRow(b, x));
+      const yourAvg =
+        matching.length === 0
+          ? null
+          : matching.reduce((s, x) => s + Number(x.agreedRateUsd), 0) / matching.length;
+      return toSpreadsheetView(
+        b,
+        {
+          yourBookedAvgUsd: yourAvg,
+          bookingCount: matching.length,
+          deltaVsBenchmarkPct:
+            yourAvg == null ? null : ((yourAvg - b.benchmarkAvgUsd) / b.benchmarkAvgUsd) * 100,
+        },
+        scope,
+      );
+    });
+    out.sort((a, b) => (b.sourceSampleCount ?? 0) - (a.sourceSampleCount ?? 0));
+    return out;
+  }
+
+  const stateBenchmarkRows = benchmarks.filter((b) => !b.originCity && !b.destinationCity);
+  const cityBenchmarkRows = benchmarks.filter((b) => Boolean(b.originCity && b.destinationCity));
+
+  const spreadsheetBenchmarks = {
+    stateLevel: mapSpreadsheetList(stateBenchmarkRows, "state"),
+    cityLevel: mapSpreadsheetList(cityBenchmarkRows, "city"),
+  };
 
   return {
     filtersApplied: {

@@ -375,30 +375,62 @@ export default async function LaneAnalyticsPage({
           <article className="rounded-lg border bg-white p-4">
             <h2 className="text-lg font-semibold">Base lane averages vs your bookings</h2>
             <p className="mt-1 text-xs text-zinc-500">
-              Primary table: <code className="rounded bg-zinc-100 px-1">data/market-benchmarks.json</code> (built from your
-              wholesaler posted-load sheets; see <code className="rounded bg-zinc-100 px-1">data/lane-rate-base-source.json</code>
-              ). Fair-rate checks use this until enough live posts exist in the DB window (
-              <code className="rounded bg-zinc-100 px-1">LOB_MIN_SAMPLES_FOR_DB_BENCHMARK</code>, default 5). Rebuild from a
-              new XLSX with <code className="rounded bg-zinc-100 px-1">npx tsx scripts/build-benchmarks-from-posted-xlsx.ts</code>.
+              <strong>State rows</strong> are one number per origin/destination <em>province or state</em> (all city pairs
+              in the posted-load sheets rolled together). <strong>City rows</strong> are specific origin/destination
+              cities—your &quot;avg booked&quot; is matched to the <em>same</em> cities when those fields exist, so it is
+              not the same as the provincial row for the same states. Source file:{" "}
+              <code className="rounded bg-zinc-100 px-1">data/market-benchmarks.json</code> — rebuild from your XLSX with{" "}
+              <code className="rounded bg-zinc-100 px-1">npx tsx scripts/build-benchmarks-from-posted-xlsx.ts</code>.
+              Fair-rate code also uses the DB window when enough samples exist (
+              <code className="rounded bg-zinc-100 px-1">LOB_MIN_SAMPLES_FOR_DB_BENCHMARK</code>).
             </p>
-            <ul className="mt-3 max-h-64 space-y-3 overflow-auto text-sm">
-              {overview.spreadsheetBenchmarks.map((row) => (
-                <li key={`${row.originState}-${row.destinationState}-${row.equipmentType}`} className="border-b border-zinc-100 pb-2">
-                  <div className="font-medium">
-                    {row.originState} → {row.destinationState} · {row.equipmentType}
-                  </div>
+            <h3 className="mt-4 text-sm font-semibold text-zinc-800">Provincial / state aggregates</h3>
+            <ul className="mt-2 max-h-48 space-y-2 overflow-auto text-sm">
+              {overview.spreadsheetBenchmarks.stateLevel.map((row) => (
+                <li key={row.rowKey} className="border-b border-zinc-100 pb-2">
+                  <div className="font-medium leading-snug">{row.laneLabel}</div>
+                  <div className="mt-0.5 text-[11px] text-zinc-500">Equipment: {row.equipmentType}</div>
                   <div className="mt-1 text-xs text-zinc-600">
                     Benchmark {formatMoney(row.benchmarkAvgUsd)}
+                    {row.sourceSampleCount != null && ` · ${row.sourceSampleCount.toLocaleString()} rows in source sheet`}
                     {row.yourBookedAvgUsd != null && (
                       <>
                         {" "}
-                        · Your avg booked {formatMoney(row.yourBookedAvgUsd)} ({row.bookingCount} loads)
+                        · Your avg {formatMoney(row.yourBookedAvgUsd)} ({row.bookingCount} bookings in period)
                         {row.deltaVsBenchmarkPct != null && (
                           <span> · {formatPct(row.deltaVsBenchmarkPct)} vs benchmark</span>
                         )}
                       </>
                     )}
-                    {row.yourBookedAvgUsd == null && <span> · No matching bookings in period</span>}
+                    {row.yourBookedAvgUsd == null && <span> · No matching bookings in this period &amp; filters</span>}
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <h3 className="mt-4 text-sm font-semibold text-zinc-800">City-pair lines (from spreadsheet)</h3>
+            <p className="mt-0.5 text-[11px] text-zinc-500">
+              Each line is a different origin/destination <em>city</em> with the same states—benchmark $ varies by lane.
+            </p>
+            <ul className="mt-2 max-h-64 space-y-2 overflow-auto text-sm">
+              {overview.spreadsheetBenchmarks.cityLevel.map((row) => (
+                <li key={row.rowKey} className="border-b border-zinc-100 pb-2">
+                  <div className="font-medium leading-snug">{row.laneLabel}</div>
+                  <div className="mt-0.5 text-[11px] text-zinc-500">Equipment: {row.equipmentType}</div>
+                  <div className="mt-1 text-xs text-zinc-600">
+                    Benchmark {formatMoney(row.benchmarkAvgUsd)}
+                    {row.sourceSampleCount != null && ` · ${row.sourceSampleCount.toLocaleString()} rows in source sheet`}
+                    {row.yourBookedAvgUsd != null && (
+                      <>
+                        {" "}
+                        · Your avg {formatMoney(row.yourBookedAvgUsd)} ({row.bookingCount} on this city lane in period)
+                        {row.deltaVsBenchmarkPct != null && (
+                          <span> · {formatPct(row.deltaVsBenchmarkPct)} vs benchmark</span>
+                        )}
+                      </>
+                    )}
+                    {row.yourBookedAvgUsd == null && (
+                      <span> · No booked loads on this exact city lane in period</span>
+                    )}
                   </div>
                 </li>
               ))}
