@@ -101,15 +101,15 @@ export function deriveViewerRole(me: MeApiResponse | null | undefined): ViewerRo
   }
 
   if (me.role === "SHIPPER") {
+    // Supplier is a single persona in the chrome — both mills and wholesalers
+    // experience the same product. The mill/wholesaler distinction is metadata
+    // on the company file (used in admin views, analytics segmentation, etc.)
+    // but is intentionally NOT surfaced as a separate persona to the user.
     const supplierKind = company?.supplierKind ?? null;
-    const label =
-      supplierKind === "MILL" ? "Mill" : supplierKind === "WHOLESALER" ? "Wholesaler" : "Supplier";
-    const shortLabel =
-      supplierKind === "MILL" ? "MILL" : supplierKind === "WHOLESALER" ? "WHOLESALER" : "SUPPLIER";
     return {
       kind: "SHIPPER",
-      label,
-      shortLabel,
+      label: "Supplier",
+      shortLabel: "SUPPLIER",
       companyId: company?.id ?? null,
       companyName: company?.legalName ?? null,
       supplierKind,

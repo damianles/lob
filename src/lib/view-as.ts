@@ -73,14 +73,17 @@ export function decodeViewAsCookie(raw: string | null | undefined): ViewAsPayloa
   }
 }
 
-/** Pretty label for the simulated profile, e.g. "Mill", "Owner-operator", "Broker". */
+/**
+ * Pretty label for the simulated persona shown in chrome.
+ *
+ * NOTE: "Supplier" is the single persona on the supplier side of the
+ * marketplace — both mills and wholesalers experience the same product. The
+ * mill-vs-wholesaler distinction lives on the account file (Company.supplierKind),
+ * not as a separate persona in the View-as picker.
+ */
 export function viewAsLabel(p: ViewAsPayload): string {
   if (p.role === "ADMIN") return "Admin";
-  if (p.role === "SHIPPER") {
-    if (p.supplierKind === "MILL") return "Mill";
-    if (p.supplierKind === "WHOLESALER") return "Wholesaler";
-    return "Supplier";
-  }
+  if (p.role === "SHIPPER") return "Supplier";
   if (p.isOwnerOperator) return "Owner-operator";
   if (p.carrierType === "BROKER") return "Broker";
   if (p.carrierType === "ASSET_BASED") return "Asset Carrier";
@@ -95,16 +98,10 @@ export const VIEW_AS_PRESETS: Array<{
   payload: ViewAsPayload;
 }> = [
   {
-    id: "mill",
-    label: "Mill",
-    hint: "Sawmill / reload supplier posting loads",
-    payload: { role: "SHIPPER", supplierKind: "MILL", verified: true },
-  },
-  {
-    id: "wholesaler",
-    label: "Wholesaler",
-    hint: "Distribution / wholesale shipper",
-    payload: { role: "SHIPPER", supplierKind: "WHOLESALER", verified: true },
+    id: "supplier",
+    label: "Supplier",
+    hint: "Mill or wholesaler — the supplier-side product is one persona",
+    payload: { role: "SHIPPER", verified: true },
   },
   {
     id: "asset-carrier",
