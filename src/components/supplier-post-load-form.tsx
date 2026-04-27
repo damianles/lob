@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { AddressDataLists } from "@/components/address-datalists";
+import { PlaceAutocomplete } from "@/components/place-autocomplete";
 import { BoardFootHelper } from "@/components/board-foot-helper";
 import { LanePriceChip } from "@/components/lane-price-chip";
 import { LoadTemplatesPanel, type LoadTemplate } from "@/components/load-templates-panel";
@@ -524,7 +525,30 @@ export function SupplierPostLoadForm({
 
         <section className="rounded border border-emerald-200 bg-white/90 p-3">
           <h4 className="text-xs font-bold uppercase tracking-wide text-emerald-900">Lane (search)</h4>
-          <p className="mt-1 text-xs text-zinc-500">Used for the board and fair-rate check; can match pickup 1.</p>
+          <p className="mt-1 text-xs text-zinc-500">
+            Used for the board and fair-rate check; can match pickup 1. Use Google place search (when configured) to fill
+            city, province/state, and postal/ZIP—same flow for all users with a valid API key in production.
+          </p>
+          <div className="mb-2 mt-2 grid gap-2 sm:grid-cols-2">
+            <PlaceAutocomplete
+              mode="city"
+              label="Search origin (city / town)"
+              onResolved={(p) => {
+                if (p.city) setOriginCity(p.city);
+                if (p.state) setOriginState(p.state.replace(/[^A-Za-z]/g, "").slice(0, 2).toUpperCase());
+                if (p.zip) setOriginZip(p.zip);
+              }}
+            />
+            <PlaceAutocomplete
+              mode="city"
+              label="Search destination (city / town)"
+              onResolved={(p) => {
+                if (p.city) setDestinationCity(p.city);
+                if (p.state) setDestinationState(p.state.replace(/[^A-Za-z]/g, "").slice(0, 2).toUpperCase());
+                if (p.zip) setDestinationZip(p.zip);
+              }}
+            />
+          </div>
           <div className="mt-2 grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
             <input
               className="rounded border px-2 py-2 text-sm"
@@ -609,6 +633,21 @@ export function SupplierPostLoadForm({
           {pickups.map((p, i) => (
             <div key={i} className="mt-3 grid gap-2 border-t border-emerald-100 pt-3 sm:grid-cols-2 lg:grid-cols-3">
               <p className="text-xs font-semibold text-zinc-700 sm:col-span-2 lg:col-span-3">Pickup {i + 1}</p>
+              {i === 0 && (
+                <div className="sm:col-span-2 lg:col-span-3">
+                  <PlaceAutocomplete
+                    mode="address"
+                    label="Search street address (optional, fills line + postal)"
+                    onResolved={(p) => {
+                      const line = p.line1 || p.formattedAddress;
+                      syncPickup(i, {
+                        address: line,
+                        postal: p.zip,
+                      });
+                    }}
+                  />
+                </div>
+              )}
               <input className="rounded border px-2 py-2 text-sm sm:col-span-2" placeholder="Address *" value={p.address} onChange={(e) => syncPickup(i, { address: e.target.value })} required={i === 0} />
               <input className="rounded border px-2 py-2 text-sm" placeholder="Postal / ZIP" value={p.postal} onChange={(e) => syncPickup(i, { postal: e.target.value })} list="recent-origin-zips" autoComplete="off" />
               <input className="rounded border px-2 py-2 text-sm" placeholder="Phone" value={p.phone} onChange={(e) => syncPickup(i, { phone: e.target.value })} />
@@ -644,6 +683,21 @@ export function SupplierPostLoadForm({
           {deliveries.map((d, i) => (
             <div key={i} className="mt-3 grid gap-2 border-t border-emerald-100 pt-3 sm:grid-cols-2 lg:grid-cols-3">
               <p className="text-xs font-semibold text-zinc-700 sm:col-span-2 lg:col-span-3">Delivery {i + 1}</p>
+              {i === 0 && (
+                <div className="sm:col-span-2 lg:col-span-3">
+                  <PlaceAutocomplete
+                    mode="address"
+                    label="Search street address (optional, fills line + postal)"
+                    onResolved={(p) => {
+                      const line = p.line1 || p.formattedAddress;
+                      syncDelivery(i, {
+                        address: line,
+                        postal: p.zip,
+                      });
+                    }}
+                  />
+                </div>
+              )}
               <input className="rounded border px-2 py-2 text-sm sm:col-span-2" placeholder="Address *" value={d.address} onChange={(e) => syncDelivery(i, { address: e.target.value })} required={i === 0} />
               <input className="rounded border px-2 py-2 text-sm" placeholder="Postal / ZIP" value={d.postal} onChange={(e) => syncDelivery(i, { postal: e.target.value })} list="recent-destination-zips" autoComplete="off" />
               <input className="rounded border px-2 py-2 text-sm" placeholder="Phone" value={d.phone} onChange={(e) => syncDelivery(i, { phone: e.target.value })} />
