@@ -1,6 +1,6 @@
 {
   "role": "authoritative_static_base",
-  "description": "Seed lane rate averages for fair-rate validation and analytics. No transaction dates — counts reflect historical rows from the source spreadsheet, stored as benchmarkAvgUsd (USD equivalent; CA–CA lanes converted with LOB_CAD_TO_USD_RATE at build time).",
+  "description": "City-pair lane rate averages (no state/province-only rows — those ranges are too wide). No transaction dates — counts reflect historical rows from the source spreadsheet, stored as benchmarkAvgUsd (USD equivalent; CA–CA lanes converted with LOB_CAD_TO_USD_RATE at build time).",
   "benchmarkFile": "data/market-benchmarks.json",
   "buildScript": "scripts/build-benchmarks-from-posted-xlsx.ts",
   "insightsFile": "data/benchmark-insights.json",
@@ -15,7 +15,7 @@
     "rowsInSheets": 3135,
     "rowsAfterOutlierFilter": 3111,
     "uniqueCityLanes": 520,
-    "uniqueStateFallbackLanes": 43,
+    "uniqueStateFallbackLanes": 0,
     "equipmentTag": "*",
     "cadToUsdRate": 0.73
   },

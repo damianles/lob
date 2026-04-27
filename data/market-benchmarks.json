@@ -1,23 +1,5 @@
 [
   {
-    "originState": "AB",
-    "destinationState": "AB",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 739,
-    "sampleCount": 1487,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback."
-  },
-  {
-    "originState": "AB",
-    "destinationState": "BC",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 1709,
-    "sampleCount": 431,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback."
-  },
-  {
     "originCity": "Fort McMurray",
     "destinationCity": "Edmonton",
     "originState": "AB",
@@ -29,15 +11,6 @@
     "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. Static city-pair fallback (canonical grouping)."
   },
   {
-    "originState": "BC",
-    "destinationState": "AB",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 1615,
-    "sampleCount": 253,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback."
-  },
-  {
     "originCity": "Fort McMurray",
     "destinationCity": "Calgary",
     "originState": "AB",
@@ -47,24 +20,6 @@
     "sampleCount": 249,
     "windowDays": 60,
     "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. Static city-pair fallback (canonical grouping)."
-  },
-  {
-    "originState": "AB",
-    "destinationState": "SK",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 1256,
-    "sampleCount": 220,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback."
-  },
-  {
-    "originState": "AB",
-    "destinationState": "MB",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 2154,
-    "sampleCount": 185,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback."
   },
   {
     "originCity": "Cochrane",
@@ -98,24 +53,6 @@
     "sampleCount": 85,
     "windowDays": 60,
     "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. Static city-pair fallback (canonical grouping)."
-  },
-  {
-    "originState": "SK",
-    "destinationState": "AB",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 1296,
-    "sampleCount": 77,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback."
-  },
-  {
-    "originState": "SK",
-    "destinationState": "BC",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 1966,
-    "sampleCount": 68,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback."
   },
   {
     "originCity": "Prince George",
@@ -195,15 +132,6 @@
     "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. Static city-pair fallback (canonical grouping)."
   },
   {
-    "originState": "SK",
-    "destinationState": "TX",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 2959,
-    "sampleCount": 39,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback. USD amounts."
-  },
-  {
     "originCity": "Fort McMurray",
     "destinationCity": "Grande Prairie",
     "originState": "AB",
@@ -213,24 +141,6 @@
     "sampleCount": 37,
     "windowDays": 60,
     "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. Static city-pair fallback (canonical grouping)."
-  },
-  {
-    "originState": "SK",
-    "destinationState": "ON",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 3832,
-    "sampleCount": 37,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback."
-  },
-  {
-    "originState": "BC",
-    "destinationState": "BC",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 1424,
-    "sampleCount": 37,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback."
   },
   {
     "originCity": "Slave Lake",
@@ -264,24 +174,6 @@
     "sampleCount": 35,
     "windowDays": 60,
     "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. Static city-pair fallback (canonical grouping)."
-  },
-  {
-    "originState": "BC",
-    "destinationState": "MB",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 2750,
-    "sampleCount": 34,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback."
-  },
-  {
-    "originState": "CA",
-    "destinationState": "AB",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 639,
-    "sampleCount": 33,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback. USD amounts."
   },
   {
     "originCity": "Fort McMurray",
@@ -361,15 +253,6 @@
     "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. Static city-pair fallback (canonical grouping)."
   },
   {
-    "originState": "BC",
-    "destinationState": "SK",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 2394,
-    "sampleCount": 24,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback."
-  },
-  {
     "originCity": "Fort McMurray___Alberta_AB",
     "destinationCity": "Edmonton",
     "originState": "CA",
@@ -390,15 +273,6 @@
     "sampleCount": 22,
     "windowDays": 60,
     "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. Static city-pair fallback (canonical grouping)."
-  },
-  {
-    "originState": "SK",
-    "destinationState": "MB",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 1651,
-    "sampleCount": 22,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback."
   },
   {
     "originCity": "Fort McMurray",
@@ -434,15 +308,6 @@
     "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. Static city-pair fallback (canonical grouping)."
   },
   {
-    "originState": "MB",
-    "destinationState": "QC",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 3549,
-    "sampleCount": 21,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback."
-  },
-  {
     "originCity": "Edmonton",
     "destinationCity": "Calgary",
     "originState": "AB",
@@ -452,15 +317,6 @@
     "sampleCount": 20,
     "windowDays": 60,
     "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. Static city-pair fallback (canonical grouping)."
-  },
-  {
-    "originState": "AB",
-    "destinationState": "ON",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 3632,
-    "sampleCount": 20,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback."
   },
   {
     "originCity": "Slave Lake",
@@ -529,15 +385,6 @@
     "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. Static city-pair fallback (canonical grouping)."
   },
   {
-    "originState": "SK",
-    "destinationState": "SK",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 842,
-    "sampleCount": 16,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback."
-  },
-  {
     "originCity": "Slave Lake",
     "destinationCity": "Redcliff",
     "originState": "AB",
@@ -593,15 +440,6 @@
     "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. Static city-pair fallback (canonical grouping)."
   },
   {
-    "originState": "AB",
-    "destinationState": "MT",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 3413,
-    "sampleCount": 15,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback. USD amounts."
-  },
-  {
     "originCity": "Swan River",
     "destinationCity": "Montmagny",
     "originState": "MB",
@@ -633,15 +471,6 @@
     "sampleCount": 14,
     "windowDays": 60,
     "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. Static city-pair fallback (canonical grouping). USD amounts."
-  },
-  {
-    "originState": "MB",
-    "destinationState": "ON",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 3073,
-    "sampleCount": 14,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback."
   },
   {
     "originCity": "Lac La Biche",
@@ -697,15 +526,6 @@
     "sampleCount": 13,
     "windowDays": 60,
     "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. Static city-pair fallback (canonical grouping)."
-  },
-  {
-    "originState": "MB",
-    "destinationState": "AB",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 1654,
-    "sampleCount": 13,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback."
   },
   {
     "originCity": "Meadow Lake",
@@ -840,15 +660,6 @@
     "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. Static city-pair fallback (canonical grouping). USD amounts."
   },
   {
-    "originState": "BC",
-    "destinationState": "ON",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 5391,
-    "sampleCount": 10,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback."
-  },
-  {
     "originCity": "High Prairie",
     "destinationCity": "Calgary",
     "originState": "AB",
@@ -924,15 +735,6 @@
     "sampleCount": 8,
     "windowDays": 60,
     "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. Static city-pair fallback (canonical grouping)."
-  },
-  {
-    "originState": "SK",
-    "destinationState": "QC",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 3796,
-    "sampleCount": 8,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback."
   },
   {
     "originCity": "Fort McMurray",
@@ -1177,24 +979,6 @@
     "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. Static city-pair fallback (canonical grouping)."
   },
   {
-    "originState": "WA",
-    "destinationState": "AB",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 2550,
-    "sampleCount": 6,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback. USD amounts."
-  },
-  {
-    "originState": "MB",
-    "destinationState": "MB",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 572,
-    "sampleCount": 6,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback."
-  },
-  {
     "originCity": "Calgary",
     "destinationCity": "Warman",
     "originState": "AB",
@@ -1347,15 +1131,6 @@
     "sampleCount": 5,
     "windowDays": 60,
     "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. Static city-pair fallback (canonical grouping)."
-  },
-  {
-    "originState": "AB",
-    "destinationState": "QC",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 4460,
-    "sampleCount": 5,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback."
   },
   {
     "originCity": "Edmonton",
@@ -1697,15 +1472,6 @@
     "sampleCount": 4,
     "windowDays": 60,
     "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. Static city-pair fallback (canonical grouping)."
-  },
-  {
-    "originState": "MB",
-    "destinationState": "BC",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 2665,
-    "sampleCount": 4,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback."
   },
   {
     "originCity": "Swan River",
@@ -2124,33 +1890,6 @@
     "sampleCount": 3,
     "windowDays": 60,
     "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. Static city-pair fallback (canonical grouping)."
-  },
-  {
-    "originState": "AB",
-    "destinationState": "MN",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 2033,
-    "sampleCount": 3,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback. USD amounts."
-  },
-  {
-    "originState": "WA",
-    "destinationState": "SK",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 3467,
-    "sampleCount": 3,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback. USD amounts."
-  },
-  {
-    "originState": "CA",
-    "destinationState": "MB",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 2300,
-    "sampleCount": 3,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback. USD amounts."
   },
   {
     "originCity": "ABBOTSFORD",
@@ -3174,33 +2913,6 @@
     "sampleCount": 2,
     "windowDays": 60,
     "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. Static city-pair fallback (canonical grouping)."
-  },
-  {
-    "originState": "MB",
-    "destinationState": "SK",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 1132,
-    "sampleCount": 2,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback."
-  },
-  {
-    "originState": "BC",
-    "destinationState": "QC",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 6789,
-    "sampleCount": 2,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback."
-  },
-  {
-    "originState": "ID",
-    "destinationState": "AB",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 1800,
-    "sampleCount": 2,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback. USD amounts."
   },
   {
     "originCity": "Prince George",
@@ -6006,104 +5718,5 @@
     "sampleCount": 1,
     "windowDays": 60,
     "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. Static city-pair fallback (canonical grouping)."
-  },
-  {
-    "originState": "AB",
-    "destinationState": "IL",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 2800,
-    "sampleCount": 1,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback. USD amounts."
-  },
-  {
-    "originState": "UT",
-    "destinationState": "MD",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 4000,
-    "sampleCount": 1,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback. USD amounts."
-  },
-  {
-    "originState": "AB",
-    "destinationState": "TX",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 4060,
-    "sampleCount": 1,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback. USD amounts."
-  },
-  {
-    "originState": "MB",
-    "destinationState": "TX",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 2500,
-    "sampleCount": 1,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback. USD amounts."
-  },
-  {
-    "originState": "WA",
-    "destinationState": "BC",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 1600,
-    "sampleCount": 1,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback. USD amounts."
-  },
-  {
-    "originState": "ON",
-    "destinationState": "AB",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 5110,
-    "sampleCount": 1,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback."
-  },
-  {
-    "originState": "AB",
-    "destinationState": "CA",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 1800,
-    "sampleCount": 1,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback. USD amounts."
-  },
-  {
-    "originState": "BC",
-    "destinationState": "MN",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 2900,
-    "sampleCount": 1,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback. USD amounts."
-  },
-  {
-    "originState": "ON",
-    "destinationState": "NS",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 2336,
-    "sampleCount": 1,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback."
-  },
-  {
-    "originState": "QC",
-    "destinationState": "ON",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 2117,
-    "sampleCount": 1,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback."
-  },
-  {
-    "originState": "OR",
-    "destinationState": "MB",
-    "equipmentType": "*",
-    "benchmarkAvgUsd": 3900,
-    "sampleCount": 1,
-    "windowDays": 60,
-    "notes": "Wholesaler posted-loads (POSTED_LOADS_BY_BUYER, POSTED_LOADS_BY_MILL, POSTED_LOADS_BY_SHIPPERS). CA–CA: CAD→USD @ 0.73. Equipment: *. State-level static fallback. USD amounts."
   }
 ]

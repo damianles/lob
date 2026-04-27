@@ -69,7 +69,7 @@ function laneLabelForBenchmark(b: BenchmarkRow): string {
   if (b.originCity && b.destinationCity) {
     return `${b.originCity} → ${b.destinationCity} · ${b.originState}–${b.destinationState}`;
   }
-  return `${b.originState} → ${b.destinationState} (all city pairs in source sheet, provincial aggregate)`;
+  return `${b.originState} → ${b.destinationState} (rebuild benchmarks — city rows only)`;
 }
 
 function rowKeyForBenchmark(b: BenchmarkRow): string {
@@ -493,11 +493,10 @@ export async function getAnalyticsOverview(scope: ActorScope, filters: Analytics
     return out;
   }
 
-  const stateBenchmarkRows = benchmarks.filter((b) => !b.originCity && !b.destinationCity);
+  // Static file is city-pair only (no state/province aggregates). Ignore any legacy state-only rows.
   const cityBenchmarkRows = benchmarks.filter((b) => Boolean(b.originCity && b.destinationCity));
 
   const spreadsheetBenchmarks = {
-    stateLevel: mapSpreadsheetList(stateBenchmarkRows, "state"),
     cityLevel: mapSpreadsheetList(cityBenchmarkRows, "city"),
   };
 

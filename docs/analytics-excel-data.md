@@ -4,7 +4,7 @@ LOB never reads an Excel file **on the web server** at request time. Your spread
 
 | What you want | Mechanism | Where it shows up |
 |----------------|-----------|-------------------|
-| **A) State-level benchmarks in Insights** (“spreadsheet vs your booked average”) | Build JSON from XLSX, **commit** it, deploy | `getAnalyticsOverview` → `spreadsheetBenchmarks.stateLevel` / `cityLevel` (reads `data/market-benchmarks.json`; state = one $ per state pair; city = one row per city pair—labels in UI distinguish them) |
+| **A) City-pair benchmarks in Insights** (vs your booked average on the same city lane) | Build JSON from XLSX, **commit** it, deploy | `getAnalyticsOverview` → `spreadsheetBenchmarks.cityLevel` only (`data/market-benchmarks.json` has **no** state/province-only rows) |
 | **B) Rolling “market” rates from your posted rows** (lane quote chip, min-rate logic, DB-backed benchmarks when sample count is high enough) | Import XLSX rows into Postgres **`LaneRateObservation`** (`source: IMPORT`) | `market-rate-lane.ts`, `/api/insights/lane-quote`, load APIs that use the benchmark window |
 
 **Live bookings/loads in Insights** (loads posted, bookings, city lanes, etc.) always come from the **Postgres** `Load` / `Booking` tables for the environment. Excel does not replace that — it **supplements** benchmarks and observations.
@@ -22,7 +22,7 @@ LOB never reads an Excel file **on the web server** at request time. Your spread
 
    (Omit the path to use defaults under `data/lane-imports/` or `~/Downloads/WholeSaler_Trucker_Lists.xlsx` if present.)
 
-3. **Commit** the changed `data/market-benchmarks.json` (and `data/benchmark-insights.json` if it updates).
+3. **Commit** the changed `data/market-benchmarks.json` (city-pair rows only; no state-wide rows).
 4. **Push to `main`** so Vercel deploys. The **production** app bundle then includes the new static benchmarks.
 
 > If you only import into the DB (B) and never rebuild/commit (A), the **Insights “spreadsheet benchmark”** columns can still point at an **old** JSON file from the last build.

@@ -375,43 +375,14 @@ export default async function LaneAnalyticsPage({
           <article className="rounded-lg border bg-white p-4">
             <h2 className="text-lg font-semibold">Base lane averages vs your bookings</h2>
             <p className="mt-1 text-xs text-zinc-500">
-              <strong>State rows</strong> are one number per origin/destination <em>province or state</em> (all city pairs
-              in the posted-load sheets rolled together). <strong>City rows</strong> are specific origin/destination
-              cities—your &quot;avg booked&quot; is matched to the <em>same</em> cities when those fields exist, so it is
-              not the same as the provincial row for the same states. Source file:{" "}
-              <code className="rounded bg-zinc-100 px-1">data/market-benchmarks.json</code> — rebuild from your XLSX with{" "}
+              Benchmarks are <strong>city to city</strong> only (provincial aggregations are too wide for pricing). &quot;Your
+              avg booked&quot; uses bookings on the <em>same origin and destination cities</em> as the row. Source:{" "}
+              <code className="rounded bg-zinc-100 px-1">data/market-benchmarks.json</code> from{" "}
               <code className="rounded bg-zinc-100 px-1">npx tsx scripts/build-benchmarks-from-posted-xlsx.ts</code>.
-              Fair-rate code also uses the DB window when enough samples exist (
+              Fair-rate / lane logic can still use the DB window when enough samples exist (
               <code className="rounded bg-zinc-100 px-1">LOB_MIN_SAMPLES_FOR_DB_BENCHMARK</code>).
             </p>
-            <h3 className="mt-4 text-sm font-semibold text-zinc-800">Provincial / state aggregates</h3>
-            <ul className="mt-2 max-h-48 space-y-2 overflow-auto text-sm">
-              {overview.spreadsheetBenchmarks.stateLevel.map((row) => (
-                <li key={row.rowKey} className="border-b border-zinc-100 pb-2">
-                  <div className="font-medium leading-snug">{row.laneLabel}</div>
-                  <div className="mt-0.5 text-[11px] text-zinc-500">Equipment: {row.equipmentType}</div>
-                  <div className="mt-1 text-xs text-zinc-600">
-                    Benchmark {formatMoney(row.benchmarkAvgUsd)}
-                    {row.sourceSampleCount != null && ` · ${row.sourceSampleCount.toLocaleString()} rows in source sheet`}
-                    {row.yourBookedAvgUsd != null && (
-                      <>
-                        {" "}
-                        · Your avg {formatMoney(row.yourBookedAvgUsd)} ({row.bookingCount} bookings in period)
-                        {row.deltaVsBenchmarkPct != null && (
-                          <span> · {formatPct(row.deltaVsBenchmarkPct)} vs benchmark</span>
-                        )}
-                      </>
-                    )}
-                    {row.yourBookedAvgUsd == null && <span> · No matching bookings in this period &amp; filters</span>}
-                  </div>
-                </li>
-              ))}
-            </ul>
-            <h3 className="mt-4 text-sm font-semibold text-zinc-800">City-pair lines (from spreadsheet)</h3>
-            <p className="mt-0.5 text-[11px] text-zinc-500">
-              Each line is a different origin/destination <em>city</em> with the same states—benchmark $ varies by lane.
-            </p>
-            <ul className="mt-2 max-h-64 space-y-2 overflow-auto text-sm">
+            <ul className="mt-3 max-h-80 space-y-2 overflow-auto text-sm">
               {overview.spreadsheetBenchmarks.cityLevel.map((row) => (
                 <li key={row.rowKey} className="border-b border-zinc-100 pb-2">
                   <div className="font-medium leading-snug">{row.laneLabel}</div>
@@ -435,6 +406,9 @@ export default async function LaneAnalyticsPage({
                 </li>
               ))}
             </ul>
+            {overview.spreadsheetBenchmarks.cityLevel.length === 0 && (
+              <p className="mt-2 text-sm text-zinc-500">No city-pair rows in the benchmark file (rebuild the JSON).</p>
+            )}
           </article>
         </section>
 

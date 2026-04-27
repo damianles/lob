@@ -238,15 +238,7 @@ function findLaneBenchmarkFile(
     if (cityHit) return { row: { ...cityHit, rateCurrency: "USD" }, matchLevel: "city" };
   }
 
-  const stateHit = rows.find(
-    (r) =>
-      !r.originCity &&
-      !r.destinationCity &&
-      normalizeState(r.originState) === oSt &&
-      normalizeState(r.destinationState) === dSt &&
-      rowMatchesEquipment(r, equipmentType),
-  );
-  if (stateHit) return { row: { ...stateHit, rateCurrency: "USD" }, matchLevel: "state" };
+  // Intentionally no state/province row in the static file — range is too wide; use DB state aggregate above.
 
   return null;
 }

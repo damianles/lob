@@ -1,6 +1,7 @@
 /**
  * Build data/market-benchmarks.json (static fallback) from posted-load sheets.
- * Groups city pairs with canonicalCityKey so Ft McMurray / Fort McMurray merge.
+ * Emits **city-pair rows only** (no state/province-wide averages — too wide for pricing).
+ * Groups with canonicalCityKey so Ft McMurray / Fort McMurray merge.
  *
  * Run: npx tsx scripts/build-benchmarks-from-posted-xlsx.ts [path/to.xlsx]
  */
@@ -199,13 +200,6 @@ function main() {
     g.usd.push(r.usd);
   }
 
-  const stateGroups = new Map<string, number[]>();
-  for (const r of cleaned) {
-    const sk = `${r.originState}\t${r.destState}`;
-    if (!stateGroups.has(sk)) stateGroups.set(sk, []);
-    stateGroups.get(sk)!.push(r.usd);
-  }
-
   const benchmarks: Record<string, unknown>[] = [];
 
   for (const g of cityGroups.values()) {
@@ -221,23 +215,7 @@ function main() {
       benchmarkAvgUsd: Math.round(avg),
       sampleCount: n,
       windowDays: 60,
-      notes: `${notesBase} Static city-pair fallback (canonical grouping).${caCa ? "" : " USD amounts."}`,
-    });
-  }
-
-  for (const [sk, usdList] of stateGroups) {
-    const [originState, destinationState] = sk.split("\t");
-    const n = usdList.length;
-    const avg = usdList.reduce((a, b) => a + b, 0) / n;
-    const caCa = CA_PROVINCES.has(originState) && CA_PROVINCES.has(destinationState);
-    benchmarks.push({
-      originState,
-      destinationState,
-      equipmentType: EQUIP_ANY,
-      benchmarkAvgUsd: Math.round(avg),
-      sampleCount: n,
-      windowDays: 60,
-      notes: `${notesBase} State-level static fallback.${caCa ? "" : " USD amounts."}`,
+      notes: `${notesBase} City-pair (canonical grouping); no state-wide aggregate — provincial bands are too wide.${caCa ? "" : " USD amounts."}`,
     });
   }
 
