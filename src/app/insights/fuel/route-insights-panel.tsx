@@ -2,6 +2,8 @@
 
 import { useState, type FormEvent } from "react";
 
+import { PlaceAutocomplete } from "@/components/place-autocomplete";
+
 type Directions =
   | {
       ok: true;
@@ -104,7 +106,17 @@ export function RouteInsightsPanel() {
       <form onSubmit={run} className="mt-4 space-y-3">
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
-            <label className="text-xs font-semibold uppercase text-stone-500">Origin</label>
+            <PlaceAutocomplete
+              mode="geocode"
+              label="Origin (search with Places, or type below)"
+              placeholder="Calgary, AB or T2P 1J4…"
+              onResolved={(p) => {
+                setOrigin(
+                  p.formattedAddress || [p.city, p.state, p.zip].filter(Boolean).join(", "),
+                );
+              }}
+            />
+            <label className="mt-2 block text-xs font-semibold uppercase text-stone-500">Origin (for route)</label>
             <input
               className="mt-1 w-full rounded-xl border border-stone-200 px-3 py-2.5 text-sm"
               value={origin}
@@ -113,7 +125,17 @@ export function RouteInsightsPanel() {
             />
           </div>
           <div>
-            <label className="text-xs font-semibold uppercase text-stone-500">Destination</label>
+            <PlaceAutocomplete
+              mode="geocode"
+              label="Destination (search with Places, or type below)"
+              placeholder="Portland, OR or 97201…"
+              onResolved={(p) => {
+                setDestination(
+                  p.formattedAddress || [p.city, p.state, p.zip].filter(Boolean).join(", "),
+                );
+              }}
+            />
+            <label className="mt-2 block text-xs font-semibold uppercase text-stone-500">Destination (for route)</label>
             <input
               className="mt-1 w-full rounded-xl border border-stone-200 px-3 py-2.5 text-sm"
               value={destination}

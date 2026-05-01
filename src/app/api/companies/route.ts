@@ -1,5 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
-import { VerificationStatus } from "@prisma/client";
+import { UserRole, VerificationStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
@@ -20,7 +20,7 @@ export async function POST(req: Request) {
       })
     : null;
 
-  if (signedInUser?.companyId) {
+  if (signedInUser?.companyId && signedInUser.role !== UserRole.ADMIN) {
     return NextResponse.json({ error: "This user is already linked to a company." }, { status: 409 });
   }
 

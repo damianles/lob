@@ -9,7 +9,7 @@ export async function POST(
   ctx: { params: Promise<{ companyId: string }> },
 ) {
   const actor = await getActorContext();
-  if (actor.role !== "ADMIN") {
+  if (actor.realRole !== "ADMIN") {
     return NextResponse.json({ error: "Admin access required." }, { status: 403 });
   }
 

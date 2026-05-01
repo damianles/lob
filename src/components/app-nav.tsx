@@ -6,8 +6,12 @@ import { startTransition, useEffect, useState } from "react";
 
 import { LobWoodOIcon } from "@/components/lob-wood-o-icon";
 import { lobAppIconAlt } from "@/components/lob-app-icon-mark";
-import { useDistanceUnitPreference, useViewerRole } from "@/components/providers/app-providers";
-import { RadioChoice } from "@/components/ui/radio-choice";
+import { useViewerRole } from "@/components/providers/app-providers";
+import { cn } from "@/lib/cn";
+import { shouldShowGlobalAdminBar } from "@/lib/actor-permissions";
+import { signInUrlForAppPath, signUpUrlForAppPath } from "@/lib/guest-auth-routes";
+import { lobWoodOutlineButtonClass, lobWoodPrimaryButtonClass } from "@/lib/lob-button-styles";
+import type { MeApiResponse } from "@/lib/viewer-role";
 import { roleAccentClasses } from "@/lib/viewer-role";
 
 const signedInLinks = [
@@ -28,7 +32,6 @@ const adminLinks = [
 export function AppNav() {
   const { isSignedIn } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
-  const { distanceUnit, setDistanceUnit } = useDistanceUnitPreference();
   const { viewer } = useViewerRole();
   const accents = roleAccentClasses(viewer.kind);
 
@@ -38,10 +41,10 @@ export function AppNav() {
       return;
     }
     let cancelled = false;
-    void fetch("/api/me")
+    void fetch("/api/me", { cache: "no-store" })
       .then((r) => r.json())
-      .then((d: { role?: string }) => {
-        if (!cancelled) setIsAdmin(d.role === "ADMIN");
+      .then((d: MeApiResponse) => {
+        if (!cancelled) setIsAdmin(shouldShowGlobalAdminBar(d));
       })
       .catch(() => {
         if (!cancelled) setIsAdmin(false);
@@ -52,8 +55,10 @@ export function AppNav() {
   }, [isSignedIn]);
 
   const guestLinks = [
-    { href: "/", label: "Loads" },
-    { href: "/insights", label: "Insights" },
+    { href: signUpUrlForAppPath("/"), label: "Register" },
+    { href: signUpUrlForAppPath("/capacity"), label: "Capacity" },
+    { href: signUpUrlForAppPath("/insights"), label: "Insights" },
+    { href: signInUrlForAppPath("/"), label: "Sign in" },
   ];
   const links = [
     ...(isSignedIn ? signedInLinks : guestLinks),
@@ -76,7 +81,12 @@ export function AppNav() {
               <Link
                 key={l.href}
                 href={l.href}
-                className="shrink-0 rounded-full px-3 py-1.5 text-[12px] font-medium text-stone-600 transition hover:bg-stone-100 hover:text-lob-navy sm:px-4 sm:py-2 sm:text-sm"
+                className={cn(
+                  "shrink-0 rounded-full px-3 py-1.5 text-[12px] font-semibold transition sm:px-4 sm:py-2 sm:text-sm",
+                  !isSignedIn && l.label === "Register"
+                    ? lobWoodPrimaryButtonClass
+                    : "text-stone-600 hover:bg-stone-100 hover:text-lob-navy",
+                )}
               >
                 {l.label}
               </Link>
@@ -92,23 +102,12 @@ export function AppNav() {
               {viewer.shortLabel}
             </span>
           )}
-          <RadioChoice
-            label="Distance units"
-            name="lob-nav-distance-unit"
-            value={distanceUnit}
-            onChange={setDistanceUnit}
-            options={[
-              { value: "mi", label: "mi" },
-              { value: "km", label: "km" },
-            ]}
-            className="hidden sm:block [&_label]:px-2.5 [&_label]:py-1.5 [&_label]:text-xs"
-          />
           {isSignedIn ? (
             <UserButton />
           ) : (
             <Link
-              href="/sign-in"
-              className="rounded-full bg-lob-navy px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-lob-navy-hover sm:px-5 sm:py-2.5 sm:text-sm"
+              href={signInUrlForAppPath("/")}
+              className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition sm:px-5 sm:py-2.5 sm:text-sm ${lobWoodOutlineButtonClass}`}
             >
               Sign in
             </Link>

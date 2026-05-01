@@ -10,6 +10,8 @@ import { carrierCompanyNameForViewer } from "@/lib/carrier-visibility";
 import { shipperCompanyNameForViewer } from "@/lib/shipper-visibility";
 import { getDatabaseErrorGuidance } from "@/lib/db-connection-hints";
 import { extractLumberSpec } from "@/lib/lumber-spec";
+import { isRealAdmin } from "@/lib/actor-permissions";
+import { getActorContext } from "@/lib/request-context";
 import { syncClerkUserToDatabase } from "@/lib/sync-clerk-user";
 
 export const dynamic = "force-dynamic";
@@ -131,6 +133,15 @@ export default async function Home() {
     console.error("[home] database error:", e);
   }
 
+  let sessionActor: Awaited<ReturnType<typeof getActorContext>> | null = null;
+  if (userId) {
+    try {
+      sessionActor = await getActorContext();
+    } catch {
+      sessionActor = null;
+    }
+  }
+
   const actor: BoardActor = {
     userId: appUser?.id ?? null,
     companyId: appUser?.companyId ?? null,
@@ -238,7 +249,7 @@ export default async function Home() {
           </section>
         )}
 
-        {userId && appUser?.role === "ADMIN" && (
+        {userId && appUser && sessionActor && isRealAdmin(sessionActor) && !sessionActor.simulated && (
           <section className="mb-4 min-w-0 max-w-full rounded-lg border border-stone-200 bg-white p-4 text-sm text-stone-700 shadow-sm">
             <p className="font-medium text-stone-900">Signed in as admin</p>
             <p className="mt-1 break-words leading-relaxed">
@@ -253,6 +264,20 @@ export default async function Home() {
                 account setup
               </Link>{" "}
               as a supplier/carrier.
+            </p>
+          </section>
+        )}
+
+        {userId && appUser && sessionActor && isRealAdmin(sessionActor) && sessionActor.simulated && (
+          <section className="mb-4 min-w-0 max-w-full rounded-lg border border-sky-200 bg-sky-50/90 p-4 text-sm text-sky-950">
+            <p className="font-medium">Previewing as a non-admin</p>
+            <p className="mt-1 leading-relaxed text-sky-900/90">
+              <strong>Carriers</strong>, <strong>Companies</strong>, and other admin links are hidden from the top bar so
+              this matches what suppliers and carriers see. Clear view-as in{" "}
+              <Link className="font-medium text-lob-navy underline" href="/admin/test-lab">
+                Test lab
+              </Link>{" "}
+              when you need full admin tools.
             </p>
           </section>
         )}

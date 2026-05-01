@@ -1,7 +1,7 @@
-import { SignUp } from "@clerk/nextjs";
 import { Suspense } from "react";
 
 import { ClerkIntentBridge } from "@/components/clerk-intent-bridge";
+import { SignUpWithRedirect } from "@/components/clerk-sign-up-with-redirect";
 import { LobBrandPrimary } from "@/components/lob-brand-primary";
 import { BRAND_POSITIONING, BRAND_PRODUCT_NAME } from "@/lib/brand-marketing";
 
@@ -21,7 +21,9 @@ export default function Page() {
             <LobBrandPrimary className="mx-auto h-auto max-h-48 w-full object-contain sm:max-h-52" priority />
           </div>
           <div className="px-1 pb-4 pt-2">
-            <SignUp />
+            <Suspense fallback={<div className="p-6 text-center text-sm text-stone-500">Loading…</div>}>
+              <SignUpWithRedirect />
+            </Suspense>
           </div>
         </div>
       </div>

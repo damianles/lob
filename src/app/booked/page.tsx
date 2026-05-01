@@ -79,10 +79,12 @@ export default async function ShipmentsPage() {
     },
   });
 
+  // Same scope as the list: admins see platform-wide counts; shippers and carriers
+  // only see counts for their company's loads.
   const [active, rush, delivered] = await Promise.all([
-    prisma.load.count({ where: { status: { not: LoadStatus.DELIVERED } } }),
-    prisma.load.count({ where: { isRush: true } }),
-    prisma.load.count({ where: { status: LoadStatus.DELIVERED } }),
+    prisma.load.count({ where: { ...where, status: { not: LoadStatus.DELIVERED } } }),
+    prisma.load.count({ where: { ...where, isRush: true } }),
+    prisma.load.count({ where: { ...where, status: LoadStatus.DELIVERED } }),
   ]);
 
   const shipments: ShipmentRow[] = loads.map((l) => ({

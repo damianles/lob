@@ -1,6 +1,24 @@
+import type { ViewerKind } from "@/lib/viewer-role";
+
 export type DistanceUnit = "mi" | "km";
 
-export const DISTANCE_UNIT_STORAGE_KEY = "lob-distance-unit";
+/** Legacy / guests / admins — single browser preference. */
+export const DISTANCE_UNIT_STORAGE_KEY_LEGACY = "lob-distance-unit";
+
+/** Shippers (suppliers) — load board EMR etc. */
+export const DISTANCE_UNIT_STORAGE_KEY_SUPPLIER = "lob-distance-unit-supplier";
+
+/** Carriers — load board EMR etc. */
+export const DISTANCE_UNIT_STORAGE_KEY_CARRIER = "lob-distance-unit-carrier";
+
+/** @deprecated alias — use DISTANCE_UNIT_STORAGE_KEY_LEGACY */
+export const DISTANCE_UNIT_STORAGE_KEY = DISTANCE_UNIT_STORAGE_KEY_LEGACY;
+
+export function distanceUnitStorageKeyForViewerKind(kind: ViewerKind): string {
+  if (kind === "SHIPPER") return DISTANCE_UNIT_STORAGE_KEY_SUPPLIER;
+  if (kind === "CARRIER") return DISTANCE_UNIT_STORAGE_KEY_CARRIER;
+  return DISTANCE_UNIT_STORAGE_KEY_LEGACY;
+}
 
 export function milesToKm(miles: number): number {
   return miles * 1.609344;

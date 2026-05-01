@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { CarrierTypeTag } from "@/components/carrier-type-tag";
+import { PlaceAutocomplete } from "@/components/place-autocomplete";
 import { LUMBER_EQUIPMENT } from "@/lib/lumber-equipment";
 
 type Me = { role?: string; companyId?: string | null };
@@ -202,7 +203,21 @@ export function CapacityWorkspace() {
         <section>
           <h2 className="text-lg font-semibold text-zinc-900">Search carrier capacity</h2>
           <p className="mt-1 text-sm text-zinc-600">Filter by ZIP (optional). Only active (unexpired) windows appear.</p>
-          <div className="mt-3 flex flex-wrap gap-3">
+          <div className="mt-3 grid max-w-2xl gap-2 sm:grid-cols-2">
+            <PlaceAutocomplete
+              mode="geocode"
+              label="Search origin (fills ZIP from Places)"
+              placeholder="City or postal code…"
+              onResolved={(p) => p.zip && setOriginZip(p.zip.toUpperCase())}
+            />
+            <PlaceAutocomplete
+              mode="geocode"
+              label="Search destination (fills ZIP from Places)"
+              placeholder="City or postal code…"
+              onResolved={(p) => p.zip && setDestinationZip(p.zip.toUpperCase())}
+            />
+          </div>
+          <div className="mt-2 flex flex-wrap gap-3">
             <input
               className="rounded border px-3 py-2 text-sm"
               placeholder="Origin ZIP"
@@ -287,21 +302,43 @@ export function CapacityWorkspace() {
             Pick a date range of at most five days. Shippers only see rows until the end of the last day (UTC).
           </p>
           <form onSubmit={submitCapacity} className="mt-4 grid max-w-xl gap-3 rounded-lg border border-zinc-200 bg-white p-4">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <input
-                required
-                className="rounded border px-3 py-2 text-sm"
-                placeholder="Origin ZIP *"
-                value={post.originZip}
-                onChange={(e) => setPost((p) => ({ ...p, originZip: e.target.value }))}
-              />
-              <input
-                required
-                className="rounded border px-3 py-2 text-sm"
-                placeholder="Destination ZIP *"
-                value={post.destinationZip}
-                onChange={(e) => setPost((p) => ({ ...p, destinationZip: e.target.value }))}
-              />
+            <div className="space-y-2">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <PlaceAutocomplete
+                  mode="geocode"
+                  label="Search origin (fills origin ZIP)"
+                  placeholder="City or postal code…"
+                  onResolved={(p) => {
+                    if (p.zip) setPost((o) => ({ ...o, originZip: p.zip.toUpperCase() }));
+                  }}
+                />
+                <PlaceAutocomplete
+                  mode="geocode"
+                  label="Search destination (fills dest ZIP)"
+                  placeholder="City or postal code…"
+                  onResolved={(p) => {
+                    if (p.zip) {
+                      setPost((o) => ({ ...o, destinationZip: p.zip.toUpperCase() }));
+                    }
+                  }}
+                />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <input
+                  required
+                  className="rounded border px-3 py-2 text-sm"
+                  placeholder="Origin ZIP *"
+                  value={post.originZip}
+                  onChange={(e) => setPost((p) => ({ ...p, originZip: e.target.value }))}
+                />
+                <input
+                  required
+                  className="rounded border px-3 py-2 text-sm"
+                  placeholder="Destination ZIP *"
+                  value={post.destinationZip}
+                  onChange={(e) => setPost((p) => ({ ...p, destinationZip: e.target.value }))}
+                />
+              </div>
             </div>
             <select
               className="rounded border px-3 py-2 text-sm"

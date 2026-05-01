@@ -4,7 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactElement } from "react";
 
+import { useAuth } from "@clerk/nextjs";
+
 import { cn } from "@/lib/cn";
+import { signUpUrlForAppPath } from "@/lib/guest-auth-routes";
 
 interface NavItem {
   href: string;
@@ -93,10 +96,13 @@ const navItems: NavItem[] = [
 
 export function MobileBottomNav() {
   const pathname = usePathname();
+  const { isSignedIn, isLoaded } = useAuth();
 
   if (pathname?.startsWith("/sign-in") || pathname?.startsWith("/sign-up")) {
     return null;
   }
+
+  const linkHref = (href: string) => (isLoaded && !isSignedIn ? signUpUrlForAppPath(href) : href);
 
   return (
     <nav
@@ -119,7 +125,7 @@ export function MobileBottomNav() {
           return (
             <Link
               key={item.href}
-              href={item.href}
+              href={linkHref(item.href)}
               className={cn(
                 "flex flex-col items-center justify-center gap-1",
                 "min-w-0 flex-1 px-2 py-1.5",

@@ -83,17 +83,30 @@ export default async function OnboardingPage() {
               </section>
             )}
 
-            {userId && appUser?.role === "ADMIN" && personaSwitch && (
-              <section className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
-                <p className="font-medium">Testing supplier and carrier flows</p>
-                <p className="mt-1">
-                  Use{" "}
+            {userId && appUser?.role === "ADMIN" && (
+              <section className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+                <p className="font-semibold">Testing as supplier or carrier on this login</p>
+                <p className="mt-1 leading-relaxed">
+                  You can complete either form below even while signed in as an admin: we create the company and link{" "}
+                  <strong>this</strong> Clerk user to it so you get the real posting / booking flow. To return to full
+                  admin, open{" "}
                   <Link className="font-semibold underline" href="/admin/test-lab">
                     Admin → Test lab
                   </Link>{" "}
-                  to attach your user to seeded North Ridge (supplier) or Blue Ox (carrier) without replacing your admin
-                  account permanently.
+                  and choose <strong>Admin only (no company)</strong> (requires{" "}
+                  <code className="rounded bg-white px-1 ring-1 ring-amber-200/80">
+                    LOB_ALLOW_ADMIN_PERSONA_SWITCH=true
+                  </code>{" "}
+                  and seed data), or set{" "}
+                  <code className="rounded bg-white px-1 ring-1 ring-amber-200/80">LOB_AUTO_ADMIN_EMAILS</code> to your
+                  email so Test Lab keeps working after your role changes.
                 </p>
+                {personaSwitch && (
+                  <p className="mt-2 text-amber-900/95">
+                    Shortcut: Test lab can also attach you to seeded <strong>North Ridge</strong> (supplier) or{" "}
+                    <strong>Blue Ox</strong> (carrier) without filling these forms.
+                  </p>
+                )}
               </section>
             )}
 

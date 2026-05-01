@@ -52,7 +52,7 @@ export function PlaceAutocomplete({
       }
       setLoading(true);
       const params = new URLSearchParams({ q: input, mode });
-      void fetch(`/api/places/autocomplete?${params}`)
+      void fetch(`/api/places/autocomplete?${params}`, { credentials: "same-origin" })
         .then(async (r) => {
           if (r.status === 503) {
             setUnavailable(true);
@@ -60,16 +60,26 @@ export function PlaceAutocomplete({
             onUnavailable?.();
             return;
           }
-          const j = (await r.json().catch(() => ({}))) as
-            | { predictions?: { placeId: string; label: string }[] }
-            | { error?: string };
-          if (r.ok && "predictions" in j && j.predictions) {
-            setPredictions(j.predictions);
-            setWarn(null);
-          } else {
+          if (r.status === 401) {
             setPredictions([]);
-            setWarn("Could not load places suggestions.");
+            setWarn("Sign in to use place search.");
+            return;
           }
+          const j = (await r.json().catch(() => ({}))) as Record<string, unknown>;
+          if (r.ok && Array.isArray(j.predictions)) {
+            setPredictions(j.predictions as { placeId: string; label: string }[]);
+            setWarn(null);
+            return;
+          }
+          setPredictions([]);
+          const fromServer = typeof j.message === "string" ? j.message : null;
+          setWarn(
+            fromServer
+              ? `Places: ${fromServer}`
+              : r.status === 502
+                ? "Google rejected the request (check API key, billing, and API enablement in Google Cloud)."
+                : "Could not load places suggestions.",
+          );
         })
         .catch(() => setPredictions([]))
         .finally(() => setLoading(false));

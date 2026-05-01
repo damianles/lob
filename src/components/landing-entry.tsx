@@ -8,6 +8,8 @@ import {
   BRAND_PUNCH_LINES,
   BRAND_VALUE_PROPS,
 } from "@/lib/brand-marketing";
+import { signUpUrlForAppPath } from "@/lib/guest-auth-routes";
+import { lobWoodOutlineButtonClass, lobWoodPrimaryButtonClass } from "@/lib/lob-button-styles";
 
 export function LandingEntry() {
   return (
@@ -34,13 +36,13 @@ export function LandingEntry() {
         <div className="mx-auto mt-10 flex max-w-2xl flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
           <Link
             href="/sign-in?lob_intent=shipper"
-            className="inline-flex min-h-12 flex-1 items-center justify-center rounded-full bg-lob-navy px-8 text-sm font-semibold text-white shadow-md shadow-lob-navy/20 transition hover:bg-lob-navy-hover hover:shadow-lg sm:min-w-[200px]"
+            className={`${lobWoodPrimaryButtonClass} min-h-12 flex-1 px-8 sm:min-w-[200px]`}
           >
             Sign in — Mill / supplier
           </Link>
           <Link
             href="/sign-in?lob_intent=carrier"
-            className="inline-flex min-h-12 flex-1 items-center justify-center rounded-full border-2 border-lob-navy bg-white px-8 text-sm font-semibold text-lob-navy transition hover:bg-stone-50 sm:min-w-[200px]"
+            className={`${lobWoodOutlineButtonClass} min-h-12 flex-1 px-8 sm:min-w-[200px]`}
           >
             Sign in — Carrier
           </Link>
@@ -48,13 +50,13 @@ export function LandingEntry() {
         <div className="mx-auto mt-3 flex max-w-2xl flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
           <Link
             href="/sign-up?lob_intent=shipper"
-            className="inline-flex min-h-11 flex-1 items-center justify-center rounded-full border border-stone-200 bg-white/80 px-6 text-sm font-medium text-stone-700 backdrop-blur transition hover:border-stone-300 hover:bg-white sm:min-w-[180px]"
+            className={`${lobWoodOutlineButtonClass} min-h-11 flex-1 px-6 sm:min-w-[180px]`}
           >
             Create account — Shipper
           </Link>
           <Link
             href="/sign-up?lob_intent=carrier"
-            className="inline-flex min-h-11 flex-1 items-center justify-center rounded-full border border-stone-200 bg-white/80 px-6 text-sm font-medium text-stone-700 backdrop-blur transition hover:border-stone-300 hover:bg-white sm:min-w-[180px]"
+            className={`${lobWoodOutlineButtonClass} min-h-11 flex-1 px-6 sm:min-w-[180px]`}
           >
             Create account — Carrier
           </Link>
@@ -85,11 +87,17 @@ export function LandingEntry() {
           </p>
           <p className="mt-4 text-sm text-stone-600">
             After sign-in, complete{" "}
-            <Link className="font-semibold text-lob-navy underline decoration-lob-gold/40 underline-offset-2" href="/onboarding">
+            <Link
+              className="font-semibold text-lob-navy underline decoration-lob-gold/40 underline-offset-2"
+              href={signUpUrlForAppPath("/onboarding")}
+            >
               account setup
             </Link>{" "}
             to link your company. Lane analytics &amp; fuel tools live in{" "}
-            <Link className="font-semibold text-lob-navy underline decoration-lob-gold/40 underline-offset-2" href="/insights">
+            <Link
+              className="font-semibold text-lob-navy underline decoration-lob-gold/40 underline-offset-2"
+              href={signUpUrlForAppPath("/insights")}
+            >
               Insights
             </Link>
             .

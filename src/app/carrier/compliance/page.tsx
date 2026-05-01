@@ -7,6 +7,7 @@ import { getActorContext } from "@/lib/request-context";
 
 import { CarrierProfileForm } from "./carrier-profile-form";
 import { InsuranceUploadForm } from "./upload-form";
+import { DistanceUnitProfilePreference } from "@/components/distance-unit-profile-preference";
 
 export const dynamic = "force-dynamic";
 
@@ -83,6 +84,10 @@ export default async function CarrierCompliancePage() {
                 Store proof of your organization and fleet details. Shippers can review this after they book a load with
                 you—before the truck arrives.
               </p>
+
+              <div className="mt-5">
+                <DistanceUnitProfilePreference persona="carrier" />
+              </div>
 
               <section className="mt-6 rounded-lg border bg-white p-4">
                 <h2 className="text-lg font-semibold">Authority</h2>

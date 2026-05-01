@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { LobBrandStrip } from "@/components/lob-brand-strip";
 import { LobSidebar } from "@/components/lob-sidebar";
+import { DistanceUnitProfilePreference } from "@/components/distance-unit-profile-preference";
 
 type Carrier = { id: string; legalName: string; dotNumber: string | null };
 
@@ -100,6 +101,10 @@ export default function ShipperCarrierPreferencesPage() {
               search and will not see any loads you post. When posting a load you can also use tiers (invite-only) or
               exclude specific carriers for that load only.
             </p>
+
+            <div className="mt-5 max-w-2xl">
+              <DistanceUnitProfilePreference persona="supplier" />
+            </div>
 
             {loading ? (
               <p className="mt-8 text-sm text-zinc-500">Loading…</p>

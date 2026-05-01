@@ -3,6 +3,7 @@
 import { useAuth } from "@clerk/nextjs";
 import { useEffect, useState } from "react";
 
+import { lobWoodPrimaryButtonClass } from "@/lib/lob-button-styles";
 import { LOB_ONBOARDING_INTENT_KEY } from "@/lib/onboarding-intent";
 
 type FormState = {
@@ -34,6 +35,7 @@ const emptyShipper: ShipperFormState = {
 
 export function OnboardingForms() {
   const { isSignedIn } = useAuth();
+  const [realRole, setRealRole] = useState<string | null>(null);
   const [shipper, setShipper] = useState<ShipperFormState>(emptyShipper);
   const [carrier, setCarrier] = useState<FormState>(emptyState);
   const [message, setMessage] = useState("");
@@ -46,6 +48,25 @@ export function OnboardingForms() {
       document.getElementById("onboarding-shipper")?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }, []);
+
+  useEffect(() => {
+    if (!isSignedIn) {
+      setRealRole(null);
+      return;
+    }
+    let cancelled = false;
+    void fetch("/api/me", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { realRole?: string | null } | null) => {
+        if (!cancelled && d?.realRole) setRealRole(d.realRole);
+      })
+      .catch(() => {
+        if (!cancelled) setRealRole(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isSignedIn]);
 
   async function submitShipper() {
     if (!shipper.legalName.trim()) {
@@ -127,6 +148,15 @@ export function OnboardingForms() {
 
   return (
     <div className="mt-6 grid gap-6 md:grid-cols-2">
+      {realRole === "ADMIN" && (
+        <section className="md:col-span-2 rounded-lg border border-amber-300 bg-amber-50/90 p-3 text-xs text-amber-950">
+          <p className="font-semibold text-amber-950">Signed in as LOB admin</p>
+          <p className="mt-1 leading-relaxed">
+            Submitting either form links <strong>this</strong> login to the new company. Use Test lab →{" "}
+            <em>Admin only</em> to switch back when done testing.
+          </p>
+        </section>
+      )}
       <section className="md:col-span-2 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
         If you are already signed in with Clerk, this form links your signed-in user to the company you
         create. Name/email fields are still shown for fallback local testing.
@@ -171,7 +201,7 @@ export function OnboardingForms() {
             required={!isSignedIn}
           />
           <button
-            className="rounded bg-zinc-900 px-4 py-2 text-sm text-white"
+            className={`${lobWoodPrimaryButtonClass} w-full justify-center sm:w-auto`}
             type="button"
             onClick={submitShipper}
           >
@@ -233,7 +263,7 @@ export function OnboardingForms() {
             <option value="BROKER">Broker</option>
           </select>
           <button
-            className="rounded bg-amber-600 px-4 py-2 text-sm text-white"
+            className={`${lobWoodPrimaryButtonClass} w-full justify-center sm:w-auto`}
             type="button"
             onClick={submitCarrier}
           >

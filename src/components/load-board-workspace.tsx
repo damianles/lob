@@ -16,7 +16,9 @@ import { FilterChip, FilterChipGroup } from "@/components/ui/filter-chip";
 import { FloatingActionButton, PlusIcon } from "@/components/ui/floating-action-button";
 import { Button } from "@/components/ui/button";
 import { RadioChoice } from "@/components/ui/radio-choice";
+import { PlaceAutocomplete } from "@/components/place-autocomplete";
 import { LUMBER_EQUIPMENT, equipmentShortTag } from "@/lib/lumber-equipment";
+import { laneQueryTokenString } from "@/lib/place-helpers";
 import {
   LUMBER_PANEL_TYPE_OPTIONS,
   LUMBER_SPECIES_OPTIONS,
@@ -646,23 +648,41 @@ export function LoadBoardWorkspace({
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <div className="grid min-w-0 flex-1 gap-3 sm:grid-cols-2">
-              <div>
-                <label className="mb-1 block text-xs font-medium text-zinc-600">From</label>
-                <input
-                  value={originQ}
-                  onChange={(e) => setOriginQ(e.target.value)}
-                  placeholder="City, state/province, postal or ZIP"
-                  className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm"
+              <div className="space-y-2">
+                <PlaceAutocomplete
+                  mode="geocode"
+                  className="[&_label]:text-zinc-600"
+                  label="From — search (places)"
+                  placeholder="Type a city, address, or postal code…"
+                  onResolved={(p) => setOriginQ(laneQueryTokenString(p))}
                 />
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-zinc-600">From — filter text</label>
+                  <input
+                    value={originQ}
+                    onChange={(e) => setOriginQ(e.target.value)}
+                    placeholder="City, state/province, postal or ZIP"
+                    className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-zinc-600">To</label>
-                <input
-                  value={destQ}
-                  onChange={(e) => setDestQ(e.target.value)}
-                  placeholder="City, state/province, postal or ZIP"
-                  className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm"
+              <div className="space-y-2">
+                <PlaceAutocomplete
+                  mode="geocode"
+                  className="[&_label]:text-zinc-600"
+                  label="To — search (places)"
+                  placeholder="Type a city, address, or postal code…"
+                  onResolved={(p) => setDestQ(laneQueryTokenString(p))}
                 />
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-zinc-600">To — filter text</label>
+                  <input
+                    value={destQ}
+                    onChange={(e) => setDestQ(e.target.value)}
+                    placeholder="City, state/province, postal or ZIP"
+                    className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm"
+                  />
+                </div>
               </div>
             </div>
             <button
@@ -754,32 +774,33 @@ export function LoadBoardWorkspace({
                 </div>
               </div>
               <div className="rounded-lg border border-dashed border-zinc-300 bg-white px-3 py-3">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-semibold uppercase tracking-wide text-zinc-600">EMR</span>
-                    <span
-                      className="cursor-help text-xs text-lob-navy underline decoration-dotted"
-                      title="Empty Mile Radius — enter your current US/CA postal code and how far you are willing to deadhead to the load origin and/or destination."
-                    >
-                      Empty Mile Radius
-                    </span>
-                  </div>
-                  <RadioChoice
-                    label="Distance units for radius"
-                    name="load-board-emr-unit"
-                    value={distanceUnit}
-                    onChange={setDistanceUnit}
-                    options={[
-                      { value: "mi", label: "Miles" },
-                      { value: "km", label: "Kilometres" },
-                    ]}
-                    className="[&_label]:py-1.5 [&_label]:text-xs"
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-zinc-600">EMR</span>
+                  <span
+                    className="cursor-help text-xs text-lob-navy underline decoration-dotted"
+                    title="Empty Mile Radius — enter your current US/CA postal code and how far you are willing to deadhead to the load origin and/or destination."
+                  >
+                    Empty Mile Radius
+                  </span>
+                </div>
+              <p className="mt-1 text-[11px] text-zinc-500">
+                Great-circle distance between US ZIP or Canadian postal (FSA). Miles vs kilometres for these fields is
+                set under{" "}
+                <strong className="font-medium text-zinc-700">Carrier profile</strong> (carriers) or{" "}
+                <strong className="font-medium text-zinc-700">Carrier preferences</strong> (suppliers). Filtering always
+                compares in miles internally.
+              </p>
+                <div className="mt-2 space-y-2 sm:col-span-3">
+                  <PlaceAutocomplete
+                    mode="geocode"
+                    label="Your location (search) — fills ZIP / postal for radius"
+                    placeholder="City or postal code…"
+                    onResolved={(p) => {
+                      if (p.zip) setEmrZip(p.zip);
+                    }}
+                    className="max-w-md [&_label]:text-xs"
                   />
                 </div>
-                <p className="mt-1 text-[11px] text-zinc-500">
-                  Great-circle distance between US ZIP or Canadian postal (FSA). Radii below use your selected unit;
-                  filtering always compares in miles internally.
-                </p>
                 <div className="mt-2 grid gap-2 sm:grid-cols-3">
                   <input
                     className="rounded border border-zinc-300 px-2 py-2 text-sm"

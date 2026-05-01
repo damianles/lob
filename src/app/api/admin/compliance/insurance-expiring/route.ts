@@ -5,7 +5,7 @@ import { getActorContext } from "@/lib/request-context";
 
 export async function GET(req: Request) {
   const actor = await getActorContext();
-  if (actor.role !== "ADMIN") {
+  if (actor.realRole !== "ADMIN") {
     return NextResponse.json({ error: "Admin access required." }, { status: 403 });
   }
 

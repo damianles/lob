@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { CarrierTypeTag } from "@/components/carrier-type-tag";
+import { PlaceAutocomplete } from "@/components/place-autocomplete";
 import { formatMoney } from "@/lib/money";
+import { laneQueryTokenString } from "@/lib/place-helpers";
 import type { LumberSpec } from "@/lib/lumber-spec";
 import { summarizeLumberSpec } from "@/lib/lumber-spec";
 
@@ -305,24 +307,38 @@ export function ShipmentsWorkspace({
               <option value="CANCELLED">Cancelled</option>
             </select>
           </label>
-          <label className="flex flex-col text-xs">
-            <span className="font-semibold uppercase tracking-wide text-stone-500">Origin</span>
+          <div className="min-w-[10rem] max-w-[14rem]">
+            <PlaceAutocomplete
+              mode="geocode"
+              label="Search origin (Places) →"
+              className="[&>label]:font-semibold [&>label]:uppercase [&>label]:text-stone-500 [&>label]:tracking-wide"
+              placeholder="City, ZIP, address…"
+              onResolved={(p) => update("origin", laneQueryTokenString(p))}
+            />
             <input
-              placeholder="City, ST or ZIP"
+              aria-label="Origin filter text"
+              placeholder="Or type origin (city, ST, ZIP)"
               value={filters.origin}
               onChange={(e) => update("origin", e.target.value)}
-              className="mt-1 w-48 rounded border border-stone-300 px-2 py-1.5 text-sm"
+              className="mt-1.5 w-full rounded border border-stone-300 px-2 py-1.5 text-sm"
             />
-          </label>
-          <label className="flex flex-col text-xs">
-            <span className="font-semibold uppercase tracking-wide text-stone-500">Destination</span>
+          </div>
+          <div className="min-w-[10rem] max-w-[14rem]">
+            <PlaceAutocomplete
+              mode="geocode"
+              label="Search destination (Places) →"
+              className="[&>label]:font-semibold [&>label]:uppercase [&>label]:text-stone-500 [&>label]:tracking-wide"
+              placeholder="City, ZIP, address…"
+              onResolved={(p) => update("destination", laneQueryTokenString(p))}
+            />
             <input
-              placeholder="City, ST or ZIP"
+              aria-label="Destination filter text"
+              placeholder="Or type destination"
               value={filters.destination}
               onChange={(e) => update("destination", e.target.value)}
-              className="mt-1 w-48 rounded border border-stone-300 px-2 py-1.5 text-sm"
+              className="mt-1.5 w-full rounded border border-stone-300 px-2 py-1.5 text-sm"
             />
-          </label>
+          </div>
           {showCarrierColumn && (
             <label className="flex flex-col text-xs">
               <span className="font-semibold uppercase tracking-wide text-stone-500">Carrier</span>

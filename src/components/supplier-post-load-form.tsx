@@ -12,6 +12,7 @@ import { RecentPostsPicker } from "@/components/recent-posts-picker";
 import { SavedLanesPanel, type SavedLane } from "@/components/saved-lanes-panel";
 import { RadioChoice } from "@/components/ui/radio-choice";
 import { LUMBER_EQUIPMENT } from "@/lib/lumber-equipment";
+import { regionCodeForLob } from "@/lib/place-helpers";
 import type { LumberSpec } from "@/lib/lumber-spec";
 
 type CarrierPick = { id: string; legalName: string };
@@ -526,25 +527,26 @@ export function SupplierPostLoadForm({
         <section className="rounded border border-emerald-200 bg-white/90 p-3">
           <h4 className="text-xs font-bold uppercase tracking-wide text-emerald-900">Lane (search)</h4>
           <p className="mt-1 text-xs text-zinc-500">
-            Used for the board and fair-rate check; can match pickup 1. Use Google place search (when configured) to fill
-            city, province/state, and postal/ZIP—same flow for all users with a valid API key in production.
+            Use <strong>Search lane</strong> to pick a city, postal code, or address; we fill the fields below. You can
+            still type or edit the lane by hand. Requires <code className="rounded bg-stone-100 px-0.5">GOOGLE_MAPS_API_KEY</code> on the server
+            (local <code className="rounded bg-stone-100 px-0.5">.env</code> and Vercel in production).
           </p>
           <div className="mb-2 mt-2 grid gap-2 sm:grid-cols-2">
             <PlaceAutocomplete
-              mode="city"
-              label="Search origin (city / town)"
+              mode="geocode"
+              label="Search origin (city, ZIP, or address)"
               onResolved={(p) => {
                 if (p.city) setOriginCity(p.city);
-                if (p.state) setOriginState(p.state.replace(/[^A-Za-z]/g, "").slice(0, 2).toUpperCase());
+                if (p.state) setOriginState(regionCodeForLob(p));
                 if (p.zip) setOriginZip(p.zip);
               }}
             />
             <PlaceAutocomplete
-              mode="city"
-              label="Search destination (city / town)"
+              mode="geocode"
+              label="Search destination (city, ZIP, or address)"
               onResolved={(p) => {
                 if (p.city) setDestinationCity(p.city);
-                if (p.state) setDestinationState(p.state.replace(/[^A-Za-z]/g, "").slice(0, 2).toUpperCase());
+                if (p.state) setDestinationState(regionCodeForLob(p));
                 if (p.zip) setDestinationZip(p.zip);
               }}
             />
@@ -633,11 +635,11 @@ export function SupplierPostLoadForm({
           {pickups.map((p, i) => (
             <div key={i} className="mt-3 grid gap-2 border-t border-emerald-100 pt-3 sm:grid-cols-2 lg:grid-cols-3">
               <p className="text-xs font-semibold text-zinc-700 sm:col-span-2 lg:col-span-3">Pickup {i + 1}</p>
-              {i === 0 && (
+              {(i === 0 || numPickups > 1) && (
                 <div className="sm:col-span-2 lg:col-span-3">
                   <PlaceAutocomplete
                     mode="address"
-                    label="Search street address (optional, fills line + postal)"
+                    label={i === 0 ? "Search street address (optional, fills line + postal)" : `Search pickup ${i + 1} (optional)`}
                     onResolved={(p) => {
                       const line = p.line1 || p.formattedAddress;
                       syncPickup(i, {
@@ -683,11 +685,11 @@ export function SupplierPostLoadForm({
           {deliveries.map((d, i) => (
             <div key={i} className="mt-3 grid gap-2 border-t border-emerald-100 pt-3 sm:grid-cols-2 lg:grid-cols-3">
               <p className="text-xs font-semibold text-zinc-700 sm:col-span-2 lg:col-span-3">Delivery {i + 1}</p>
-              {i === 0 && (
+              {(i === 0 || numDeliveries > 1) && (
                 <div className="sm:col-span-2 lg:col-span-3">
                   <PlaceAutocomplete
                     mode="address"
-                    label="Search street address (optional, fills line + postal)"
+                    label={i === 0 ? "Search street address (optional, fills line + postal)" : `Search delivery ${i + 1} (optional)`}
                     onResolved={(p) => {
                       const line = p.line1 || p.formattedAddress;
                       syncDelivery(i, {

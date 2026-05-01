@@ -4,7 +4,8 @@ import { useAuth } from "@clerk/nextjs";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 import {
-  DISTANCE_UNIT_STORAGE_KEY,
+  DISTANCE_UNIT_STORAGE_KEY_LEGACY,
+  distanceUnitStorageKeyForViewerKind,
   type DistanceUnit,
 } from "@/lib/units";
 import { deriveViewerRole, type MeApiResponse, type ViewerRole } from "@/lib/viewer-role";
@@ -26,33 +27,49 @@ const ViewerRoleContext = createContext<ViewerRoleCtx | null>(null);
 
 const guestViewer: ViewerRole = deriveViewerRole(null);
 
-export function AppProviders({ children }: { children: React.ReactNode }) {
+function DistanceUnitProvider({ children }: { children: React.ReactNode }) {
+  const { viewer, loading } = useViewerRole();
   const [distanceUnit, setDistanceUnitState] = useState<DistanceUnit>("mi");
 
   useEffect(() => {
+    if (loading) return;
     try {
-      const v = localStorage.getItem(DISTANCE_UNIT_STORAGE_KEY);
+      const key = distanceUnitStorageKeyForViewerKind(viewer.kind);
+      let v = localStorage.getItem(key);
+      if (v !== "km" && v !== "mi" && (viewer.kind === "SHIPPER" || viewer.kind === "CARRIER")) {
+        const legacy = localStorage.getItem(DISTANCE_UNIT_STORAGE_KEY_LEGACY);
+        if (legacy === "km" || legacy === "mi") {
+          v = legacy;
+          localStorage.setItem(key, legacy);
+        }
+      }
       if (v === "km" || v === "mi") setDistanceUnitState(v);
+      else setDistanceUnitState("mi");
     } catch {
-      /* ignore */
+      setDistanceUnitState("mi");
     }
-  }, []);
+  }, [viewer.kind, loading]);
 
-  const setDistanceUnit = useCallback((u: DistanceUnit) => {
-    setDistanceUnitState(u);
-    try {
-      localStorage.setItem(DISTANCE_UNIT_STORAGE_KEY, u);
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
-  const unitsValue = useMemo(
-    () => ({ distanceUnit, setDistanceUnit }),
-    [distanceUnit, setDistanceUnit],
+  const setDistanceUnit = useCallback(
+    (u: DistanceUnit) => {
+      setDistanceUnitState(u);
+      if (loading) return;
+      try {
+        const key = distanceUnitStorageKeyForViewerKind(viewer.kind);
+        localStorage.setItem(key, u);
+      } catch {
+        /* ignore */
+      }
+    },
+    [viewer.kind, loading],
   );
 
-  // Viewer role
+  const unitsValue = useMemo(() => ({ distanceUnit, setDistanceUnit }), [distanceUnit, setDistanceUnit]);
+
+  return <DistanceUnitContext.Provider value={unitsValue}>{children}</DistanceUnitContext.Provider>;
+}
+
+export function AppProviders({ children }: { children: React.ReactNode }) {
   const { isSignedIn, isLoaded } = useAuth();
   const [viewer, setViewer] = useState<ViewerRole>(guestViewer);
   const [loading, setLoading] = useState(true);
@@ -88,9 +105,9 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   const viewerValue = useMemo(() => ({ viewer, loading, refresh }), [viewer, loading, refresh]);
 
   return (
-    <DistanceUnitContext.Provider value={unitsValue}>
-      <ViewerRoleContext.Provider value={viewerValue}>{children}</ViewerRoleContext.Provider>
-    </DistanceUnitContext.Provider>
+    <ViewerRoleContext.Provider value={viewerValue}>
+      <DistanceUnitProvider>{children}</DistanceUnitProvider>
+    </ViewerRoleContext.Provider>
   );
 }
 
