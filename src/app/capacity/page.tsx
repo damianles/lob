@@ -1,5 +1,6 @@
 import { LobBrandStrip } from "@/components/lob-brand-strip";
 import { CapacityWorkspace } from "@/components/capacity-workspace";
+import { CapacityPageIntro } from "@/components/capacity-page-intro";
 import { LobSidebar } from "@/components/lob-sidebar";
 
 export const dynamic = "force-dynamic";
@@ -13,18 +14,7 @@ export default function CapacityPage() {
           <LobBrandStrip />
           <div className="p-6 lg:p-8">
             <h1 className="text-2xl font-bold text-zinc-900">Capacity</h1>
-            <p className="mt-2 max-w-2xl text-sm text-zinc-600">
-              Carriers publish available trucks by lane and date window. Suppliers search without seeing carrier names
-              on the open board. Use{" "}
-              <a className="font-medium text-lob-navy underline" href="/shipper/carrier-preferences">
-                Carrier preferences
-              </a>{" "}
-              to hide carriers you never want to book. Booked freight and dispatch stay on the{" "}
-              <a className="font-medium text-lob-navy underline" href="/booked">
-                Booked freight
-              </a>{" "}
-              page.
-            </p>
+            <CapacityPageIntro />
             <div className="mt-8">
               <CapacityWorkspace />
             </div>

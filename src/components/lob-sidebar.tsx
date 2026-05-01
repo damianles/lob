@@ -1,6 +1,10 @@
+"use client";
+
 import Link from "next/link";
+import { useMemo } from "react";
 
 import { LobWoodOIcon } from "@/components/lob-wood-o-icon";
+import { useViewerRole } from "@/components/providers/app-providers";
 import { BRAND_POSITIONING, BRAND_PRODUCT_NAME } from "@/lib/brand-marketing";
 
 export type LobNavId =
@@ -57,6 +61,13 @@ export function LobSidebar({
   active: LobNavId;
   stats?: LobSidebarStats;
 }) {
+  const { viewer, loading } = useViewerRole();
+  const navItems = useMemo(() => {
+    const showCarrierPrefs = !loading && viewer.kind === "SHIPPER";
+    if (showCarrierPrefs) return items;
+    return items.filter((i) => i.id !== "carrierPrefs");
+  }, [loading, viewer.kind]);
+
   return (
     <aside className="hidden w-[15.5rem] shrink-0 flex-col border-r border-stone-200/50 bg-stone-50/30 lg:flex">
       <div className="border-b border-stone-200/50 px-4 pb-4 pt-6">
@@ -81,7 +92,7 @@ export function LobSidebar({
         className="flex max-h-[calc(100vh-10rem)] flex-col gap-1 overflow-y-auto px-3 pb-4 text-[13px]"
         aria-label="Main"
       >
-        {items.map((item) => {
+        {navItems.map((item) => {
           const isActive = item.id === active;
           return (
             <Link
