@@ -4,6 +4,7 @@ import { useAuth } from "@clerk/nextjs";
 import { useEffect, useState } from "react";
 
 import { lobWoodPrimaryButtonClass } from "@/lib/lob-button-styles";
+import { cn } from "@/lib/cn";
 import { LOB_ONBOARDING_INTENT_KEY } from "@/lib/onboarding-intent";
 
 type FormState = {
@@ -39,12 +40,14 @@ export function OnboardingForms() {
   const [shipper, setShipper] = useState<ShipperFormState>(emptyShipper);
   const [carrier, setCarrier] = useState<FormState>(emptyState);
   const [message, setMessage] = useState("");
+  const [intent, setIntent] = useState<string | null>(null);
 
   useEffect(() => {
-    const intent = sessionStorage.getItem(LOB_ONBOARDING_INTENT_KEY);
-    if (intent === "carrier") {
+    const raw = sessionStorage.getItem(LOB_ONBOARDING_INTENT_KEY);
+    setIntent(raw);
+    if (raw === "carrier") {
       document.getElementById("onboarding-carrier")?.scrollIntoView({ behavior: "smooth", block: "start" });
-    } else if (intent === "shipper") {
+    } else if (raw === "shipper") {
       document.getElementById("onboarding-shipper")?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }, []);
@@ -161,9 +164,36 @@ export function OnboardingForms() {
         If you are already signed in with Clerk, this form links your signed-in user to the company you
         create. Name/email fields are still shown for fallback local testing.
       </section>
-      <section id="onboarding-shipper" className="scroll-mt-24 rounded-lg border bg-white p-4">
-        <h2 className="text-lg font-semibold">Supplier — post loads</h2>
-        <p className="mt-1 text-xs text-zinc-600">Mills, wholesalers, and other lumber suppliers. Carriers never see your supplier type on the open board.</p>
+      {intent === "carrier" && (
+        <section className="md:col-span-2 rounded-lg border border-emerald-200 bg-emerald-50/95 p-4 text-sm text-emerald-950">
+          <p className="font-semibold text-emerald-950">You chose carrier registration</p>
+          <p className="mt-1 leading-relaxed">
+            Complete only the <strong>Carrier — book loads</strong> column (DOT and MC required). The supplier column is
+            for mills and wholesalers — it does not apply to trucking companies.
+          </p>
+        </section>
+      )}
+      {intent === "shipper" && (
+        <section className="md:col-span-2 rounded-lg border border-[#dde2ec] bg-[#eef1f7] p-4 text-sm text-lob-navy">
+          <p className="font-semibold">You chose supplier registration</p>
+          <p className="mt-1 leading-relaxed">
+            Complete only the <strong>Supplier — post loads</strong> column. Carrier onboarding (DOT/MC) is separate —
+            use the carrier flow if you move freight instead of posting lumber loads.
+          </p>
+        </section>
+      )}
+      <section
+        id="onboarding-shipper"
+        className={cn(
+          "scroll-mt-24 rounded-lg border bg-white p-4",
+          intent === "shipper" && "ring-2 ring-lob-navy/35 ring-offset-2 ring-offset-stone-50",
+        )}
+      >
+        <h2 className="text-lg font-semibold text-lob-navy">Supplier — post loads</h2>
+        <p className="mt-1 text-xs text-zinc-600">
+          Mills, wholesalers, and reloads that publish loads. This is not the carrier application — carriers book loads,
+          they do not pick a supplier type.
+        </p>
         <div className="mt-3 space-y-2">
           <label className="block text-xs font-medium text-zinc-600">
             Supplier type
@@ -210,9 +240,18 @@ export function OnboardingForms() {
         </div>
       </section>
 
-      <section id="onboarding-carrier" className="scroll-mt-24 rounded-lg border bg-white p-4">
-        <h2 className="text-lg font-semibold">Carrier — book loads</h2>
-        <p className="mt-1 text-xs text-zinc-600">Transportation company (asset or broker).</p>
+      <section
+        id="onboarding-carrier"
+        className={cn(
+          "scroll-mt-24 rounded-lg border bg-white p-4",
+          intent === "carrier" && "ring-2 ring-emerald-600/40 ring-offset-2 ring-offset-stone-50",
+        )}
+      >
+        <h2 className="text-lg font-semibold text-emerald-900">Carrier — book loads</h2>
+        <p className="mt-1 text-xs text-zinc-600">
+          Trucking company (asset or broker). This path gives you dispatcher tools — not supplier posting. Ignore supplier
+          type above unless you also operate as a mill or wholesaler on LOB.
+        </p>
         <div className="mt-3 space-y-2">
           <input
             className="w-full rounded border px-3 py-2 text-sm"

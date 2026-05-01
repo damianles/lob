@@ -6,8 +6,8 @@ import { useViewerRole } from "@/components/providers/app-providers";
 import { roleAccentClasses } from "@/lib/viewer-role";
 
 /**
- * Thin ribbon under the masthead that tells the viewer exactly which side of the
- * marketplace they're on (Mill / Wholesaler / Carrier / Broker / Admin).
+ * Thin ribbon under the masthead that tells the viewer which side of the
+ * marketplace they're on (supplier vs carrier vs admin), or that registration is incomplete.
  *
  * - Hidden for guests
  * - Tinted using role accent classes (kept subtle — the shell stays navy)
@@ -36,6 +36,11 @@ export function RoleRibbon() {
           {viewer.companyName && (
             <span className="truncate font-semibold">{viewer.companyName}</span>
           )}
+          {viewer.kind === "SETUP" && (
+            <span className="hidden min-w-0 truncate font-normal opacity-90 sm:inline">
+              Not marked as supplier or carrier until you link a company below.
+            </span>
+          )}
           {viewer.verified && (
             <span className="hidden items-center gap-1 text-[10px] font-medium opacity-80 sm:inline-flex">
               <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
@@ -51,6 +56,14 @@ export function RoleRibbon() {
           )}
         </div>
         <div className="flex shrink-0 items-center gap-3">
+          {viewer.kind === "SETUP" && (
+            <Link
+              href="/onboarding"
+              className="hidden font-semibold underline-offset-2 hover:underline sm:inline"
+            >
+              Finish registration →
+            </Link>
+          )}
           {showVerifyCta && (
             <Link
               href={viewer.kind === "CARRIER" ? "/carrier/compliance" : "/onboarding"}

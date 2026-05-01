@@ -220,7 +220,8 @@ export function LoadBoardWorkspace({
   const effectiveViewMode = isDesktop ? viewMode : "cards";
 
   const isShipper = actor.role === "SHIPPER" && Boolean(actor.companyId);
-  const isDispatcher = actor.role === "DISPATCHER" && Boolean(actor.companyId) && actor.carrierApproved;
+  const isCarrierAccount = actor.role === "DISPATCHER" && Boolean(actor.companyId);
+  const isDispatcher = isCarrierAccount && actor.carrierApproved;
 
   const hasActiveFilters = Boolean(
     originQ ||
@@ -826,7 +827,9 @@ export function LoadBoardWorkspace({
                 <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                   <span className="text-xs font-semibold uppercase tracking-wide text-zinc-600">Lumber spec</span>
                   <span className="text-[11px] text-zinc-500">
-                    Match loads where the supplier filled in these details on post.
+                    {isShipper
+                      ? "Match loads where your posts included these lumber details."
+                      : "Match loads where the posting supplier included these details."}
                   </span>
                 </div>
                 <div className="grid gap-2 sm:grid-cols-3">

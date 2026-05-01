@@ -1,13 +1,13 @@
 /**
  * Viewer-role types shared between client + server. We model the role from a UX angle —
- * a "kind" of viewer (Shipper, Carrier, Admin, Guest) plus the underlying business attrs
+ * a viewer kind (supplier, carrier, admin, guest, or setup-incomplete) plus attrs
  * that drive theming and labelling (mill vs wholesaler, asset-based vs broker, owner-op).
  *
  * The DB still stores `User.role` (SHIPPER / DISPATCHER / DRIVER / ADMIN) and
  * `Company.supplierKind` / `Company.carrierType` / `Company.isOwnerOperator` separately.
  */
 
-export type ViewerKind = "SHIPPER" | "CARRIER" | "ADMIN" | "GUEST";
+export type ViewerKind = "SHIPPER" | "CARRIER" | "ADMIN" | "GUEST" | "SETUP";
 
 export type SupplierKind = "MILL" | "WHOLESALER" | "OTHER";
 export type CarrierBusinessType = "ASSET_BASED" | "BROKER";
@@ -55,9 +55,11 @@ export type MeApiResponse = {
   viewAs: ViewAsApiPayload | null;
 };
 
-function kindFromRole(role: MeApiResponse["role"]): ViewerKind {
+function kindFromRole(role: MeApiResponse["role"], companyId: string | null): ViewerKind {
   if (role === "ADMIN") return "ADMIN";
+  if (role === "SHIPPER" && !companyId) return "SETUP";
   if (role === "SHIPPER") return "SHIPPER";
+  if ((role === "DISPATCHER" || role === "DRIVER") && !companyId) return "SETUP";
   if (role === "DISPATCHER" || role === "DRIVER") return "CARRIER";
   return "GUEST";
 }
@@ -80,9 +82,32 @@ export function deriveViewerRole(me: MeApiResponse | null | undefined): ViewerRo
   }
 
   const company = me.company;
+  const companyId = me.companyId;
   const verified = company?.verificationStatus === "APPROVED";
   const simulated = Boolean(me.simulated);
-  const realKind = kindFromRole(me.realRole ?? me.role);
+  const realKind = kindFromRole(me.realRole ?? me.role, companyId);
+
+  const needsCompanyLink =
+    !simulated &&
+    me.role !== "ADMIN" &&
+    !companyId &&
+    (me.role === "SHIPPER" || me.role === "DISPATCHER" || me.role === "DRIVER");
+
+  if (needsCompanyLink) {
+    return {
+      kind: "SETUP",
+      label: "Account setup — supplier or carrier",
+      shortLabel: "SETUP",
+      companyId: null,
+      companyName: null,
+      supplierKind: null,
+      carrierType: null,
+      isOwnerOperator: false,
+      verified: false,
+      simulated,
+      realKind,
+    };
+  }
 
   if (me.role === "ADMIN") {
     return {
@@ -108,7 +133,7 @@ export function deriveViewerRole(me: MeApiResponse | null | undefined): ViewerRo
     const supplierKind = company?.supplierKind ?? null;
     return {
       kind: "SHIPPER",
-      label: "Supplier",
+      label: "Supplier — post loads",
       shortLabel: "SUPPLIER",
       companyId: company?.id ?? null,
       companyName: company?.legalName ?? null,
@@ -202,6 +227,16 @@ export function roleAccentClasses(kind: ViewerKind): {
         pillText: "text-white",
         pillRing: "ring-lob-navy/30",
         cardBorder: "border-l-lob-navy",
+      };
+    case "SETUP":
+      return {
+        ribbonBg: "bg-amber-50",
+        ribbonBorder: "border-amber-200",
+        ribbonText: "text-amber-950",
+        pillBg: "bg-amber-700",
+        pillText: "text-white",
+        pillRing: "ring-amber-500/30",
+        cardBorder: "border-l-amber-500",
       };
     default:
       return {

@@ -43,8 +43,10 @@ export default async function OnboardingPage() {
               <div className="min-w-0">
                 <h1 className="text-3xl font-semibold tracking-tight text-lob-navy sm:text-4xl">Account setup</h1>
                 <p className="mt-3 max-w-xl text-base leading-relaxed text-stone-500">
-                  Register a mill or wholesaler to post loads, or a trucking company to book them. Carriers are usually
-                  verified by admin before booking.
+                  Two separate registrations: <strong className="font-semibold text-stone-700">Suppliers</strong> (mills,
+                  wholesalers, reloads) post loads. <strong className="font-semibold text-stone-700">Carriers</strong>{" "}
+                  (asset fleets or brokers) book them. Pick the column that matches your business — they are not
+                  interchangeable. Carriers are usually verified by admin before booking.
                 </p>
               </div>
             </div>

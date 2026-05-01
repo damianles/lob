@@ -236,9 +236,8 @@ export default async function Home() {
           <section className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-4">
             <h2 className="font-semibold text-amber-900">One step left — link your company</h2>
             <p className="mt-1 text-sm text-amber-800">
-              Your sign-in is connected. Create a <strong>supplier</strong> profile (mill, wholesaler, or other lumber
-              supplier) to post loads, or a <strong>carrier</strong> profile to book them (carriers may need admin approval unless preview
-              auto-approve is on).
+              Your sign-in is connected. Open account setup to register as a <strong>supplier</strong> (post loads) or a{" "}
+              <strong>carrier</strong> (book loads) — pick one path per company; they use different forms.
             </p>
             <Link
               className="mt-3 inline-block rounded bg-amber-700 px-4 py-2 text-sm font-medium text-white"
