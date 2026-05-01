@@ -64,6 +64,37 @@ function kindFromRole(role: MeApiResponse["role"], companyId: string | null): Vi
   return "GUEST";
 }
 
+function viewerRoleForCarrierOrg(
+  company: MeApiResponse["company"],
+  verified: boolean,
+  simulated: boolean,
+  realKind: ViewerKind,
+): ViewerRole {
+  const ct = company?.carrierType ?? null;
+  const oo = company?.isOwnerOperator ?? false;
+  const label = oo
+    ? "Carrier (Owner-operator)"
+    : ct === "BROKER"
+      ? "Broker"
+      : ct === "ASSET_BASED"
+        ? "Carrier (Asset-based)"
+        : "Carrier";
+  const shortLabel = oo ? "OWNER-OP" : ct === "BROKER" ? "BROKER" : ct === "ASSET_BASED" ? "ASSET" : "CARRIER";
+  return {
+    kind: "CARRIER",
+    label,
+    shortLabel,
+    companyId: company?.id ?? null,
+    companyName: company?.legalName ?? null,
+    supplierKind: null,
+    carrierType: ct,
+    isOwnerOperator: oo,
+    verified,
+    simulated,
+    realKind,
+  };
+}
+
 export function deriveViewerRole(me: MeApiResponse | null | undefined): ViewerRole {
   if (!me || !me.signedIn) {
     return {
@@ -125,6 +156,14 @@ export function deriveViewerRole(me: MeApiResponse | null | undefined): ViewerRo
     };
   }
 
+  /** Row says SHIPPER but company record is a trucking org — show carrier chrome (stale role or bad merge). */
+  const companyLooksLikeCarrierOnly =
+    Boolean(company?.carrierType) && company?.supplierKind == null;
+
+  if (me.role === "SHIPPER" && company && companyLooksLikeCarrierOnly) {
+    return viewerRoleForCarrierOrg(company, verified, simulated, realKind);
+  }
+
   if (me.role === "SHIPPER") {
     // Supplier is a single persona in the chrome — both mills and wholesalers
     // experience the same product. The mill/wholesaler distinction is metadata
@@ -147,29 +186,7 @@ export function deriveViewerRole(me: MeApiResponse | null | undefined): ViewerRo
   }
 
   if (me.role === "DISPATCHER" || me.role === "DRIVER") {
-    const ct = company?.carrierType ?? null;
-    const oo = company?.isOwnerOperator ?? false;
-    const label = oo
-      ? "Carrier (Owner-operator)"
-      : ct === "BROKER"
-        ? "Broker"
-        : ct === "ASSET_BASED"
-          ? "Carrier (Asset-based)"
-          : "Carrier";
-    const shortLabel = oo ? "OWNER-OP" : ct === "BROKER" ? "BROKER" : ct === "ASSET_BASED" ? "ASSET" : "CARRIER";
-    return {
-      kind: "CARRIER",
-      label,
-      shortLabel,
-      companyId: company?.id ?? null,
-      companyName: company?.legalName ?? null,
-      supplierKind: null,
-      carrierType: ct,
-      isOwnerOperator: oo,
-      verified,
-      simulated,
-      realKind,
-    };
+    return viewerRoleForCarrierOrg(company, verified, simulated, realKind);
   }
 
   return {
