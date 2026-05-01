@@ -96,8 +96,9 @@ export function AppNav() {
         <div className="flex shrink-0 items-center justify-end gap-2 pl-2 sm:gap-3">
           {isSignedIn && viewer.kind !== "GUEST" && (
             <span
-              className={`hidden items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] ring-1 ring-inset sm:inline-flex ${accents.pillBg} ${accents.pillText} ${accents.pillRing}`}
+              className={`inline-flex max-w-[10rem] shrink-0 items-center justify-center gap-1 truncate rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] ring-1 ring-inset sm:max-w-none ${accents.pillBg} ${accents.pillText} ${accents.pillRing}`}
               title={viewer.label}
+              aria-label={viewer.label}
             >
               {viewer.shortLabel}
             </span>

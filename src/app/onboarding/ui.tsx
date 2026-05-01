@@ -1,11 +1,13 @@
 "use client";
 
 import { useAuth } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { lobWoodPrimaryButtonClass } from "@/lib/lob-button-styles";
 import { cn } from "@/lib/cn";
 import { LOB_ONBOARDING_INTENT_KEY } from "@/lib/onboarding-intent";
+import { useViewerRole } from "@/components/providers/app-providers";
 
 type FormState = {
   legalName: string;
@@ -36,6 +38,8 @@ const emptyShipper: ShipperFormState = {
 
 export function OnboardingForms() {
   const { isSignedIn } = useAuth();
+  const router = useRouter();
+  const { refresh: refreshViewerRole } = useViewerRole();
   const [realRole, setRealRole] = useState<string | null>(null);
   const [shipper, setShipper] = useState<ShipperFormState>(emptyShipper);
   const [carrier, setCarrier] = useState<FormState>(emptyState);
@@ -103,6 +107,8 @@ export function OnboardingForms() {
     }
     setMessage(`Supplier account ready: ${data.data.legalName}`);
     setShipper(emptyShipper);
+    refreshViewerRole();
+    router.refresh();
   }
 
   async function submitCarrier() {
@@ -147,6 +153,8 @@ export function OnboardingForms() {
     }
     setMessage(`Carrier submitted for review: ${data.data.legalName}`);
     setCarrier(emptyState);
+    refreshViewerRole();
+    router.refresh();
   }
 
   return (
