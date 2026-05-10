@@ -6,6 +6,7 @@ import { RateConPrint } from "@/components/rate-con-print";
 import { extractLumberSpec } from "@/lib/lumber-spec";
 import { formatMoney } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
+import { getActorContext } from "@/lib/request-context";
 import { syncClerkUserToDatabase } from "@/lib/sync-clerk-user";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +17,7 @@ export default async function RateConPage({ params }: { params: Promise<{ loadId
   if (!userId) redirect("/sign-in");
 
   await syncClerkUserToDatabase();
+  const actor = await getActorContext();
   const appUser = await prisma.user.findUnique({
     where: { authProviderId: userId },
     select: { id: true, role: true, companyId: true },
@@ -58,11 +60,11 @@ export default async function RateConPage({ params }: { params: Promise<{ loadId
     );
   }
 
-  const isAdmin = appUser.role === "ADMIN";
+  const isAdmin = actor.role === "ADMIN";
   const isShipperOwner =
-    appUser.role === "SHIPPER" && appUser.companyId === load.shipperCompanyId;
+    actor.role === "SHIPPER" && appUser.companyId === load.shipperCompanyId;
   const isBookedCarrier =
-    (appUser.role === "DISPATCHER" || appUser.role === "ADMIN") &&
+    (actor.role === "DISPATCHER" || actor.role === "ADMIN") &&
     appUser.companyId === load.booking.carrierCompanyId;
 
   if (!isAdmin && !isShipperOwner && !isBookedCarrier) {

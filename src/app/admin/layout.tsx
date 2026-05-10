@@ -11,5 +11,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!isRealAdmin(actor)) {
     redirect("/");
   }
+  // When an admin is simulating another persona, treat admin routes as out-of-bounds
+  // so the UX matches what that persona can actually access.
+  if (actor.simulated) {
+    redirect("/");
+  }
   return <>{children}</>;
 }

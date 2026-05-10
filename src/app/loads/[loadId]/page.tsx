@@ -23,6 +23,7 @@ import {
 } from "@/lib/shipper-visibility";
 import { carrierMayViewPostedLoad } from "@/lib/carrier-load-access";
 import { syncClerkUserToDatabase } from "@/lib/sync-clerk-user";
+import { getActorContext } from "@/lib/request-context";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,7 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
   }
 
   await syncClerkUserToDatabase();
+  const actor = await getActorContext();
 
   const appUser = await prisma.user.findUnique({
     where: { authProviderId: userId },
@@ -85,18 +87,18 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
     carrierApproved = co?.verificationStatus === VerificationStatus.APPROVED;
   }
 
-  const isAdmin = appUser.role === "ADMIN";
+  const isAdmin = actor.role === "ADMIN";
   const isShipperOwner =
-    appUser.role === "SHIPPER" && appUser.companyId && load.shipperCompanyId === appUser.companyId;
+    actor.role === "SHIPPER" && appUser.companyId && load.shipperCompanyId === appUser.companyId;
   const isBookedCarrier =
     load.booking &&
     appUser.companyId &&
     load.booking.carrierCompanyId === appUser.companyId &&
-    (appUser.role === "DISPATCHER" || appUser.role === "ADMIN");
+    (actor.role === "DISPATCHER" || actor.role === "ADMIN");
 
   let canBrowsePosted = false;
   if (
-    appUser.role === "DISPATCHER" &&
+    actor.role === "DISPATCHER" &&
     appUser.companyId &&
     carrierApproved &&
     load.status === LoadStatus.POSTED
@@ -140,7 +142,7 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
     );
   }
 
-  const visibilityActor = { companyId: appUser.companyId, role: appUser.role };
+  const visibilityActor = { companyId: appUser.companyId, role: actor.role };
   const millName = shipperCompanyNameForViewer(load.shipperCompany.legalName, load, visibilityActor);
   const supplierKindVisible = supplierKindForViewer(load.shipperCompany.supplierKind, load, visibilityActor);
   const carrierNameVisible = load.booking
