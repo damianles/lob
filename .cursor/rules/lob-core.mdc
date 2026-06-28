@@ -1,0 +1,51 @@
+---
+description: LOB core stack, scope discipline, and local dev constraints
+alwaysApply: true
+---
+
+# LOB — core agent rules
+
+## Stack
+
+- **Next.js 16** App Router, **React 19**, **TypeScript**, **Tailwind 4**
+- **Prisma 7** + **PostgreSQL** (local: native Postgres on Windows; prod: Supabase pooler)
+- **Clerk** auth (`@clerk/nextjs`); middleware in `src/proxy.ts`
+- **Clerk app:** `app_3B0GZBYUj2l8zOryfv6HA27cfQh`
+
+## Before you explore
+
+1. Read **`AGENTS.md`** for architecture and folder map (do not re-scan the whole repo).
+2. Read **`docs/WORKFLOW.md`** when the user asks about process or starts a new chat.
+3. Use **`@` mentions** or targeted search — only open files relevant to the task.
+4. **Minimal diffs** — match existing patterns; no drive-by refactors or extra docs unless asked.
+
+## Local dev (Damia / Windows)
+
+- Project root: `C:\Users\damia\Projects\lob`
+- Env: `.env` (gitignored — never commit; never print secrets)
+- DB: `DATABASE_URL` → local Postgres database `lob` on `localhost:5432`
+- **No Docker** on this machine (virtualization disabled)
+- Fresh local DB: `npx prisma db push` then `npm run db:seed` (see AGENTS.md — migrate order quirk)
+- Run app: `& "C:\Program Files\nodejs\npm.cmd" run dev` if PowerShell blocks `npm`
+- Only **one** dev server; restart after `.env` changes → http://localhost:3000
+
+## Auth & roles
+
+- Sign-in via Clerk; DB user sync in `src/lib/sync-clerk-user.ts`
+- Roles: `ADMIN`, `SHIPPER`, `DISPATCHER`; onboarding at `/onboarding`
+- `await auth()` — always async in this codebase
+
+## Deploy pointers
+
+- Ship: `SHIP.md` / `DEPLOY.md` — Vercel + Supabase pooler + Clerk env vars
+- Do not commit unless the user explicitly asks
+
+## New chat — greet with workflow first
+
+On the **first user message** in a conversation, unless they already gave a **specific scoped task** (file + outcome):
+
+1. Post the **New chat checklist** from `docs/WORKFLOW.md` (section "New chat checklist") — keep it brief (bullets, not a wall of text).
+2. Ask what they want to work on this session.
+3. Do **not** start coding, exploring, or installing until they confirm the task.
+
+If the first message is already scoped (e.g. "Fix booking button on `load-card.tsx`"), skip the checklist and proceed.
