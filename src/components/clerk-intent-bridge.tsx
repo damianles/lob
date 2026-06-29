@@ -3,16 +3,16 @@
 import { useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 
-import { LOB_ONBOARDING_INTENT_KEY } from "@/lib/onboarding-intent";
+import { LOB_ONBOARDING_INTENT_KEY, parseOnboardingIntent } from "@/lib/onboarding-intent";
 
-/** Persists `?lob_intent=carrier|shipper` for account setup scrolling. */
+/** Persists `?lob_intent=carrier|shipper` so account setup shows one form only. */
 export function ClerkIntentBridge() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    const raw = searchParams.get("lob_intent");
-    if (raw === "carrier" || raw === "shipper") {
-      sessionStorage.setItem(LOB_ONBOARDING_INTENT_KEY, raw);
+    const intent = parseOnboardingIntent(searchParams.get("lob_intent"));
+    if (intent) {
+      sessionStorage.setItem(LOB_ONBOARDING_INTENT_KEY, intent);
     }
   }, [searchParams]);
 

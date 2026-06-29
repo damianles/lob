@@ -1,6 +1,64 @@
 import { CarrierType, LoadStatus, SupplierKind, UserRole, VerificationStatus } from "@prisma/client";
 
+import { lumberSpecToLoadColumns, type LumberSpec } from "../src/lib/lumber-spec";
 import { prisma } from "../src/lib/prisma";
+
+type SeedLoadRow = {
+  ref: string;
+  originCity: string;
+  originState: string;
+  originZip: string;
+  destinationCity: string;
+  destinationState: string;
+  destinationZip: string;
+  weightLbs: number;
+  equipmentType: string;
+  isRush: boolean;
+  offeredRateUsd: number;
+  offerCurrency?: "USD" | "CAD";
+  pickupDaysFromNow: number;
+  lumber?: LumberSpec;
+};
+
+function extendedPostingFor(lumber?: LumberSpec) {
+  return lumber ? { lumber } : undefined;
+}
+
+async function upsertPostedLoad(shipperCompanyId: string, shipperUserId: string, row: SeedLoadRow) {
+  const requestedPickupAt = new Date(Date.now() + row.pickupDaysFromNow * 24 * 60 * 60 * 1000);
+  const extendedPosting = extendedPostingFor(row.lumber);
+  const lumberCols = lumberSpecToLoadColumns(row.lumber ?? null);
+
+  const shared = {
+    originCity: row.originCity,
+    originState: row.originState,
+    originZip: row.originZip,
+    destinationCity: row.destinationCity,
+    destinationState: row.destinationState,
+    destinationZip: row.destinationZip,
+    weightLbs: row.weightLbs,
+    equipmentType: row.equipmentType,
+    isRush: row.isRush,
+    offeredRateUsd: row.offeredRateUsd,
+    offerCurrency: row.offerCurrency ?? "USD",
+    shipperCompanyId,
+    createdByUserId: shipperUserId,
+    status: LoadStatus.POSTED,
+    requestedPickupAt,
+    extendedPosting,
+    ...lumberCols,
+  };
+
+  await prisma.load.upsert({
+    where: { referenceNumber: row.ref },
+    update: shared,
+    create: {
+      referenceNumber: row.ref,
+      uniquePickupCode: row.ref.slice(-6).toUpperCase(),
+      ...shared,
+    },
+  });
+}
 
 async function main() {
   const shipperCompany = await prisma.company.upsert({
@@ -22,6 +80,8 @@ async function main() {
     where: { legalName: "Blue Ox Transport" },
     update: {
       analyticsSubscriber: true,
+      verificationStatus: VerificationStatus.APPROVED,
+      carrierType: CarrierType.ASSET_BASED,
     },
     create: {
       legalName: "Blue Ox Transport",
@@ -68,6 +128,7 @@ async function main() {
 
   const pu1 = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
 
+  // Demo booked load (shows on Shipments, not the open board).
   await prisma.load.upsert({
     where: { referenceNumber: "LOB-SEED-0001" },
     update: {
@@ -78,7 +139,7 @@ async function main() {
       destinationState: "CA",
       destinationZip: "95814",
       weightLbs: 42000,
-      equipmentType: "Flatbed",
+      equipmentType: "SB",
       isRush: true,
       offeredRateUsd: 3200,
       marketRateUsd: 3050,
@@ -86,6 +147,24 @@ async function main() {
       createdByUserId: shipperUser.id,
       uniquePickupCode: "AX74Q1",
       requestedPickupAt: pu1,
+      extendedPosting: {
+        lumber: {
+          productCategory: "DIMENSIONAL",
+          species: "DF",
+          dryness: "KD",
+          treatment: "NONE",
+          fragile: false,
+          weatherSensitive: false,
+        },
+      },
+      ...lumberSpecToLoadColumns({
+        productCategory: "DIMENSIONAL",
+        species: "DF",
+        dryness: "KD",
+        treatment: "NONE",
+        fragile: false,
+        weatherSensitive: false,
+      }),
     },
     create: {
       referenceNumber: "LOB-SEED-0001",
@@ -96,7 +175,7 @@ async function main() {
       destinationState: "CA",
       destinationZip: "95814",
       weightLbs: 42000,
-      equipmentType: "Flatbed",
+      equipmentType: "SB",
       isRush: true,
       offeredRateUsd: 3200,
       marketRateUsd: 3050,
@@ -104,50 +183,67 @@ async function main() {
       createdByUserId: shipperUser.id,
       uniquePickupCode: "AX74Q1",
       requestedPickupAt: pu1,
+      extendedPosting: {
+        lumber: {
+          productCategory: "DIMENSIONAL",
+          species: "DF",
+          dryness: "KD",
+          treatment: "NONE",
+        },
+      },
+      ...lumberSpecToLoadColumns({
+        productCategory: "DIMENSIONAL",
+        species: "DF",
+        dryness: "KD",
+        treatment: "NONE",
+      }),
     },
   });
 
-  const extraLoads: Array<{
-    ref: string;
-    originCity: string;
-    originState: string;
-    originZip: string;
-    destinationCity: string;
-    destinationState: string;
-    destinationZip: string;
-    weightLbs: number;
-    equipmentType: string;
-    isRush: boolean;
-    offeredRateUsd: number;
-    pickupDaysFromNow: number;
-  }> = [
+  const openLoads: SeedLoadRow[] = [
     {
       ref: "LOB-SEED-0002",
-      originCity: "Seattle",
-      originState: "WA",
-      originZip: "98101",
-      destinationCity: "Boise",
-      destinationState: "ID",
-      destinationZip: "83702",
-      weightLbs: 38000,
-      equipmentType: "Dry van",
-      isRush: false,
-      offeredRateUsd: 2250,
-      pickupDaysFromNow: 4,
+      originCity: "Eugene",
+      originState: "OR",
+      originZip: "97401",
+      destinationCity: "Phoenix",
+      destinationState: "AZ",
+      destinationZip: "85001",
+      weightLbs: 48000,
+      equipmentType: "SB",
+      isRush: true,
+      offeredRateUsd: 3850,
+      pickupDaysFromNow: 2,
+      lumber: {
+        productCategory: "DIMENSIONAL",
+        species: "DF",
+        dryness: "KD",
+        treatment: "NONE",
+        fragile: false,
+        weatherSensitive: false,
+      },
     },
     {
       ref: "LOB-SEED-0003",
-      originCity: "Dallas",
-      originState: "TX",
-      originZip: "75201",
-      destinationCity: "Oklahoma City",
-      destinationState: "OK",
-      destinationZip: "73102",
+      originCity: "Bellingham",
+      originState: "WA",
+      originZip: "98225",
+      destinationCity: "Denver",
+      destinationState: "CO",
+      destinationZip: "80202",
       weightLbs: 44000,
-      equipmentType: "Flatbed",
+      equipmentType: "Tri",
       isRush: false,
-      offeredRateUsd: 1900,
-      pickupDaysFromNow: 5,
+      offeredRateUsd: 4100,
+      pickupDaysFromNow: 4,
+      lumber: {
+        productCategory: "PANELS",
+        species: "SPF",
+        panelType: "OSB",
+        dryness: "KD",
+        treatment: "NONE",
+        weatherSensitive: true,
+      },
     },
     {
       ref: "LOB-SEED-0004",
@@ -158,24 +254,37 @@ async function main() {
       destinationState: "NV",
       destinationZip: "89501",
       weightLbs: 40000,
-      equipmentType: "Reefer",
+      equipmentType: "MX",
       isRush: true,
       offeredRateUsd: 3400,
-      pickupDaysFromNow: 6,
+      pickupDaysFromNow: 3,
+      lumber: {
+        productCategory: "TIMBERS",
+        species: "DF_LARCH",
+        dryness: "GREEN",
+        treatment: "NONE",
+      },
     },
     {
       ref: "LOB-SEED-0005",
-      originCity: "Atlanta",
-      originState: "GA",
-      originZip: "30303",
-      destinationCity: "Nashville",
-      destinationState: "TN",
-      destinationZip: "37203",
-      weightLbs: 35000,
-      equipmentType: "Dry van",
+      originCity: "Tacoma",
+      originState: "WA",
+      originZip: "98402",
+      destinationCity: "Salt Lake City",
+      destinationState: "UT",
+      destinationZip: "84101",
+      weightLbs: 36000,
+      equipmentType: "CW",
       isRush: false,
-      offeredRateUsd: 1650,
-      pickupDaysFromNow: 2,
+      offeredRateUsd: 2950,
+      pickupDaysFromNow: 5,
+      lumber: {
+        productCategory: "MILLWORK",
+        species: "WRC",
+        dryness: "KD",
+        treatment: "NONE",
+        fragile: true,
+      },
     },
     {
       ref: "LOB-SEED-0006",
@@ -186,51 +295,42 @@ async function main() {
       destinationState: "MT",
       destinationZip: "59101",
       weightLbs: 42000,
-      equipmentType: "Flatbed",
+      equipmentType: "Tan",
       isRush: false,
       offeredRateUsd: 2800,
+      pickupDaysFromNow: 6,
+      lumber: {
+        productCategory: "BUNDLES",
+        species: "SPF",
+        dryness: "KD",
+        treatment: "NONE",
+      },
+    },
+    {
+      ref: "LOB-SEED-0007",
+      originCity: "Vancouver",
+      originState: "BC",
+      originZip: "V6B1A1",
+      destinationCity: "Calgary",
+      destinationState: "AB",
+      destinationZip: "T2P1J9",
+      weightLbs: 45000,
+      equipmentType: "SB",
+      isRush: false,
+      offeredRateUsd: 3600,
+      offerCurrency: "CAD",
       pickupDaysFromNow: 7,
+      lumber: {
+        productCategory: "DIMENSIONAL",
+        species: "HEM_FIR",
+        dryness: "KD",
+        treatment: "NONE",
+      },
     },
   ];
 
-  for (const row of extraLoads) {
-    const requestedPickupAt = new Date(Date.now() + row.pickupDaysFromNow * 24 * 60 * 60 * 1000);
-    await prisma.load.upsert({
-      where: { referenceNumber: row.ref },
-      update: {
-        originCity: row.originCity,
-        originState: row.originState,
-        originZip: row.originZip,
-        destinationCity: row.destinationCity,
-        destinationState: row.destinationState,
-        destinationZip: row.destinationZip,
-        weightLbs: row.weightLbs,
-        equipmentType: row.equipmentType,
-        isRush: row.isRush,
-        offeredRateUsd: row.offeredRateUsd,
-        shipperCompanyId: shipperCompany.id,
-        createdByUserId: shipperUser.id,
-        status: LoadStatus.POSTED,
-        requestedPickupAt,
-      },
-      create: {
-        referenceNumber: row.ref,
-        originCity: row.originCity,
-        originState: row.originState,
-        originZip: row.originZip,
-        destinationCity: row.destinationCity,
-        destinationState: row.destinationState,
-        destinationZip: row.destinationZip,
-        weightLbs: row.weightLbs,
-        equipmentType: row.equipmentType,
-        isRush: row.isRush,
-        offeredRateUsd: row.offeredRateUsd,
-        shipperCompanyId: shipperCompany.id,
-        createdByUserId: shipperUser.id,
-        uniquePickupCode: row.ref.slice(-6).toUpperCase(),
-        requestedPickupAt,
-      },
-    });
+  for (const row of openLoads) {
+    await upsertPostedLoad(shipperCompany.id, shipperUser.id, row);
   }
 
   const primaryLoad = await prisma.load.findUnique({
@@ -259,6 +359,8 @@ async function main() {
     carrierCompanyId: carrierCompany.id,
     dispatcherUserId: dispatcher.id,
     adminUserId: adminUser.id,
+    openPostedLoads: openLoads.length,
+    bookedDemoLoad: "LOB-SEED-0001",
   });
 }
 

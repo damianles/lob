@@ -152,6 +152,22 @@ export default async function ShipmentsPage() {
                   </Link>
                 </div>
               )}
+              {perspective === "carrier" && (
+                <div className="flex flex-wrap gap-2">
+                  <Link
+                    href="/driver"
+                    className="rounded-lg border border-emerald-700 bg-white px-4 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-50"
+                  >
+                    Driver dispatch
+                  </Link>
+                  <Link
+                    href="/carrier/compliance"
+                    className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800"
+                  >
+                    Carrier profile
+                  </Link>
+                </div>
+              )}
             </div>
 
             <ShipmentsWorkspace

@@ -462,6 +462,19 @@ export function LoadBoardWorkspace({
                 loads appear here.
               </p>
             </div>
+          ) : isCarrierAccount ? (
+            <div className="mb-4">
+              <h1 className="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Open loads</h1>
+              <p className="mt-1 text-sm text-zinc-600">
+                Search freight posted by mills and wholesalers. Supplier names stay private until you book a load.
+                {!actor.carrierApproved ? (
+                  <>
+                    {" "}
+                    Your company is still pending approval — you can browse but not book yet.
+                  </>
+                ) : null}
+              </p>
+            </div>
           ) : null}
           <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
             <p className="text-sm text-zinc-600">

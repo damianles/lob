@@ -240,16 +240,23 @@ export default async function Home() {
             <section className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-4">
               <h2 className="font-semibold text-amber-900">Carrier verification pending</h2>
               <p className="mt-1 text-sm text-amber-800">
-                An admin must approve your company before you can book loads. If this is your own preview
-                environment, set <code className="rounded bg-amber-100 px-1">LOB_AUTO_APPROVE_CARRIERS=true</code> in
-                Vercel and register again, or approve yourself in the admin queue.
+                LOB must approve your company before you can book loads. You can still browse the open board and update
+                your{" "}
+                <Link className="font-medium text-amber-900 underline" href="/carrier/compliance">
+                  carrier profile
+                </Link>
+                .
               </p>
-              <Link
-                className="mt-2 inline-block text-sm font-medium text-amber-900 underline"
-                href="/admin/carriers"
-              >
-                Open admin · Carriers
-              </Link>
+              {sessionActor && isRealAdmin(sessionActor) && (
+                <p className="mt-2 text-sm text-amber-900/90">
+                  Preview / admin: set{" "}
+                  <code className="rounded bg-amber-100 px-1">LOB_AUTO_APPROVE_CARRIERS=true</code> or approve in{" "}
+                  <Link className="font-medium underline" href="/admin/carriers">
+                    admin · Carriers
+                  </Link>
+                  .
+                </p>
+              )}
             </section>
           )}
 
@@ -260,16 +267,18 @@ export default async function Home() {
             <section className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-4">
               <h2 className="font-semibold text-amber-900">Supplier verification pending</h2>
               <p className="mt-1 text-sm text-amber-800">
-                An admin must approve your company before you can post loads. If this is your own preview
-                environment, set <code className="rounded bg-amber-100 px-1">LOB_AUTO_APPROVE_SUPPLIERS=true</code> in
-                Vercel and register again, or approve yourself in the admin queue.
+                LOB must approve your company before you can post loads.
               </p>
-              <Link
-                className="mt-2 inline-block text-sm font-medium text-amber-900 underline"
-                href="/admin/suppliers"
-              >
-                Open admin · Suppliers
-              </Link>
+              {sessionActor && isRealAdmin(sessionActor) && (
+                <p className="mt-2 text-sm text-amber-900/90">
+                  Preview / admin: set{" "}
+                  <code className="rounded bg-amber-100 px-1">LOB_AUTO_APPROVE_SUPPLIERS=true</code> or approve in{" "}
+                  <Link className="font-medium underline" href="/admin/suppliers">
+                    admin · Suppliers
+                  </Link>
+                  .
+                </p>
+              )}
             </section>
           )}
 

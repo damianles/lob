@@ -6,53 +6,10 @@ import { useMemo } from "react";
 import { LobWoodOIcon } from "@/components/lob-wood-o-icon";
 import { useViewerRole } from "@/components/providers/app-providers";
 import { BRAND_POSITIONING, BRAND_PRODUCT_NAME } from "@/lib/brand-marketing";
+import { lobNavItemsForViewer, type LobNavId } from "@/lib/lob-nav";
 
-export type LobNavId =
-  | "loads"
-  | "capacity"
-  | "insights"
-  | "booked"
-  | "driver"
-  | "facilityPickup"
-  | "facilityDelivery"
-  | "carrierProfile"
-  | "carrierPrefs"
-  | "onboarding";
-
+export type { LobNavId };
 export type LobSidebarStats = { active: number; rush: number; delivered: number };
-
-const items: { id: LobNavId; href: string; label: string; hint: string }[] = [
-  { id: "loads", href: "/", label: "Loads", hint: "Posted loads from mills & wholesalers" },
-  { id: "capacity", href: "/capacity", label: "Capacity", hint: "Carrier truck availability by lane & dates" },
-  { id: "insights", href: "/insights", label: "Insights", hint: "Lane rate analytics & fuel pricing" },
-  { id: "booked", href: "/booked", label: "Shipments", hint: "Track all your loads — sortable, filterable, exportable" },
-  { id: "driver", href: "/driver", label: "Driver", hint: "Dispatch links & QR for drivers" },
-  {
-    id: "facilityPickup",
-    href: "/scan/pickup",
-    label: "Facility pickup",
-    hint: "Scan driver QR at pickup — no account required",
-  },
-  {
-    id: "facilityDelivery",
-    href: "/scan/delivery",
-    label: "Facility delivery",
-    hint: "Scan driver QR at delivery — no account required",
-  },
-  {
-    id: "carrierProfile",
-    href: "/carrier/compliance",
-    label: "Carrier profile",
-    hint: "DOT/MC, insurance, fleet & equipment for shippers",
-  },
-  {
-    id: "carrierPrefs",
-    href: "/shipper/carrier-preferences",
-    label: "Carrier preferences",
-    hint: "Block carriers from capacity & your loads; use with per-load tiers when posting",
-  },
-  { id: "onboarding", href: "/onboarding", label: "Account setup", hint: "Link supplier or carrier company" },
-];
 
 export function LobSidebar({
   active,
@@ -63,17 +20,10 @@ export function LobSidebar({
 }) {
   const { viewer, loading } = useViewerRole();
   const navItems = useMemo(() => {
-    const showCarrierPrefs = !loading && viewer.kind === "SHIPPER";
-    let list = showCarrierPrefs ? items : items.filter((i) => i.id !== "carrierPrefs");
-    if (!loading && viewer.kind === "SHIPPER") {
-      list = list.map((item) =>
-        item.id === "loads"
-          ? { ...item, hint: "Post loads and track your company's postings" }
-          : item,
-      );
-    }
-    return list;
-  }, [loading, viewer.kind]);
+    if (loading) return lobNavItemsForViewer("GUEST");
+    const showOnboarding = viewer.kind === "SETUP" || !viewer.companyId;
+    return lobNavItemsForViewer(viewer.kind, { showOnboarding });
+  }, [loading, viewer.kind, viewer.companyId]);
 
   return (
     <aside className="hidden w-[15.5rem] shrink-0 flex-col border-r border-stone-200/50 bg-stone-50/30 lg:flex">

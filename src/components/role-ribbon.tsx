@@ -67,12 +67,15 @@ export function RoleRibbon() {
             </Link>
           )}
           {showVerifyCta && (
-            <Link
-              href="/carrier/compliance"
-              className="hidden font-semibold underline-offset-2 hover:underline sm:inline"
-            >
-              Complete verification →
-            </Link>
+            <>
+              <span className="hidden font-semibold opacity-90 sm:inline">Awaiting LOB approval</span>
+              <Link
+                href="/carrier/compliance"
+                className="hidden font-semibold underline-offset-2 hover:underline sm:inline"
+              >
+                Carrier profile →
+              </Link>
+            </>
           )}
           {showSupplierPending && (
             <span className="hidden font-semibold opacity-90 sm:inline">Awaiting LOB approval</span>

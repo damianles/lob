@@ -1,0 +1,135 @@
+import type { ViewerKind } from "@/lib/viewer-role";
+
+export type LobNavId =
+  | "loads"
+  | "capacity"
+  | "insights"
+  | "booked"
+  | "driver"
+  | "facilityPickup"
+  | "facilityDelivery"
+  | "carrierProfile"
+  | "carrierPrefs"
+  | "onboarding";
+
+export type LobNavItem = {
+  id: LobNavId;
+  href: string;
+  label: string;
+  hint: string;
+};
+
+export const LOB_NAV_ITEMS: LobNavItem[] = [
+  { id: "loads", href: "/", label: "Loads", hint: "Posted loads from mills & wholesalers" },
+  {
+    id: "capacity",
+    href: "/capacity",
+    label: "Capacity",
+    hint: "Carrier truck availability by lane & dates",
+  },
+  { id: "insights", href: "/insights", label: "Insights", hint: "Lane rate analytics & fuel pricing" },
+  {
+    id: "booked",
+    href: "/booked",
+    label: "Shipments",
+    hint: "Track all your loads — sortable, filterable, exportable",
+  },
+  { id: "driver", href: "/driver", label: "Driver", hint: "Dispatch links & QR for drivers" },
+  {
+    id: "facilityPickup",
+    href: "/scan/pickup",
+    label: "Facility pickup",
+    hint: "Scan driver QR at pickup — no account required",
+  },
+  {
+    id: "facilityDelivery",
+    href: "/scan/delivery",
+    label: "Facility delivery",
+    hint: "Scan driver QR at delivery — no account required",
+  },
+  {
+    id: "carrierProfile",
+    href: "/carrier/compliance",
+    label: "Carrier profile",
+    hint: "DOT/MC, insurance, fleet & equipment for shippers",
+  },
+  {
+    id: "carrierPrefs",
+    href: "/shipper/carrier-preferences",
+    label: "Carrier preferences",
+    hint: "Block carriers from capacity & your loads; use with per-load tiers when posting",
+  },
+  { id: "onboarding", href: "/onboarding", label: "Account setup", hint: "Link supplier or carrier company" },
+];
+
+const CARRIER_IDS: LobNavId[] = [
+  "loads",
+  "capacity",
+  "insights",
+  "booked",
+  "driver",
+  "carrierProfile",
+  "onboarding",
+];
+
+const SHIPPER_IDS: LobNavId[] = [
+  "loads",
+  "capacity",
+  "insights",
+  "booked",
+  "facilityPickup",
+  "facilityDelivery",
+  "carrierPrefs",
+  "onboarding",
+];
+
+const SETUP_IDS: LobNavId[] = ["loads", "capacity", "onboarding"];
+
+function navIdsForKind(kind: ViewerKind): Set<LobNavId> {
+  switch (kind) {
+    case "CARRIER":
+      return new Set(CARRIER_IDS);
+    case "SHIPPER":
+      return new Set(SHIPPER_IDS);
+    case "SETUP":
+      return new Set(SETUP_IDS);
+    case "ADMIN":
+      return new Set(LOB_NAV_ITEMS.map((i) => i.id));
+    default:
+      return new Set(["loads", "capacity", "insights", "booked", "onboarding"]);
+  }
+}
+
+export function lobNavItemsForViewer(
+  kind: ViewerKind,
+  opts?: { showOnboarding?: boolean },
+): LobNavItem[] {
+  const allowed = navIdsForKind(kind);
+  const showOnboarding = opts?.showOnboarding ?? true;
+
+  return LOB_NAV_ITEMS.filter((item) => {
+    if (item.id === "onboarding" && !showOnboarding) return false;
+    return allowed.has(item.id);
+  }).map((item) => {
+    if (item.id === "loads" && kind === "SHIPPER") {
+      return { ...item, hint: "Post loads and track your company's postings" };
+    }
+    if (item.id === "loads" && kind === "CARRIER") {
+      return { ...item, hint: "Browse open freight and book loads for your fleet" };
+    }
+    if (item.id === "booked" && kind === "CARRIER") {
+      return { ...item, hint: "Loads you've booked — dispatch, pickup, and delivery history" };
+    }
+    return item;
+  });
+}
+
+/** Top masthead links (mobile / compact). */
+export function lobTopNavLinksForViewer(kind: ViewerKind): { href: string; label: string }[] {
+  const sidebar = lobNavItemsForViewer(kind, {
+    showOnboarding: kind === "SETUP" || kind === "GUEST",
+  });
+  return sidebar
+    .filter((i) => i.id !== "facilityPickup" && i.id !== "facilityDelivery")
+    .map((i) => ({ href: i.href, label: i.label }));
+}

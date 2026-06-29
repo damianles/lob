@@ -10,17 +10,10 @@ import { useViewerRole } from "@/components/providers/app-providers";
 import { cn } from "@/lib/cn";
 import { shouldShowGlobalAdminBar } from "@/lib/actor-permissions";
 import { signInUrlForAppPath, signUpUrlForAppPath } from "@/lib/guest-auth-routes";
+import { lobTopNavLinksForViewer } from "@/lib/lob-nav";
 import { lobWoodOutlineButtonClass, lobWoodPrimaryButtonClass } from "@/lib/lob-button-styles";
 import type { MeApiResponse } from "@/lib/viewer-role";
 import { roleAccentClasses } from "@/lib/viewer-role";
-
-const signedInLinks = [
-  { href: "/", label: "Loads" },
-  { href: "/capacity", label: "Capacity" },
-  { href: "/insights", label: "Insights" },
-  { href: "/booked", label: "Shipments" },
-  { href: "/onboarding", label: "Account setup" },
-];
 
 const adminLinks = [
   { href: "/admin/test-lab", label: "Test lab" },
@@ -60,6 +53,7 @@ export function AppNav() {
     { href: signUpUrlForAppPath("/insights"), label: "Insights" },
     { href: signInUrlForAppPath("/"), label: "Sign in" },
   ];
+  const signedInLinks = lobTopNavLinksForViewer(viewer.kind);
   const links = [
     ...(isSignedIn ? signedInLinks : guestLinks),
     ...(isSignedIn && isAdmin ? adminLinks : []),
