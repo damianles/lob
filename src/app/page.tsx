@@ -79,6 +79,7 @@ export default async function Home() {
   let profileSyncDbError: string | null = null;
   let appUser: { id: string; companyId: string | null; role: string } | null = null;
   let carrierApproved = false;
+  let supplierApproved = false;
   let clerkSyncError: "missing_email" | null = null;
 
   try {
@@ -93,32 +94,61 @@ export default async function Home() {
     console.error("[home] profile sync error:", e);
   }
 
+  let sessionActor: Awaited<ReturnType<typeof getActorContext>> | null = null;
+  if (userId) {
+    try {
+      sessionActor = await getActorContext();
+    } catch {
+      sessionActor = null;
+    }
+  }
+
+  const boardRole = sessionActor?.role ?? appUser?.role ?? null;
+  const boardCompanyId = sessionActor?.companyId ?? appUser?.companyId ?? null;
+  const boardUserId = sessionActor?.userId ?? appUser?.id ?? null;
+
   try {
-    if (appUser?.role === "DISPATCHER" && appUser.companyId) {
+    if (boardRole === "DISPATCHER" && boardCompanyId) {
       const co = await prisma.company.findUnique({
-        where: { id: appUser.companyId },
+        where: { id: boardCompanyId },
         select: { verificationStatus: true },
       });
       carrierApproved = co?.verificationStatus === VerificationStatus.APPROVED;
     }
 
     const pickupCutoff = new Date(Date.now() - 48 * 60 * 60 * 1000);
-    loads = await prisma.load.findMany({
-      where: {
-        OR: [
-          { status: { not: LoadStatus.POSTED } },
-          { AND: [{ status: LoadStatus.POSTED }, { requestedPickupAt: { gte: pickupCutoff } }] },
-        ],
-      },
-      orderBy: [{ isRush: "desc" }, { createdAt: "desc" }],
-      include: loadBoardInclude,
-      take: 50,
-    });
+    const isSupplierWithCompany = boardRole === "SHIPPER" && Boolean(boardCompanyId);
 
-    if (appUser?.role === "SHIPPER" && appUser.companyId) {
+    if (boardRole === "SHIPPER" && !boardCompanyId) {
+      loads = [];
+    } else {
+      loads = await prisma.load.findMany({
+        where: isSupplierWithCompany
+          ? { shipperCompanyId: boardCompanyId! }
+          : {
+              OR: [
+                { status: { not: LoadStatus.POSTED } },
+                {
+                  AND: [{ status: LoadStatus.POSTED }, { requestedPickupAt: { gte: pickupCutoff } }],
+                },
+              ],
+            },
+        orderBy: [{ isRush: "desc" }, { createdAt: "desc" }],
+        include: loadBoardInclude,
+        take: isSupplierWithCompany ? 100 : 50,
+      });
+    }
+
+    if (boardRole === "SHIPPER" && boardCompanyId) {
+      const co = await prisma.company.findUnique({
+        where: { id: boardCompanyId },
+        select: { verificationStatus: true },
+      });
+      supplierApproved = co?.verificationStatus === VerificationStatus.APPROVED;
+
       stalePostedLoads = await prisma.load.findMany({
         where: {
-          shipperCompanyId: appUser.companyId,
+          shipperCompanyId: boardCompanyId,
           status: LoadStatus.POSTED,
           requestedPickupAt: { lt: pickupCutoff },
         },
@@ -133,19 +163,10 @@ export default async function Home() {
     console.error("[home] database error:", e);
   }
 
-  let sessionActor: Awaited<ReturnType<typeof getActorContext>> | null = null;
-  if (userId) {
-    try {
-      sessionActor = await getActorContext();
-    } catch {
-      sessionActor = null;
-    }
-  }
-
   const actor: BoardActor = {
-    userId: appUser?.id ?? null,
-    companyId: appUser?.companyId ?? null,
-    role: appUser?.role ?? null,
+    userId: boardUserId,
+    companyId: boardCompanyId,
+    role: boardRole,
     carrierApproved,
   };
 
@@ -213,8 +234,8 @@ export default async function Home() {
         )}
 
         {userId &&
-          appUser?.role === "DISPATCHER" &&
-          appUser.companyId &&
+          boardRole === "DISPATCHER" &&
+          boardCompanyId &&
           !carrierApproved && (
             <section className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-4">
               <h2 className="font-semibold text-amber-900">Carrier verification pending</h2>
@@ -228,6 +249,26 @@ export default async function Home() {
                 href="/admin/carriers"
               >
                 Open admin · Carriers
+              </Link>
+            </section>
+          )}
+
+        {userId &&
+          boardRole === "SHIPPER" &&
+          boardCompanyId &&
+          !supplierApproved && (
+            <section className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-4">
+              <h2 className="font-semibold text-amber-900">Supplier verification pending</h2>
+              <p className="mt-1 text-sm text-amber-800">
+                An admin must approve your company before you can post loads. If this is your own preview
+                environment, set <code className="rounded bg-amber-100 px-1">LOB_AUTO_APPROVE_SUPPLIERS=true</code> in
+                Vercel and register again, or approve yourself in the admin queue.
+              </p>
+              <Link
+                className="mt-2 inline-block text-sm font-medium text-amber-900 underline"
+                href="/admin/suppliers"
+              >
+                Open admin · Suppliers
               </Link>
             </section>
           )}
@@ -291,7 +332,7 @@ export default async function Home() {
           </section>
         )}
 
-        {userId && appUser?.role === "SHIPPER" && stalePostedLoads.length > 0 && (
+        {userId && boardRole === "SHIPPER" && stalePostedLoads.length > 0 && (
           <section className="mx-auto mb-4 max-w-[1600px] rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
             <p className="font-semibold">Loads past the pickup window</p>
             <p className="mt-1 text-amber-900">
@@ -316,6 +357,7 @@ export default async function Home() {
           stats={{ active, rush, delivered }}
         />
 
+        {boardRole === "ADMIN" && (
         <details className="mx-auto mt-6 max-w-[1600px] rounded border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-600">
           <summary className="cursor-pointer font-medium text-zinc-900">Deploy, admin, and API (for builders)</summary>
           <ol className="mt-3 list-inside list-decimal space-y-2 text-zinc-700">
@@ -343,11 +385,17 @@ export default async function Home() {
               (remove for real launches).
             </li>
             <li>
+              To test posting without admin: set{" "}
+              <code className="rounded bg-zinc-100 px-1">LOB_AUTO_APPROVE_SUPPLIERS=true</code> on the preview project
+              (remove for real launches).
+            </li>
+            <li>
               API: <code>POST /api/loads</code>, <code>POST /api/loads/:id/book</code>,{" "}
               <code>POST /api/loads/:id/dispatch</code>. More in <Link href="/insights">Insights</Link>.
             </li>
           </ol>
         </details>
+        )}
       </div>
     </main>
   );

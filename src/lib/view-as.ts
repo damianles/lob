@@ -7,9 +7,9 @@
  * - The cookie is read on the server by `getActorContext()` and ONLY honored
  *   when the *real* user is an ADMIN. A non-admin who hand-crafts this cookie
  *   gets no effect — there is no privilege escalation path.
- * - The cookie only changes the UX layer (labels, ribbon color, role-aware
- *   filters, conditional links). It does NOT change `realCompanyId`, so all
- *   data-scoped queries continue to use the admin's true company access.
+ * - When simulating a supplier or carrier, `getActorContext()` attaches the seeded
+ *   demo company (`North Ridge Lumber` / `Blue Ox Transport`) so shipper/carrier
+ *   APIs work during UX previews. Requires `npm run db:seed` on the database.
  */
 
 import type { CarrierBusinessType, SupplierKind } from "@/lib/viewer-role";

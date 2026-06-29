@@ -85,7 +85,7 @@ public/brand/       # Approved brand assets
 - `DATABASE_URL` — local postgres or Supabase direct URL for migrations
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY` — required for auth
 - `CLERK_WEBHOOK_SIGNING_SECRET` — optional locally
-- Optional preview: `LOB_AUTO_APPROVE_CARRIERS`, `LOB_AUTO_ADMIN_EMAILS`, `LOB_ALLOW_ADMIN_PERSONA_SWITCH`, `NEXT_PUBLIC_LOB_DEMO_MODE`
+- Optional preview: `LOB_AUTO_APPROVE_CARRIERS`, `LOB_AUTO_APPROVE_SUPPLIERS`, `LOB_AUTO_ADMIN_EMAILS`, `LOB_ALLOW_ADMIN_PERSONA_SWITCH`, `NEXT_PUBLIC_LOB_DEMO_MODE`
 
 ### Commands
 

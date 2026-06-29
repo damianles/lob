@@ -71,6 +71,7 @@ export async function POST(req: Request) {
   }
 
   const autoApproveCarriers = process.env.LOB_AUTO_APPROVE_CARRIERS === "true";
+  const autoApproveSuppliers = process.env.LOB_AUTO_APPROVE_SUPPLIERS === "true";
 
   const company = await prisma.company.create({
     data: {
@@ -81,7 +82,9 @@ export async function POST(req: Request) {
       supplierKind: payload.role === "SHIPPER" ? payload.supplierKind : undefined,
       verificationStatus:
         payload.role === "SHIPPER"
-          ? VerificationStatus.PENDING
+          ? autoApproveSuppliers
+            ? VerificationStatus.APPROVED
+            : VerificationStatus.PENDING
           : autoApproveCarriers
             ? VerificationStatus.APPROVED
             : VerificationStatus.PENDING,

@@ -26,15 +26,33 @@ export default function ShipperCarrierPreferencesPage() {
       fetch("/api/shipper/carrier-picklist"),
       fetch("/api/shipper/blocked-carriers"),
     ]);
-    const jMe = await rMe.json();
+    const jMe = (await rMe.json()) as {
+      role?: string;
+      companyId?: string | null;
+      simulated?: boolean;
+    };
+    const jPick = await rPick.json().catch(() => ({}));
+    const jBlock = await rBlock.json().catch(() => ({}));
     setMe({ role: jMe.role });
+
     if (!rPick.ok || !rBlock.ok) {
-      setErr("Could not load carrier list. Supplier account required.");
+      if (jMe.role !== "SHIPPER" || !jMe.companyId) {
+        setErr(
+          jMe.simulated
+            ? "Supplier preview needs seed data. Run npm run db:seed, then reset view-as or use Admin → Test lab → Test as supplier (North Ridge)."
+            : "Link a supplier company in Account setup before managing carrier preferences.",
+        );
+      } else {
+        const apiErr =
+          (typeof jPick.error === "string" && jPick.error) ||
+          (typeof jBlock.error === "string" && jBlock.error) ||
+          null;
+        setErr(apiErr ?? "Could not load carrier list.");
+      }
       setLoading(false);
       return;
     }
-    const jPick = await rPick.json();
-    const jBlock = await rBlock.json();
+
     setPicklist(jPick.data ?? []);
     setBlockedIds(new Set((jBlock.data?.blocked ?? []).map((c: Carrier) => c.id)));
     setLoading(false);

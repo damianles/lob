@@ -16,8 +16,8 @@ export async function POST(
   const { companyId } = await ctx.params;
   const result = await updateCompanyVerificationStatus(
     companyId,
-    VerificationStatus.REJECTED,
-    "carrier",
+    VerificationStatus.APPROVED,
+    "supplier",
   );
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: result.status });
@@ -25,4 +25,3 @@ export async function POST(
 
   return NextResponse.json({ data: result.data });
 }
-

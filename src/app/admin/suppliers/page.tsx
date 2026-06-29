@@ -51,6 +51,7 @@ export default async function AdminSuppliersPage() {
                 <th className="p-3">Type on file</th>
                 <th className="p-3">Primary user</th>
                 <th className="p-3">Status</th>
+                <th className="p-3">Analytics</th>
                 <th className="p-3">Actions</th>
               </tr>
             </thead>
@@ -70,16 +71,31 @@ export default async function AdminSuppliersPage() {
                     </span>
                   </td>
                   <td className="p-3">
-                    <CarrierReviewActions companyId={c.id} analyticsEnabled={c.analyticsSubscriber} />
+                    {c.analyticsSubscriber ? (
+                      <span className="rounded bg-emerald-100 px-2 py-1 text-xs text-emerald-900">Enabled</span>
+                    ) : (
+                      <span className="rounded bg-zinc-100 px-2 py-1 text-xs text-zinc-700">Disabled</span>
+                    )}
+                  </td>
+                  <td className="p-3">
+                    <CarrierReviewActions
+                      companyId={c.id}
+                      analyticsEnabled={c.analyticsSubscriber}
+                      queue="suppliers"
+                    />
                   </td>
                 </tr>
               ))}
+              {suppliers.length === 0 && (
+                <tr>
+                  <td className="p-4 text-center text-zinc-500" colSpan={6}>
+                    No supplier companies in the database yet.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
-        {suppliers.length === 0 && (
-          <p className="mt-4 text-sm text-zinc-500">No supplier companies in the database yet.</p>
-        )}
       </div>
     </main>
   );

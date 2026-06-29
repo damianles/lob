@@ -105,7 +105,12 @@ export function OnboardingForms() {
       setMessage(data.error ? JSON.stringify(data.error) : "Could not create supplier account.");
       return;
     }
-    setMessage(`Supplier account ready: ${data.data.legalName}`);
+    const approved = data.data?.verificationStatus === "APPROVED";
+    setMessage(
+      approved
+        ? `Supplier account ready: ${data.data.legalName}. You can post loads now.`
+        : `Supplier account created: ${data.data.legalName}. LOB must approve your company before you can post loads — we'll review your registration soon.`,
+    );
     setShipper(emptyShipper);
     refreshViewerRole();
     router.refresh();

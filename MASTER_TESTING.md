@@ -23,7 +23,7 @@ npm run set-admin -- your-email@example.com
 
 | Role | How |
 |------|-----|
-| **Mill / seller** | Second Clerk user (or incognito) → Account setup → mill → post loads. |
+| **Mill / seller** | Second Clerk user (or incognito) → Account setup → mill → post loads (use `LOB_AUTO_APPROVE_SUPPLIERS=true` on preview to skip queue). |
 | **Carrier** | Third user or same incognito → trucking company → book (use `LOB_AUTO_APPROVE_CARRIERS=true` on preview to skip queue). |
 | **Ops / you** | Your email after `set-admin` → admin pages + full visibility. |
 

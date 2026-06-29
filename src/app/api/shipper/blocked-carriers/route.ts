@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
 import { getActorContext } from "@/lib/request-context";
+import { isSupplierActor } from "@/lib/simulated-actor-company";
 
 const putSchema = z.object({
   blockedCarrierCompanyIds: z.array(z.string().min(1)).max(200),
@@ -11,7 +12,7 @@ const putSchema = z.object({
 
 export async function GET() {
   const actor = await getActorContext();
-  if (!actor.userId || actor.role !== "SHIPPER" || !actor.companyId) {
+  if (!isSupplierActor(actor)) {
     return NextResponse.json({ error: "Supplier accounts only." }, { status: 403 });
   }
 
@@ -34,7 +35,7 @@ export async function GET() {
 
 export async function PUT(req: Request) {
   const actor = await getActorContext();
-  if (!actor.userId || actor.role !== "SHIPPER" || !actor.companyId) {
+  if (!isSupplierActor(actor)) {
     return NextResponse.json({ error: "Supplier accounts only." }, { status: 403 });
   }
 

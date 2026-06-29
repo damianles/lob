@@ -17,7 +17,7 @@ export async function POST(
   const result = await updateCompanyVerificationStatus(
     companyId,
     VerificationStatus.REJECTED,
-    "carrier",
+    "supplier",
   );
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: result.status });
@@ -25,4 +25,3 @@ export async function POST(
 
   return NextResponse.json({ data: result.data });
 }
-

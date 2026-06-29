@@ -25,6 +25,7 @@ import {
   LUMBER_TREATMENT_OPTIONS,
   summarizeLumberSpec,
 } from "@/lib/lumber-spec";
+import { formatDisplayDate } from "@/lib/format-display-date";
 import { formatMoney } from "@/lib/money";
 import { parseRadiusToMiles } from "@/lib/units";
 import { milesBetweenZips } from "@/lib/zip-distance";
@@ -359,7 +360,9 @@ export function LoadBoardWorkspace({
     const withRate = filteredLoads.filter((l) => l.offeredRateUsd != null || l.booking);
     const sum = withRate.reduce((acc, l) => acc + toUsdEquivalentForSummary(l), 0);
     const avg = withRate.length ? sum / withRate.length : null;
-    return { count: filteredLoads.length, avgPostedOrBooked: avg };
+    const booked = filteredLoads.filter((l) => l.booking).length;
+    const open = filteredLoads.filter((l) => l.status === "POSTED").length;
+    return { count: filteredLoads.length, avgPostedOrBooked: avg, booked, open };
   }, [filteredLoads]);
 
   function swapOriginDest() {
@@ -451,18 +454,53 @@ export function LoadBoardWorkspace({
 
         {/* Search header */}
         <div className="border-b border-stone-100 bg-stone-50/50 px-6 py-6 sm:px-8 sm:py-8">
+          {isShipper ? (
+            <div className="mb-4">
+              <h1 className="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Your loads</h1>
+              <p className="mt-1 text-sm text-zinc-600">
+                Post freight and track open postings, carrier bookings, and delivery status — only your company&apos;s
+                loads appear here.
+              </p>
+            </div>
+          ) : null}
           <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
             <p className="text-sm text-zinc-600">
-              <span className="font-medium text-zinc-800">{summary.count}</span> load
-              {summary.count !== 1 ? "s" : ""}
-              {originQ || destQ ? " match your search" : " on the board"}
+              {isShipper ? (
+                <>
+                  <span className="font-medium text-zinc-800">{summary.count}</span> of your load
+                  {summary.count !== 1 ? "s" : ""}
+                  {originQ || destQ ? " match your filters" : ""}
+                  {summary.count > 0 && !originQ && !destQ ? (
+                    <>
+                      {" "}
+                      · <span className="font-medium text-zinc-800">{summary.open}</span> open
+                      {summary.booked > 0 ? (
+                        <>
+                          {" "}
+                          · <span className="font-medium text-zinc-800">{summary.booked}</span> booked by a carrier
+                        </>
+                      ) : null}
+                    </>
+                  ) : null}
+                </>
+              ) : (
+                <>
+                  <span className="font-medium text-zinc-800">{summary.count}</span> load
+                  {summary.count !== 1 ? "s" : ""}
+                  {originQ || destQ ? " match your search" : " on the board"}
+                </>
+              )}
             </p>
             <button
               type="button"
               onClick={() => setMoreFilters((v) => !v)}
               className="text-xs font-medium text-lob-navy underline hover:no-underline"
             >
-              {moreFilters ? "Hide extra filters" : "More filters (sort, dates, EMR, equipment…)"}
+              {moreFilters
+                ? "Hide extra filters"
+                : isShipper
+                  ? "More filters (sort, dates, equipment…)"
+                  : "More filters (sort, dates, EMR, equipment…)"}
             </button>
           </div>
 
@@ -496,22 +534,22 @@ export function LoadBoardWorkspace({
                 )}
                 {postedFrom && (
                   <FilterChip onRemove={() => setPostedFrom("")}>
-                    Posted from: {new Date(postedFrom).toLocaleDateString()}
+                    Posted from: {formatDisplayDate(postedFrom)}
                   </FilterChip>
                 )}
                 {postedTo && (
                   <FilterChip onRemove={() => setPostedTo("")}>
-                    Posted to: {new Date(postedTo).toLocaleDateString()}
+                    Posted to: {formatDisplayDate(postedTo)}
                   </FilterChip>
                 )}
                 {pickupFrom && (
                   <FilterChip onRemove={() => setPickupFrom("")}>
-                    Pickup from: {new Date(pickupFrom).toLocaleDateString()}
+                    Pickup from: {formatDisplayDate(pickupFrom)}
                   </FilterChip>
                 )}
                 {pickupTo && (
                   <FilterChip onRemove={() => setPickupTo("")}>
-                    Pickup to: {new Date(pickupTo).toLocaleDateString()}
+                    Pickup to: {formatDisplayDate(pickupTo)}
                   </FilterChip>
                 )}
                 {emrZip && (
@@ -619,7 +657,7 @@ export function LoadBoardWorkspace({
             {isShipper && (
               <label
                 className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50"
-                title="Hide loads booked by brokers — only show asset-based carriers"
+                title="Hide loads booked by freight brokers"
               >
                 <input
                   type="checkbox"
@@ -774,6 +812,7 @@ export function LoadBoardWorkspace({
                   />
                 </div>
               </div>
+              {!isShipper && (
               <div className="rounded-lg border border-dashed border-zinc-300 bg-white px-3 py-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-xs font-semibold uppercase tracking-wide text-zinc-600">EMR</span>
@@ -787,9 +826,8 @@ export function LoadBoardWorkspace({
               <p className="mt-1 text-[11px] text-zinc-500">
                 Great-circle distance between US ZIP or Canadian postal (FSA). Miles vs kilometres for these fields is
                 set under{" "}
-                <strong className="font-medium text-zinc-700">Carrier profile</strong> (carriers) or{" "}
-                <strong className="font-medium text-zinc-700">Carrier preferences</strong> (suppliers). Filtering always
-                compares in miles internally.
+                <strong className="font-medium text-zinc-700">Carrier profile</strong>.
+                Filtering always compares in miles internally.
               </p>
                 <div className="mt-2 space-y-2 sm:col-span-3">
                   <PlaceAutocomplete
@@ -823,6 +861,7 @@ export function LoadBoardWorkspace({
                   />
                 </div>
               </div>
+              )}
               <div className="rounded-lg border border-dashed border-zinc-300 bg-white px-3 py-3">
                 <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                   <span className="text-xs font-semibold uppercase tracking-wide text-zinc-600">Lumber spec</span>
@@ -938,16 +977,33 @@ export function LoadBoardWorkspace({
 
         {/* Lane summary strip */}
         <div className="flex flex-wrap items-center gap-4 border-b border-stone-100 bg-white px-6 py-3.5 text-sm sm:px-8">
-          <span className="text-zinc-600">
-            Avg rate (filtered, ≈ USD):{" "}
-            <span className="font-semibold text-zinc-900">
-              {summary.avgPostedOrBooked != null ? formatMoney(summary.avgPostedOrBooked, "USD") : "—"}
-            </span>
-          </span>
-          <span className="text-zinc-400">·</span>
-          <span className="text-zinc-600">
-            Delivered all-time: <span className="font-semibold text-zinc-900">{stats.delivered}</span>
-          </span>
+          {isShipper ? (
+            <>
+              <span className="text-zinc-600">
+                Avg rate on your loads (≈ USD):{" "}
+                <span className="font-semibold text-zinc-900">
+                  {summary.avgPostedOrBooked != null ? formatMoney(summary.avgPostedOrBooked, "USD") : "—"}
+                </span>
+              </span>
+              <span className="text-zinc-400">·</span>
+              <span className="text-zinc-600">
+                Delivered: <span className="font-semibold text-zinc-900">{stats.delivered}</span>
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="text-zinc-600">
+                Avg rate (filtered, ≈ USD):{" "}
+                <span className="font-semibold text-zinc-900">
+                  {summary.avgPostedOrBooked != null ? formatMoney(summary.avgPostedOrBooked, "USD") : "—"}
+                </span>
+              </span>
+              <span className="text-zinc-400">·</span>
+              <span className="text-zinc-600">
+                Delivered all-time: <span className="font-semibold text-zinc-900">{stats.delivered}</span>
+              </span>
+            </>
+          )}
         </div>
 
         {/* Results: cards on all small screens; desktop can choose a dense "table" (stacked) list. */}
@@ -1144,12 +1200,12 @@ export function LoadBoardWorkspace({
         {filteredLoads.length === 0 && (
           <EmptyState
             icon={hasActiveFilters ? <SearchIcon /> : <TruckIcon />}
-            title={hasActiveFilters ? "No loads match your filters" : "No loads on the board yet"}
+            title={hasActiveFilters ? "No loads match your filters" : isShipper ? "No loads posted yet" : "No loads on the board yet"}
             description={
               hasActiveFilters
-                ? "Try adjusting your search criteria or clearing some filters"
+                ? "Try adjusting your filters or clearing them to see your postings."
                 : isShipper
-                  ? "Post your first load to get started"
+                  ? "Post a load to make it available to approved carriers on LOB."
                   : "Check back soon for new load postings"
             }
             action={

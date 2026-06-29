@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { CarrierTypeTag } from "@/components/carrier-type-tag";
+import { formatDisplayDate } from "@/lib/format-display-date";
 import { PlaceAutocomplete } from "@/components/place-autocomplete";
 import { LUMBER_EQUIPMENT } from "@/lib/lumber-equipment";
 
@@ -107,11 +107,8 @@ export function CapacityWorkspace() {
   const isShipperLike = me?.role === "SHIPPER" || me?.role === "ADMIN";
   const isCarrier = me?.role === "DISPATCHER";
 
-  const fmtRange = (a: string, b: string) => {
-    const da = new Date(a);
-    const db = new Date(b);
-    return `${da.toLocaleDateString()} – ${db.toLocaleDateString()}`;
-  };
+  const fmtRange = (a: string, b: string) =>
+    `${formatDisplayDate(a)} – ${formatDisplayDate(b)}`;
 
   async function submitCapacity(e: React.FormEvent) {
     e.preventDefault();

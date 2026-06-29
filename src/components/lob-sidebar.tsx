@@ -64,8 +64,15 @@ export function LobSidebar({
   const { viewer, loading } = useViewerRole();
   const navItems = useMemo(() => {
     const showCarrierPrefs = !loading && viewer.kind === "SHIPPER";
-    if (showCarrierPrefs) return items;
-    return items.filter((i) => i.id !== "carrierPrefs");
+    let list = showCarrierPrefs ? items : items.filter((i) => i.id !== "carrierPrefs");
+    if (!loading && viewer.kind === "SHIPPER") {
+      list = list.map((item) =>
+        item.id === "loads"
+          ? { ...item, hint: "Post loads and track your company's postings" }
+          : item,
+      );
+    }
+    return list;
   }, [loading, viewer.kind]);
 
   return (

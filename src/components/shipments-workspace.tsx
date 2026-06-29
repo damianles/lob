@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 
 import { CarrierTypeTag } from "@/components/carrier-type-tag";
 import { PlaceAutocomplete } from "@/components/place-autocomplete";
+import { formatDisplayDate } from "@/lib/format-display-date";
 import { formatMoney } from "@/lib/money";
 import { laneQueryTokenString } from "@/lib/place-helpers";
 import type { LumberSpec } from "@/lib/lumber-spec";
@@ -484,7 +485,7 @@ export function ShipmentsWorkspace({
                     {r.originCity}, {r.originState} → {r.destinationCity}, {r.destinationState}
                   </td>
                   <td className="px-3 py-2 text-zinc-700 tabular-nums">
-                    {new Date(r.requestedPickupAt).toLocaleDateString()}
+                    {formatDisplayDate(r.requestedPickupAt)}
                   </td>
                   <td className="px-3 py-2">
                     <span

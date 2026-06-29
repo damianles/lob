@@ -18,7 +18,9 @@ export function RoleRibbon() {
 
   const accents = roleAccentClasses(viewer.kind);
   const showVerifyCta =
-    viewer.kind !== "ADMIN" && !viewer.verified && Boolean(viewer.companyId);
+    viewer.kind === "CARRIER" && !viewer.verified && Boolean(viewer.companyId);
+  const showSupplierPending =
+    viewer.kind === "SHIPPER" && !viewer.verified && Boolean(viewer.companyId);
 
   return (
     <div
@@ -66,11 +68,14 @@ export function RoleRibbon() {
           )}
           {showVerifyCta && (
             <Link
-              href={viewer.kind === "CARRIER" ? "/carrier/compliance" : "/onboarding"}
+              href="/carrier/compliance"
               className="hidden font-semibold underline-offset-2 hover:underline sm:inline"
             >
               Complete verification →
             </Link>
+          )}
+          {showSupplierPending && (
+            <span className="hidden font-semibold opacity-90 sm:inline">Awaiting LOB approval</span>
           )}
         </div>
       </div>

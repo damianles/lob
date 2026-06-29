@@ -30,6 +30,7 @@ export default async function OnboardingPage() {
   }
 
   const carrierAutoApprove = process.env.LOB_AUTO_APPROVE_CARRIERS === "true";
+  const supplierAutoApprove = process.env.LOB_AUTO_APPROVE_SUPPLIERS === "true";
   const personaSwitch = isAdminPersonaSwitchEnabled();
 
   return (
@@ -46,7 +47,7 @@ export default async function OnboardingPage() {
                   Two separate registrations: <strong className="font-semibold text-stone-700">Suppliers</strong> (mills,
                   wholesalers, reloads) post loads. <strong className="font-semibold text-stone-700">Carriers</strong>{" "}
                   (asset fleets or brokers) book them. Pick the column that matches your business — they are not
-                  interchangeable. Carriers are usually verified by admin before booking.
+                  interchangeable. Carriers are usually verified by admin before booking; suppliers before posting loads.
                 </p>
               </div>
             </div>
@@ -116,6 +117,12 @@ export default async function OnboardingPage() {
               <p className="mt-2 rounded-md border border-lob-gold/40 bg-lob-paper px-3 py-2 text-sm text-lob-navy">
                 <strong>Preview mode:</strong> this server has <code className="rounded bg-white px-1 ring-1 ring-stone-200">LOB_AUTO_APPROVE_CARRIERS=true</code>{" "}
                 — new trucking companies are approved immediately so you can book without the admin queue.
+              </p>
+            )}
+            {supplierAutoApprove && (
+              <p className="mt-2 rounded-md border border-lob-gold/40 bg-lob-paper px-3 py-2 text-sm text-lob-navy">
+                <strong>Preview mode:</strong> this server has <code className="rounded bg-white px-1 ring-1 ring-stone-200">LOB_AUTO_APPROVE_SUPPLIERS=true</code>{" "}
+                — new supplier companies are approved immediately so you can post loads without the admin queue.
               </p>
             )}
             <OnboardingForms />

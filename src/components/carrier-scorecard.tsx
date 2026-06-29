@@ -1,4 +1,5 @@
 import { CarrierTypeTag } from "@/components/carrier-type-tag";
+import { formatDisplayDate } from "@/lib/format-display-date";
 
 type DocSummary = { kind: string; expiresAt: Date | null };
 
@@ -161,7 +162,7 @@ export function CarrierScorecard({ carrier, documents = [], className }: Props) 
                   <span className="font-medium">{d.kind}</span>
                   {d.expiresAt ? (
                     <span className={expSoon ? "text-amber-800" : "text-zinc-500"}>
-                      · expires {d.expiresAt.toLocaleDateString()}
+                      · expires {formatDisplayDate(d.expiresAt)}
                     </span>
                   ) : (
                     <span className="text-zinc-400">· no expiry</span>

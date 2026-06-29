@@ -135,7 +135,7 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
             Only the posting mill, the booked carrier, or approved carriers browsing open loads can view this page.
           </p>
           <Link href="/" className="mt-4 inline-block text-sm font-medium text-lob-navy underline">
-            Back to load board
+            {actor.role === "SHIPPER" ? "Back to your loads" : "Back to load board"}
           </Link>
         </div>
       </main>
@@ -149,10 +149,17 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
     ? carrierCompanyNameForViewer(load.booking.carrierCompany.legalName, load, visibilityActor)
     : null;
 
+  const supplierStatsScope =
+    actor.role === "SHIPPER" && appUser.companyId
+      ? { shipperCompanyId: appUser.companyId }
+      : undefined;
+
   const [active, rush, delivered] = await Promise.all([
-    prisma.load.count({ where: { status: { not: LoadStatus.DELIVERED } } }),
-    prisma.load.count({ where: { isRush: true } }),
-    prisma.load.count({ where: { status: LoadStatus.DELIVERED } }),
+    prisma.load.count({
+      where: { status: { not: LoadStatus.DELIVERED }, ...supplierStatsScope },
+    }),
+    prisma.load.count({ where: { isRush: true, ...supplierStatsScope } }),
+    prisma.load.count({ where: { status: LoadStatus.DELIVERED, ...supplierStatsScope } }),
   ]);
 
   const h = await headers();
@@ -170,7 +177,7 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
           <div className="mx-auto max-w-3xl">
             <Breadcrumb
               items={[
-                { label: "Loads", href: "/" },
+                { label: actor.role === "SHIPPER" ? "Your loads" : "Loads", href: "/" },
                 { label: load.referenceNumber },
               ]}
               className="mb-4"

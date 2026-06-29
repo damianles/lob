@@ -3,6 +3,7 @@ import { cookies, headers } from "next/headers";
 
 import { prisma } from "@/lib/prisma";
 import { syncClerkUserToDatabase } from "@/lib/sync-clerk-user";
+import { seedCompanyIdForViewAs } from "@/lib/simulated-actor-company";
 import { VIEW_AS_COOKIE, decodeViewAsCookie, type ViewAsPayload } from "@/lib/view-as";
 
 export type ActorContext = {
@@ -81,9 +82,17 @@ export async function getActorContext(): Promise<ActorContext> {
       }
     }
 
+    let companyId = realCompanyId;
+    if (realRole === "ADMIN" && viewAs) {
+      const simulatedCompanyId = await seedCompanyIdForViewAs(viewAs);
+      if (simulatedCompanyId) {
+        companyId = simulatedCompanyId;
+      }
+    }
+
     return {
       userId: appUser.id,
-      companyId: realCompanyId,
+      companyId,
       role: effectiveRole,
       realRole,
       realCompanyId,

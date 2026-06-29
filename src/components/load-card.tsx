@@ -166,6 +166,9 @@ export function LoadCard({
             {isShipper ? "You posted this load" : `Shipper: ${load.shipperCompanyName}`}
           </div>
         )}
+        {isShipper && load.status === "POSTED" && !load.booking && (
+          <p className="mb-3 text-xs font-medium text-stone-500">Awaiting carrier booking</p>
+        )}
         {load.booking && (
           <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-stone-600">
             <span>Carrier: {load.booking.carrierCompany.legalName || "Booked"}</span>

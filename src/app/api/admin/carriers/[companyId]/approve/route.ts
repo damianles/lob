@@ -1,7 +1,7 @@
 import { VerificationStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 
-import { prisma } from "@/lib/prisma";
+import { updateCompanyVerificationStatus } from "@/lib/admin-company-verification";
 import { getActorContext } from "@/lib/request-context";
 
 export async function POST(
@@ -14,13 +14,15 @@ export async function POST(
   }
 
   const { companyId } = await ctx.params;
-  const updated = await prisma.company.update({
-    where: { id: companyId },
-    data: {
-      verificationStatus: VerificationStatus.APPROVED,
-    },
-  });
+  const result = await updateCompanyVerificationStatus(
+    companyId,
+    VerificationStatus.APPROVED,
+    "carrier",
+  );
+  if (!result.ok) {
+    return NextResponse.json({ error: result.error }, { status: result.status });
+  }
 
-  return NextResponse.json({ data: updated });
+  return NextResponse.json({ data: result.data });
 }
 

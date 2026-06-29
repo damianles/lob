@@ -35,14 +35,21 @@ export async function GET() {
 
   const boardCutoff = new Date(Date.now() - 48 * 60 * 60 * 1000);
 
-  const clauses: Prisma.LoadWhereInput[] = [
-    {
-      OR: [
-        { status: { not: LoadStatus.POSTED } },
-        { AND: [{ status: LoadStatus.POSTED }, { requestedPickupAt: { gte: boardCutoff } }] },
-      ],
-    },
-  ];
+  if (actor.role === "SHIPPER" && !actor.companyId) {
+    return NextResponse.json({ data: [] });
+  }
+
+  const clauses: Prisma.LoadWhereInput[] =
+    actor.role === "SHIPPER" && actor.companyId
+      ? [{ shipperCompanyId: actor.companyId }]
+      : [
+          {
+            OR: [
+              { status: { not: LoadStatus.POSTED } },
+              { AND: [{ status: LoadStatus.POSTED }, { requestedPickupAt: { gte: boardCutoff } }] },
+            ],
+          },
+        ];
   if (hideRush) {
     clauses.push({ isRush: false });
   }

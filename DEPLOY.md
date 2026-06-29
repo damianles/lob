@@ -68,6 +68,7 @@ Set these for **Production** (and **Preview** if you use preview URLs):
 | Variable | Effect |
 |----------|--------|
 | `LOB_AUTO_APPROVE_CARRIERS=true` | New trucking companies are approved immediately (no admin queue). |
+| `LOB_AUTO_APPROVE_SUPPLIERS=true` | New supplier companies are approved immediately (no admin queue). |
 | `NEXT_PUBLIC_LOB_DEMO_MODE=true` | Yellow **Demo / preview** banner at the top of every page. |
 
 After changing env vars, **redeploy** so the new values apply.
