@@ -24,7 +24,6 @@ export function AnalyticsToggle({
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "x-user-role": "ADMIN",
             },
             body: JSON.stringify({ enabled: !enabled }),
           });

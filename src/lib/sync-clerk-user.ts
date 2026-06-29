@@ -8,6 +8,13 @@ import { prisma } from "@/lib/prisma";
 /** Comma- or semicolon-separated list; also honors legacy LOB_AUTO_ADMIN_EMAIL. Preview/staging only. */
 export function parseAutoAdminEmails(): Set<string> {
   const set = new Set<string>();
+  // Never honor email-only admin grants on Vercel Production unless explicitly opted in.
+  if (
+    process.env.VERCEL_ENV === "production" &&
+    process.env.LOB_ALLOW_PREVIEW_ADMIN_TOOLS !== "true"
+  ) {
+    return set;
+  }
   const list = process.env.LOB_AUTO_ADMIN_EMAILS?.split(/[,;]/).map((e) => e.trim().toLowerCase()).filter(Boolean);
   if (list) {
     for (const e of list) set.add(e);

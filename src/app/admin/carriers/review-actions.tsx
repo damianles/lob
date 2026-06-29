@@ -20,9 +20,6 @@ export function CarrierReviewActions({
     startTransition(async () => {
       await fetch(path, {
         method: "POST",
-        headers: {
-          "x-user-role": "ADMIN",
-        },
       });
       router.refresh();
     });
@@ -34,7 +31,6 @@ export function CarrierReviewActions({
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-user-role": "ADMIN",
         },
         body: JSON.stringify({ enabled }),
       });

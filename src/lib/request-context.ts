@@ -1,5 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 
 import { prisma } from "@/lib/prisma";
 import { syncClerkUserToDatabase } from "@/lib/sync-clerk-user";
@@ -21,23 +21,21 @@ export type ActorContext = {
   simulated: boolean;
 };
 
+const UNAUTHENTICATED: ActorContext = {
+  userId: null,
+  companyId: null,
+  role: null,
+  realRole: null,
+  realCompanyId: null,
+  viewAs: null,
+  simulated: false,
+};
+
 export async function getActorContext(): Promise<ActorContext> {
-  const h = await headers();
-
-  const fallback: ActorContext = {
-    userId: h.get("x-user-id"),
-    companyId: h.get("x-company-id"),
-    role: h.get("x-user-role"),
-    realRole: h.get("x-user-role"),
-    realCompanyId: h.get("x-company-id"),
-    viewAs: null,
-    simulated: false,
-  };
-
   try {
     const session = await auth();
     if (!session.userId) {
-      return fallback;
+      return UNAUTHENTICATED;
     }
 
     let appUser = await prisma.user.findUnique({
@@ -57,7 +55,7 @@ export async function getActorContext(): Promise<ActorContext> {
     }
 
     if (!appUser) {
-      return fallback;
+      return UNAUTHENTICATED;
     }
 
     const realRole = appUser.role;
@@ -100,6 +98,6 @@ export async function getActorContext(): Promise<ActorContext> {
       simulated: viewAs !== null,
     };
   } catch {
-    return fallback;
+    return UNAUTHENTICATED;
   }
 }

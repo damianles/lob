@@ -148,7 +148,7 @@ export async function POST(req: Request) {
   const actor = await getActorContext();
   if (!actor.companyId || !actor.userId) {
     return NextResponse.json(
-      { error: "Missing actor context. Provide x-company-id and x-user-id headers." },
+      { error: "Sign in and complete supplier onboarding to post loads." },
       { status: 401 },
     );
   }
