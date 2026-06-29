@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { CarrierTypeTag } from "@/components/carrier-type-tag";
 import { formatDisplayDate } from "@/lib/format-display-date";
 import { PlaceAutocomplete } from "@/components/place-autocomplete";
 import { LUMBER_EQUIPMENT } from "@/lib/lumber-equipment";

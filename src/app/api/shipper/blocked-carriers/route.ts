@@ -77,7 +77,7 @@ export async function PUT(req: Request) {
       ? [
           prisma.shipperCarrierExclusion.createMany({
             data: ids.map((carrierCompanyId) => ({
-              shipperCompanyId: actor.companyId!,
+              shipperCompanyId: actor.companyId,
               carrierCompanyId,
             })),
           }),

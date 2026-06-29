@@ -5,6 +5,8 @@ import {
 } from "@/lib/admin-test-personas";
 import type { ViewAsPayload } from "@/lib/view-as";
 
+import type { ActorContext } from "@/lib/request-context";
+
 /** Seed company row used when an admin previews a non-admin persona via view-as. */
 export async function seedCompanyIdForViewAs(viewAs: ViewAsPayload): Promise<string | null> {
   if (viewAs.role === "SHIPPER") {
@@ -24,10 +26,12 @@ export async function seedCompanyIdForViewAs(viewAs: ViewAsPayload): Promise<str
   return null;
 }
 
-export function isSupplierActor(actor: {
-  userId: string | null;
-  role: string | null;
-  companyId: string | null;
-}): boolean {
+export function isSupplierActor(
+  actor: Pick<ActorContext, "userId" | "role" | "companyId">,
+): actor is Pick<ActorContext, "userId" | "role" | "companyId"> & {
+  userId: string;
+  role: "SHIPPER";
+  companyId: string;
+} {
   return Boolean(actor.userId && actor.role === "SHIPPER" && actor.companyId);
 }
