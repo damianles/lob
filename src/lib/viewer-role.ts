@@ -284,28 +284,28 @@ export function roleAccentClasses(
         pageBg: "bg-sky-50/80",
       };
     case "broker":
-      /* Cool slate — neutral, distinct from asset carriers. */
+      /* Cool slate-indigo — brokerage / desk feel. */
       return {
-        ribbonBg: "bg-slate-100",
-        ribbonBorder: "border-slate-300",
-        ribbonText: "text-slate-900",
-        pillBg: "bg-slate-600",
+        ribbonBg: "bg-indigo-50",
+        ribbonBorder: "border-indigo-200",
+        ribbonText: "text-indigo-950",
+        pillBg: "bg-indigo-600",
         pillText: "text-white",
-        pillRing: "ring-slate-500/30",
-        cardBorder: "border-l-slate-500",
-        pageBg: "bg-slate-50",
+        pillRing: "ring-indigo-500/30",
+        cardBorder: "border-l-indigo-500",
+        pageBg: "bg-indigo-50/70",
       };
     case "ownerOp":
-      /* Warm stone — second neutral for single-truck owner-ops. */
+      /* Warm sage — clearly distinct from cool indigo broker. */
       return {
-        ribbonBg: "bg-stone-100",
-        ribbonBorder: "border-stone-300",
-        ribbonText: "text-stone-900",
-        pillBg: "bg-stone-600",
+        ribbonBg: "bg-[#eef4ec]",
+        ribbonBorder: "border-[#c5d4bc]",
+        ribbonText: "text-[#1f3320]",
+        pillBg: "bg-[#4d6b45]",
         pillText: "text-white",
-        pillRing: "ring-stone-500/30",
-        cardBorder: "border-l-stone-500",
-        pageBg: "bg-stone-50",
+        pillRing: "ring-[#4d6b45]/30",
+        cardBorder: "border-l-[#4d6b45]",
+        pageBg: "bg-[#f3f6f1]",
       };
     case "admin":
       return {

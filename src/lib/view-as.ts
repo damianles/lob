@@ -143,9 +143,9 @@ export function viewAsInitialsClasses(tone: (typeof VIEW_AS_PRESETS)[number]["to
     case "assetCarrier":
       return "bg-sky-600 text-white";
     case "broker":
-      return "bg-slate-600 text-white";
+      return "bg-indigo-600 text-white";
     case "ownerOp":
-      return "bg-stone-600 text-white";
+      return "bg-[#4d6b45] text-white";
   }
 }
 
