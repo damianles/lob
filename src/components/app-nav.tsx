@@ -4,8 +4,6 @@ import { UserButton, useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { startTransition, useEffect, useState } from "react";
 
-import { LobWoodOIcon } from "@/components/lob-wood-o-icon";
-import { lobAppIconAlt } from "@/components/lob-app-icon-mark";
 import { useViewerRole } from "@/components/providers/app-providers";
 import { cn } from "@/lib/cn";
 import { shouldShowGlobalAdminBar } from "@/lib/actor-permissions";
@@ -26,7 +24,7 @@ export function AppNav() {
   const { isSignedIn } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
   const { viewer } = useViewerRole();
-  const accents = roleAccentClasses(viewer.kind);
+  const accents = roleAccentClasses(viewer);
 
   useEffect(() => {
     if (!isSignedIn) {
@@ -62,14 +60,7 @@ export function AppNav() {
   return (
     <header className="relative z-50 border-b border-stone-200/50 bg-white/75 backdrop-blur-xl supports-[backdrop-filter]:bg-white/60 lg:sticky lg:top-0">
       <div className="mx-auto flex max-w-[1680px] items-center justify-between gap-3 px-3 py-2 sm:gap-6 sm:px-8 sm:py-4">
-        <div className="flex min-w-0 flex-1 items-center gap-8">
-          <Link
-            href="/"
-            className="group hidden shrink-0 rounded-xl p-1.5 ring-offset-2 transition hover:bg-stone-100/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lob-navy/25 sm:flex"
-            aria-label={lobAppIconAlt()}
-          >
-            <LobWoodOIcon className="h-10 w-10 shrink-0 drop-shadow-sm sm:h-11 sm:w-11" decorative />
-          </Link>
+        <div className="flex min-w-0 flex-1 items-center">
           <nav className="hide-scrollbar -mx-1 flex min-w-0 flex-1 items-center gap-x-1 overflow-x-auto px-1 sm:flex-wrap sm:gap-y-1.5 sm:overflow-visible" aria-label="Primary">
             {links.map((l) => (
               <Link

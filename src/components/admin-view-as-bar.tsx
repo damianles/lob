@@ -6,7 +6,12 @@ import { createPortal } from "react-dom";
 
 import { useViewerRole } from "@/components/providers/app-providers";
 import { roleAccentClasses } from "@/lib/viewer-role";
-import { VIEW_AS_PRESETS, viewAsLabel, type ViewAsPayload } from "@/lib/view-as";
+import {
+  VIEW_AS_PRESETS,
+  isViewAsPresetActive,
+  viewAsInitialsClasses,
+  type ViewAsPayload,
+} from "@/lib/view-as";
 
 /**
  * Admin-only role-perspective switcher.
@@ -159,7 +164,7 @@ export function AdminViewAsBar() {
 
   // When simulating, paint the bar in the simulated role's accent so admin
   // experiences the visual identity each user sees.
-  const accent = roleAccentClasses(viewer.kind);
+  const accent = roleAccentClasses(viewer);
   const simulating = viewer.simulated;
   const personaLabel = simulating
     ? `${viewer.label}${viewer.companyName ? ` · ${viewer.companyName}` : ""}`
@@ -181,11 +186,11 @@ export function AdminViewAsBar() {
         <div className={`flex min-w-0 items-center gap-2 ${simulating ? accent.ribbonText : "text-amber-900"}`}>
           <span
             aria-hidden
-            className={`inline-flex h-5 w-5 items-center justify-center rounded-full ${
+            className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 ${
               simulating ? accent.pillBg : "bg-amber-600"
-            } text-[10px] font-bold ${simulating ? accent.pillText : "text-white"}`}
+            } text-[9px] font-bold tracking-tight ${simulating ? accent.pillText : "text-white"}`}
           >
-            {simulating ? "👁" : "★"}
+            {simulating ? viewer.shortLabel : "★"}
           </span>
           <span className="font-semibold uppercase tracking-wider">
             {simulating ? "Viewing as" : "Admin"}
@@ -248,15 +253,7 @@ export function AdminViewAsBar() {
                     </p>
                     <ul className="space-y-0.5 pr-0.5">
                       {VIEW_AS_PRESETS.map((preset) => {
-                        const isActive =
-                          simulating &&
-                          viewer.kind ===
-                            (preset.payload.role === "SHIPPER"
-                              ? "SHIPPER"
-                              : preset.payload.role === "ADMIN"
-                                ? "ADMIN"
-                                : "CARRIER") &&
-                          viewAsLabel(preset.payload) === viewer.label;
+                        const isActive = isViewAsPresetActive(preset, viewer);
                         return (
                           <li key={preset.id}>
                             <button
@@ -271,13 +268,9 @@ export function AdminViewAsBar() {
                             >
                               <span
                                 aria-hidden
-                                className={`mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold ${
-                                  preset.payload.role === "SHIPPER"
-                                    ? "bg-lob-navy text-white"
-                                    : "bg-emerald-600 text-white"
-                                }`}
+                                className={`mt-0.5 inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-[9px] font-bold tracking-tight ${viewAsInitialsClasses(preset.tone)}`}
                               >
-                                {preset.label.slice(0, 1)}
+                                {preset.initials}
                               </span>
                               <span className="min-w-0 flex-1">
                                 <span className="block font-semibold text-stone-800">{preset.label}</span>
@@ -286,7 +279,7 @@ export function AdminViewAsBar() {
                                 </span>
                               </span>
                               {isActive && (
-                                <span className="mt-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700">
+                                <span className="mt-1 text-[10px] font-bold uppercase tracking-wider text-sky-700">
                                   Active
                                 </span>
                               )}

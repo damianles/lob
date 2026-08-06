@@ -7,6 +7,7 @@ import { AppNav } from "@/components/app-nav";
 import { LobBrandMasthead } from "@/components/lob-brand-masthead";
 import { DemoBanner } from "@/components/demo-banner";
 import { DeployFingerprint } from "@/components/deploy-fingerprint";
+import { PersonaBodyTint } from "@/components/persona-body-tint";
 import { AppProviders } from "@/components/providers/app-providers";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { RoleRibbon } from "@/components/role-ribbon";
@@ -42,6 +43,7 @@ export default function RootLayout({
           <AppProviders>
             <DemoBanner />
             <DeployFingerprint />
+            <PersonaBodyTint />
             <LobBrandMasthead />
             <AdminViewAsBar />
             <RoleRibbon />

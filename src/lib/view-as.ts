@@ -94,31 +94,83 @@ export function viewAsLabel(p: ViewAsPayload): string {
 export const VIEW_AS_PRESETS: Array<{
   id: string;
   label: string;
+  /** Circle badge letters: S / AC / B / OO */
+  initials: string;
+  /** Matches PersonaTone for accent colors in the picker. */
+  tone: "supplier" | "assetCarrier" | "broker" | "ownerOp";
   hint: string;
   payload: ViewAsPayload;
 }> = [
   {
     id: "supplier",
     label: "Supplier",
+    initials: "S",
+    tone: "supplier",
     hint: "Mill or wholesaler — the supplier-side product is one persona",
     payload: { role: "SHIPPER", verified: true },
   },
   {
     id: "asset-carrier",
     label: "Asset Carrier",
+    initials: "AC",
+    tone: "assetCarrier",
     hint: "Dispatcher at an asset-based fleet",
     payload: { role: "DISPATCHER", carrierType: "ASSET_BASED", verified: true },
   },
   {
     id: "broker",
     label: "Broker",
+    initials: "B",
+    tone: "broker",
     hint: "Freight brokerage dispatcher",
     payload: { role: "DISPATCHER", carrierType: "BROKER", verified: true },
   },
   {
     id: "owner-op",
     label: "Owner-operator",
+    initials: "OO",
+    tone: "ownerOp",
     hint: "Single-truck owner-operator driver",
     payload: { role: "DRIVER", carrierType: "ASSET_BASED", isOwnerOperator: true, verified: true },
   },
 ];
+
+/** Circle badge classes for View-as picker (keep in sync with roleAccentClasses). */
+export function viewAsInitialsClasses(tone: (typeof VIEW_AS_PRESETS)[number]["tone"]): string {
+  switch (tone) {
+    case "supplier":
+      return "bg-lob-gold text-white";
+    case "assetCarrier":
+      return "bg-sky-600 text-white";
+    case "broker":
+      return "bg-slate-600 text-white";
+    case "ownerOp":
+      return "bg-stone-600 text-white";
+  }
+}
+
+export function isViewAsPresetActive(
+  preset: (typeof VIEW_AS_PRESETS)[number],
+  viewer: {
+    simulated: boolean;
+    kind: string;
+    carrierType: string | null;
+    isOwnerOperator: boolean;
+  },
+): boolean {
+  if (!viewer.simulated) return false;
+  const p = preset.payload;
+  if (p.role === "SHIPPER") return viewer.kind === "SHIPPER";
+  if (p.isOwnerOperator) return viewer.kind === "CARRIER" && viewer.isOwnerOperator;
+  if (p.carrierType === "BROKER") {
+    return viewer.kind === "CARRIER" && viewer.carrierType === "BROKER" && !viewer.isOwnerOperator;
+  }
+  if (p.carrierType === "ASSET_BASED") {
+    return (
+      viewer.kind === "CARRIER" &&
+      viewer.carrierType === "ASSET_BASED" &&
+      !viewer.isOwnerOperator
+    );
+  }
+  return false;
+}

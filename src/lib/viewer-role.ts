@@ -16,7 +16,7 @@ export type ViewerRole = {
   kind: ViewerKind;
   /** Verbose label e.g. "Mill", "Wholesaler", "Carrier (Asset-based)", "Broker" */
   label: string;
-  /** Short label e.g. "MILL", "BROKER", "ASSET", "ADMIN" — for the role pill */
+  /** Compact badge: S / AC / B / OO / ADMIN — used in nav pill and View-as circles */
   shortLabel: string;
   companyId: string | null;
   companyName: string | null;
@@ -79,7 +79,8 @@ function viewerRoleForCarrierOrg(
       : ct === "ASSET_BASED"
         ? "Carrier (Asset-based)"
         : "Carrier";
-  const shortLabel = oo ? "OWNER-OP" : ct === "BROKER" ? "BROKER" : ct === "ASSET_BASED" ? "ASSET" : "CARRIER";
+  /** Compact badges: S / AC / B / OO (see admin View-as picker). */
+  const shortLabel = oo ? "OO" : ct === "BROKER" ? "B" : ct === "ASSET_BASED" ? "AC" : "AC";
   return {
     kind: "CARRIER",
     label,
@@ -173,7 +174,7 @@ export function deriveViewerRole(me: MeApiResponse | null | undefined): ViewerRo
     return {
       kind: "SHIPPER",
       label: "Supplier — post loads",
-      shortLabel: "SUPPLIER",
+      shortLabel: "S",
       companyId: company?.id ?? null,
       companyName: company?.legalName ?? null,
       supplierKind,
@@ -204,8 +205,35 @@ export function deriveViewerRole(me: MeApiResponse | null | undefined): ViewerRo
   };
 }
 
-/** Tailwind class helpers for role-tinted accents (lightweight; no inline styles). */
-export function roleAccentClasses(kind: ViewerKind): {
+/**
+ * Visual persona for chrome tinting — finer than ViewerKind so asset carriers,
+ * brokers, and owner-ops each get a distinct wash.
+ */
+export type PersonaTone =
+  | "supplier"
+  | "assetCarrier"
+  | "broker"
+  | "ownerOp"
+  | "admin"
+  | "setup"
+  | "guest";
+
+export function personaToneFromViewer(
+  viewer: Pick<ViewerRole, "kind" | "carrierType" | "isOwnerOperator">,
+): PersonaTone {
+  if (viewer.kind === "SHIPPER") return "supplier";
+  if (viewer.kind === "ADMIN") return "admin";
+  if (viewer.kind === "SETUP") return "setup";
+  if (viewer.kind === "GUEST") return "guest";
+  if (viewer.kind === "CARRIER") {
+    if (viewer.isOwnerOperator) return "ownerOp";
+    if (viewer.carrierType === "BROKER") return "broker";
+    return "assetCarrier";
+  }
+  return "guest";
+}
+
+export type RoleAccentClasses = {
   ribbonBg: string;
   ribbonBorder: string;
   ribbonText: string;
@@ -213,19 +241,73 @@ export function roleAccentClasses(kind: ViewerKind): {
   pillText: string;
   pillRing: string;
   cardBorder: string;
-} {
-  switch (kind) {
-    case "CARRIER":
+  /** Soft full-page wash (main shells that opt in). */
+  pageBg: string;
+};
+
+/** Tailwind class helpers for persona-tinted accents (lightweight; no inline styles). */
+export function roleAccentClasses(
+  viewerOrKind: ViewerKind | Pick<ViewerRole, "kind" | "carrierType" | "isOwnerOperator">,
+): RoleAccentClasses {
+  const tone =
+    typeof viewerOrKind === "string"
+      ? personaToneFromViewer({
+          kind: viewerOrKind,
+          carrierType: null,
+          isOwnerOperator: false,
+        })
+      : personaToneFromViewer(viewerOrKind);
+
+  switch (tone) {
+    case "supplier":
+      /* Wood / honey-oak wash — matches LOB gold brand. */
       return {
-        ribbonBg: "bg-emerald-50",
-        ribbonBorder: "border-emerald-200",
-        ribbonText: "text-emerald-900",
-        pillBg: "bg-emerald-600",
+        ribbonBg: "bg-[#faf4eb]",
+        ribbonBorder: "border-[#e8d4b0]",
+        ribbonText: "text-[#5c3d12]",
+        pillBg: "bg-lob-gold",
         pillText: "text-white",
-        pillRing: "ring-emerald-500/30",
-        cardBorder: "border-l-emerald-500",
+        pillRing: "ring-lob-gold/35",
+        cardBorder: "border-l-lob-gold",
+        pageBg: "bg-[#faf6f0]",
       };
-    case "ADMIN":
+    case "assetCarrier":
+      /* Light blue — primary carrier (asset fleet) identity. */
+      return {
+        ribbonBg: "bg-sky-50",
+        ribbonBorder: "border-sky-200",
+        ribbonText: "text-sky-950",
+        pillBg: "bg-sky-600",
+        pillText: "text-white",
+        pillRing: "ring-sky-500/30",
+        cardBorder: "border-l-sky-500",
+        pageBg: "bg-sky-50/80",
+      };
+    case "broker":
+      /* Cool slate — neutral, distinct from asset carriers. */
+      return {
+        ribbonBg: "bg-slate-100",
+        ribbonBorder: "border-slate-300",
+        ribbonText: "text-slate-900",
+        pillBg: "bg-slate-600",
+        pillText: "text-white",
+        pillRing: "ring-slate-500/30",
+        cardBorder: "border-l-slate-500",
+        pageBg: "bg-slate-50",
+      };
+    case "ownerOp":
+      /* Warm stone — second neutral for single-truck owner-ops. */
+      return {
+        ribbonBg: "bg-stone-100",
+        ribbonBorder: "border-stone-300",
+        ribbonText: "text-stone-900",
+        pillBg: "bg-stone-600",
+        pillText: "text-white",
+        pillRing: "ring-stone-500/30",
+        cardBorder: "border-l-stone-500",
+        pageBg: "bg-stone-50",
+      };
+    case "admin":
       return {
         ribbonBg: "bg-amber-50",
         ribbonBorder: "border-amber-200",
@@ -234,18 +316,9 @@ export function roleAccentClasses(kind: ViewerKind): {
         pillText: "text-white",
         pillRing: "ring-amber-500/30",
         cardBorder: "border-l-amber-500",
+        pageBg: "bg-amber-50/40",
       };
-    case "SHIPPER":
-      return {
-        ribbonBg: "bg-[#eef1f7]",
-        ribbonBorder: "border-[#dde2ec]",
-        ribbonText: "text-lob-navy",
-        pillBg: "bg-lob-navy",
-        pillText: "text-white",
-        pillRing: "ring-lob-navy/30",
-        cardBorder: "border-l-lob-navy",
-      };
-    case "SETUP":
+    case "setup":
       return {
         ribbonBg: "bg-amber-50",
         ribbonBorder: "border-amber-200",
@@ -254,6 +327,7 @@ export function roleAccentClasses(kind: ViewerKind): {
         pillText: "text-white",
         pillRing: "ring-amber-500/30",
         cardBorder: "border-l-amber-500",
+        pageBg: "bg-amber-50/50",
       };
     default:
       return {
@@ -264,6 +338,7 @@ export function roleAccentClasses(kind: ViewerKind): {
         pillText: "text-white",
         pillRing: "ring-stone-500/30",
         cardBorder: "border-l-stone-300",
+        pageBg: "bg-lob-paper",
       };
   }
 }

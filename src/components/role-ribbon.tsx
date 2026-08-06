@@ -16,7 +16,7 @@ export function RoleRibbon() {
   const { viewer, loading } = useViewerRole();
   if (loading || viewer.kind === "GUEST") return null;
 
-  const accents = roleAccentClasses(viewer.kind);
+  const accents = roleAccentClasses(viewer);
   const showVerifyCta =
     viewer.kind === "CARRIER" && !viewer.verified && Boolean(viewer.companyId);
   const showSupplierPending =
