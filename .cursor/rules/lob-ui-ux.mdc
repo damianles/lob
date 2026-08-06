@@ -1,0 +1,42 @@
+---
+description: LOB UI/UX — brand chrome, logos, banners, and shell layout
+globs: src/components/**/*.{tsx,css},src/app/**/*.{tsx,css},src/app/globals.css
+alwaysApply: false
+---
+
+# LOB — UI / UX chrome
+
+Apply when editing shell layout, brand marks, nav, or page chrome. Prefer existing brand components over new ad-hoc logos.
+
+## Brand hierarchy (do not stack duplicates)
+
+| Layer | Component | Role |
+|-------|-----------|------|
+| Global wordmark | `LobBrandMasthead` in `src/app/layout.tsx` | Sole full-bleed top brand bar |
+| Primary nav | `AppNav` | Links + auth only — **no** LOB mark / wood-O |
+| In-app sidebar | `LobSidebar` | Compact mark + product name inside workspace |
+| Status chrome | `RoleRibbon`, `AdminViewAsBar`, `DemoBanner` | Role/admin/demo — not brand logos |
+
+- **One global masthead** — do not add a second wordmark above/beside `AppNav`.
+- **Masthead lockup** — square `LobAppIconMark` + `BRAND_PRODUCT_NAME` + `BRAND_POSITIONING`, **centered** on a full-bleed white bar (`justify-center`). Do not left-align or use the horizontal PNG lockup (`lob-brand-lockup.png`) in the masthead.
+- **Masthead is full-bleed** — `w-full` white bar edge-to-edge; do not re-introduce `max-w-[1680px]` on the masthead shell (content pages may still use that max width).
+- **No logo in `AppNav`** — home is the masthead (and sidebar on large screens).
+- Reuse `@/components/lob-brand-*`, `LobWoodOIcon`, `@/lib/brand`, `@/lib/brand-marketing` — do not invent new lockups.
+
+## UX defaults
+
+- Match neighboring Tailwind patterns (stone/navy/gold tokens in `globals.css`).
+- Preserve persona body tints (`PersonaBodyTint`) — do not override with one-off page backgrounds unless the task asks.
+- Mobile: same centered lockup at a smaller size; do not force a second brand treatment on phones.
+- Minimal diffs — no drive-by redesign of unrelated surfaces.
+
+## Ship
+
+- UI/UX session changes land on **`origin/main`** (commit + push) so the existing Vercel project **`lob`** deploys — do not create a new Vercel project.
+- Production aliases: `lob-damian-les-projects.vercel.app` (and related). Per-deploy `lob-*-damian-les-projects.vercel.app` URLs are snapshots of that same project.
+
+## Entry points
+
+- Shell: `src/app/layout.tsx`, `src/components/app-nav.tsx`, `src/components/lob-brand-masthead.tsx`
+- Workspace chrome: `src/components/lob-sidebar.tsx`, `src/components/load-board-workspace.tsx`
+- Tokens: `src/app/globals.css`, `src/lib/brand.ts`
