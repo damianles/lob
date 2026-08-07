@@ -18,8 +18,8 @@ Apply when editing shell layout, brand marks, nav, or page chrome. Prefer existi
 | Status chrome | `RoleRibbon`, `AdminViewAsBar`, `DemoBanner` | Role/admin/demo — not brand logos |
 
 - **One global masthead** — do not add a second wordmark above/beside `AppNav`.
-- **Masthead lockup** — square `LobAppIconMark` + `BRAND_PRODUCT_NAME` + `BRAND_POSITIONING`, **centered** on a full-bleed white bar (`justify-center`). Do not left-align or use the horizontal PNG lockup (`lob-brand-lockup.png`) in the masthead.
-- **Masthead is full-bleed** — `w-full` white bar edge-to-edge; do not re-introduce `max-w-[1680px]` on the masthead shell (content pages may still use that max width).
+- **Masthead lockup** — dark navy bar (`bg-lob-navy`) with centered `LOB_DARK_LOCKUP_SRC` (white LOB + “Lumber One Board”). No `#1` / positioning tagline in the masthead.
+- **Masthead is full-bleed** — `w-full` edge-to-edge; do not re-introduce `max-w-[1680px]` on the masthead shell (content pages may still use that max width).
 - **No logo in `AppNav`** — home is the masthead (and sidebar on large screens).
 - Reuse `@/components/lob-brand-*`, `LobWoodOIcon`, `@/lib/brand`, `@/lib/brand-marketing` — do not invent new lockups.
 
