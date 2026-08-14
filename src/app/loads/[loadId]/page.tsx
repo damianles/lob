@@ -4,9 +4,11 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
+import { CancelLoadButton } from "@/components/cancel-load-button";
 import { CarrierScorecard } from "@/components/carrier-scorecard";
 import { CarrierTypeTag } from "@/components/carrier-type-tag";
 import { DispatchQrPanel } from "@/components/dispatch-qr-panel";
+import { ExtendedPostingPanel } from "@/components/extended-posting-panel";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { LobBrandStrip } from "@/components/lob-brand-strip";
 import { LobSidebar } from "@/components/lob-sidebar";
@@ -273,6 +275,32 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
               )}
             </div>
 
+            {(isShipperOwner || isRealAdmin) && (
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                {load.status === LoadStatus.BOOKED && (
+                  <Link
+                    href={`/loads/${load.id}/rate-con`}
+                    className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-50"
+                  >
+                    Rate confirmation
+                  </Link>
+                )}
+                {(load.status === LoadStatus.BOOKED || load.status === LoadStatus.ASSIGNED || load.status === LoadStatus.IN_TRANSIT) && (
+                  <Link
+                    href={`/loads/${load.id}/bol-strip`}
+                    className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-50"
+                  >
+                    BOL / pickup strip
+                  </Link>
+                )}
+                <CancelLoadButton
+                  loadId={load.id}
+                  referenceNumber={load.referenceNumber}
+                  status={load.status}
+                />
+              </div>
+            )}
+
             {(() => {
               const lumber = extractLumberSpec(load.extendedPosting);
               return lumber ? <LumberSpecPanel spec={lumber} className="mt-4" /> : null;
@@ -310,12 +338,7 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
             )}
 
             {load.extendedPosting != null && (isShipperOwner || isRealAdmin || isBookedCarrier) && (
-              <details className="mt-4 rounded-lg border border-zinc-200 bg-white p-4 text-sm">
-                <summary className="cursor-pointer font-medium text-zinc-900">Full post details (supplier)</summary>
-                <pre className="mt-2 max-h-80 overflow-auto whitespace-pre-wrap break-words text-xs text-zinc-700">
-                  {JSON.stringify(load.extendedPosting, null, 2)}
-                </pre>
-              </details>
+              <ExtendedPostingPanel data={load.extendedPosting} className="mt-4" />
             )}
 
             <div className="mt-6">

@@ -284,7 +284,13 @@ export function LoadBoardWorkspace({
     const list = loads.filter((l) => {
       // Hard boundary: suppliers never see another company's loads in this workspace.
       if (isShipper && actor.companyId && l.shipperCompanyId !== actor.companyId) return false;
-      if (isShipper && !showCancelled && l.status === "CANCELLED") return false;
+      if (isShipper) {
+        if (showCancelled) {
+          if (l.status !== "CANCELLED") return false;
+        } else if (l.status === "CANCELLED") {
+          return false;
+        }
+      }
 
       const o = `${l.originCity} ${l.originState} ${l.originZip}`.toLowerCase();
       const d = `${l.destinationCity} ${l.destinationState} ${l.destinationZip}`.toLowerCase();
@@ -508,8 +514,7 @@ export function LoadBoardWorkspace({
                   <>
                     <span className="text-zinc-300">·</span>
                     <span>
-                      <span className="font-medium text-zinc-800">{summary.count}</span> showing
-                      (incl. cancelled)
+                      <span className="font-medium text-zinc-800">{summary.count}</span> cancelled
                     </span>
                   </>
                 ) : null}
@@ -535,7 +540,7 @@ export function LoadBoardWorkspace({
                     checked={showCancelled}
                     onChange={(e) => setShowCancelled(e.target.checked)}
                   />
-                  Show cancelled
+                  {showCancelled ? "Showing cancelled only" : "Show cancelled"}
                 </label>
                 {isDesktop && (
                   <div className="ml-auto">
