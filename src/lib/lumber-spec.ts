@@ -17,7 +17,6 @@ export const LUMBER_PRODUCT_CATEGORY_OPTIONS = [
   { value: "POLES", label: "Poles / posts" },
   { value: "PELLETS", label: "Wood pellets / bagged" },
   { value: "CHIPS", label: "Chips / hog fuel / sawdust" },
-  { value: "MILLWORK", label: "Millwork / mouldings / finished" },
   { value: "OTHER", label: "Other / mixed" },
 ] as const;
 

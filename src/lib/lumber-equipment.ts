@@ -6,6 +6,7 @@ export const LUMBER_EQUIPMENT = [
   { code: "MX", label: "Maxi" },
   { code: "Tan", label: "Tandem" },
   { code: "CW", label: "Curtain Wall" },
+  { code: "SPEC", label: "Specialized" },
 ] as const;
 
 export type LumberEquipmentCode = (typeof LUMBER_EQUIPMENT)[number]["code"];

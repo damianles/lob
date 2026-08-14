@@ -55,6 +55,19 @@ export async function POST(req: Request) {
     );
   }
 
+  if (payload.role === "SHIPPER" && payload.acronym) {
+    const taken = await prisma.company.findUnique({
+      where: { acronym: payload.acronym },
+      select: { id: true },
+    });
+    if (taken) {
+      return NextResponse.json(
+        { error: `Acronym ${payload.acronym} is already in use. Pick another.` },
+        { status: 409 },
+      );
+    }
+  }
+
   if (payload.role === "DISPATCHER") {
     if (!payload.carrierType) {
       return NextResponse.json(
@@ -76,6 +89,7 @@ export async function POST(req: Request) {
   const company = await prisma.company.create({
     data: {
       legalName: payload.legalName,
+      acronym: payload.role === "SHIPPER" ? payload.acronym : undefined,
       dotNumber: payload.dotNumber,
       mcNumber: payload.mcNumber,
       carrierType: payload.carrierType,

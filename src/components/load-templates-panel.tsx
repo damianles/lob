@@ -53,15 +53,25 @@ type Props = {
   onLoad: (t: LoadTemplate) => void;
   /** Snapshot getter so we don't capture stale state. */
   getCurrentSnapshot: () => CurrentFormSnapshot;
+  /**
+   * full = picker + save (legacy inline form)
+   * picker = choose/apply/delete only
+   * save-only = name + save current (use next to Publish)
+   */
+  variant?: "full" | "picker" | "save-only";
 };
 
-export function LoadTemplatesPanel({ onLoad, getCurrentSnapshot }: Props) {
+export function LoadTemplatesPanel({
+  onLoad,
+  getCurrentSnapshot,
+  variant = "full",
+}: Props) {
   const [list, setList] = useState<LoadTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [picked, setPicked] = useState<string>("");
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState("");
-  const [showSave, setShowSave] = useState(false);
+  const [showSave, setShowSave] = useState(variant === "save-only");
   const [msg, setMsg] = useState<string | null>(null);
 
   useEffect(() => {
@@ -95,7 +105,7 @@ export function LoadTemplatesPanel({ onLoad, getCurrentSnapshot }: Props) {
     const t = list.find((x) => x.id === picked);
     if (!t) return;
     onLoad(t);
-    setMsg(`Loaded "${t.name}".`);
+    setMsg(`Loaded "${t.name}". Set pickup and delivery dates, then review details.`);
   }
 
   async function onSaveTemplate() {
@@ -137,7 +147,7 @@ export function LoadTemplatesPanel({ onLoad, getCurrentSnapshot }: Props) {
       }
       setName("");
       setShowSave(false);
-      setMsg(`Saved template "${j.data.name}".`);
+      setMsg(`Saved recurring load/lane "${j.data.name}".`);
       refresh();
     } finally {
       setSaving(false);
@@ -148,7 +158,7 @@ export function LoadTemplatesPanel({ onLoad, getCurrentSnapshot }: Props) {
     if (!picked) return;
     const t = list.find((x) => x.id === picked);
     if (!t) return;
-    if (!confirm(`Delete template "${t.name}"?`)) return;
+    if (!confirm(`Delete recurring load/lane "${t.name}"?`)) return;
     const r = await fetch(`/api/templates/${picked}`, { method: "DELETE" });
     if (!r.ok) {
       const j = await r.json().catch(() => ({}));
@@ -173,12 +183,58 @@ export function LoadTemplatesPanel({ onLoad, getCurrentSnapshot }: Props) {
     return parts.join(" · ");
   }, [list, picked]);
 
+  if (variant === "save-only") {
+    return (
+      <div className="flex flex-wrap items-center gap-2">
+        {msg && <p className="w-full text-[11px] text-emerald-800">{msg}</p>}
+        {!showSave ? (
+          <button
+            type="button"
+            onClick={() => setShowSave(true)}
+            className="rounded-lg border border-emerald-600 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-100"
+          >
+            Save as Recurring Load/Lane
+          </button>
+        ) : (
+          <>
+            <input
+              autoFocus
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Name this recurring load/lane"
+              className="min-w-[12rem] flex-1 rounded border border-emerald-300 px-3 py-2 text-sm"
+            />
+            <button
+              type="button"
+              onClick={onSaveTemplate}
+              disabled={!name.trim() || saving}
+              className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-50"
+            >
+              {saving ? "Saving…" : "Save"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowSave(false);
+                setName("");
+                setMsg(null);
+              }}
+              className="rounded-lg border border-stone-300 px-4 py-2 text-sm text-stone-700 hover:bg-stone-50"
+            >
+              Cancel
+            </button>
+          </>
+        )}
+      </div>
+    );
+  }
+
   return (
     <section className="rounded border border-emerald-200 bg-white/90 p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h4 className="text-xs font-bold uppercase tracking-wide text-emerald-900">Templates</h4>
+        <h4 className="text-xs font-bold uppercase tracking-wide text-emerald-900">Recurring Load/Lane</h4>
         <p className="text-[11px] text-zinc-500">
-          Save your usual lane × spec for one-click reposting.
+          Saved lane + product setup — dates are always set fresh when you post.
         </p>
       </div>
       {msg && <p className="mt-2 text-[11px] text-emerald-800">{msg}</p>}
@@ -189,7 +245,13 @@ export function LoadTemplatesPanel({ onLoad, getCurrentSnapshot }: Props) {
           className="rounded border border-emerald-300 px-2 py-2 text-sm"
           disabled={loading}
         >
-          <option value="">{loading ? "Loading templates…" : list.length ? "Pick a saved template…" : "No saved templates yet"}</option>
+          <option value="">
+            {loading
+              ? "Loading…"
+              : list.length
+                ? "Pick a recurring load/lane…"
+                : "None saved yet"}
+          </option>
           {list.map((t) => (
             <option key={t.id} value={t.id}>
               {t.name}
@@ -203,7 +265,7 @@ export function LoadTemplatesPanel({ onLoad, getCurrentSnapshot }: Props) {
           disabled={!picked}
           className="rounded bg-emerald-700 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Load template
+          Use this
         </button>
         <button
           type="button"
@@ -216,6 +278,7 @@ export function LoadTemplatesPanel({ onLoad, getCurrentSnapshot }: Props) {
       </div>
       {summary && <p className="mt-1 text-[11px] text-zinc-500">{summary}</p>}
 
+      {variant === "full" && (
       <div className="mt-2 flex flex-wrap items-center gap-2">
         {!showSave ? (
           <button
@@ -223,7 +286,7 @@ export function LoadTemplatesPanel({ onLoad, getCurrentSnapshot }: Props) {
             onClick={() => setShowSave(true)}
             className="rounded-md border border-emerald-600 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-100"
           >
-            + Save current as template
+            + Save current as Recurring Load/Lane
           </button>
         ) : (
           <>
@@ -255,6 +318,7 @@ export function LoadTemplatesPanel({ onLoad, getCurrentSnapshot }: Props) {
           </>
         )}
       </div>
+      )}
     </section>
   );
 }

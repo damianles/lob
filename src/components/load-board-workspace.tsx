@@ -8,7 +8,6 @@ import { LobBrandStrip } from "@/components/lob-brand-strip";
 import { LobSidebar, type LobSidebarStats } from "@/components/lob-sidebar";
 import { useDistanceUnitPreference } from "@/components/providers/app-providers";
 import { SavedSearchesBar } from "@/components/saved-searches-bar";
-import { SupplierPostLoadForm } from "@/components/supplier-post-load-form";
 import { LoadCard } from "@/components/load-card";
 import { Badge, type BadgeVariant } from "@/components/ui/badge";
 import { EmptyState, SearchIcon, TruckIcon } from "@/components/ui/empty-state";
@@ -72,6 +71,8 @@ export type SerializableLoad = {
   offerCurrency: "USD" | "CAD";
   offeredRateUsd: number | null;
   requestedPickupAt: string;
+  /** Null on older loads that predate delivery dates. */
+  requestedDeliveryAt: string | null;
   createdAt: string;
   booking: null | {
     carrierCompanyId: string;
@@ -91,6 +92,8 @@ export type SerializableLoad = {
 export type BoardActor = {
   userId: string | null;
   companyId: string | null;
+  /** Linked company legal name — used for supplier Loads title. */
+  companyName: string | null;
   role: string | null;
   carrierApproved: boolean;
 };
@@ -170,7 +173,6 @@ export function LoadBoardWorkspace({
   const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [postOpen, setPostOpen] = useState(false);
   const [bookRate, setBookRate] = useState<Record<string, string>>({});
   const [dispatchForm, setDispatchForm] = useState<Record<string, { driverName: string; hours: string }>>({});
 
@@ -196,7 +198,17 @@ export function LoadBoardWorkspace({
   const [lumberTreatment, setLumberTreatment] = useState("");
   const [lumberFragileOnly, setLumberFragileOnly] = useState(false);
   const [lumberWeatherSensitiveOnly, setLumberWeatherSensitiveOnly] = useState(false);
+  const [showCancelled, setShowCancelled] = useState(false);
   const { distanceUnit, setDistanceUnit } = useDistanceUnitPreference();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const posted = params.get("posted");
+    if (posted) {
+      setMessage(posted);
+      window.history.replaceState({}, "", "/");
+    }
+  }, []);
 
   useEffect(() => {
     const mq = window.matchMedia("(min-width: 768px)");
@@ -270,6 +282,10 @@ export function LoadBoardWorkspace({
     const emrZipTrim = emrZip.trim();
 
     const list = loads.filter((l) => {
+      // Hard boundary: suppliers never see another company's loads in this workspace.
+      if (isShipper && actor.companyId && l.shipperCompanyId !== actor.companyId) return false;
+      if (isShipper && !showCancelled && l.status === "CANCELLED") return false;
+
       const o = `${l.originCity} ${l.originState} ${l.originZip}`.toLowerCase();
       const d = `${l.destinationCity} ${l.destinationState} ${l.destinationZip}`.toLowerCase();
       if (originQ.trim() && !o.includes(originQ.trim().toLowerCase())) return false;
@@ -354,6 +370,9 @@ export function LoadBoardWorkspace({
     lumberTreatment,
     lumberFragileOnly,
     lumberWeatherSensitiveOnly,
+    isShipper,
+    showCancelled,
+    actor.companyId,
   ]);
 
   const summary = useMemo(() => {
@@ -455,14 +474,89 @@ export function LoadBoardWorkspace({
         {/* Search header */}
         <div className="border-b border-stone-100 bg-stone-50/50 px-6 py-6 sm:px-8 sm:py-8">
           {isShipper ? (
-            <div className="mb-4">
-              <h1 className="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Your loads</h1>
-              <p className="mt-1 text-sm text-zinc-600">
-                Post freight and track open postings, carrier bookings, and delivery status — only your company&apos;s
-                loads appear here.
-              </p>
-            </div>
-          ) : isCarrierAccount ? (
+            <>
+              <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                  <h1 className="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">
+                    {actor.companyName ? `${actor.companyName} Loads` : "Your Loads"}
+                  </h1>
+                  <p className="mt-1 text-sm text-zinc-600">
+                    Posted, booked, in transit, and delivered — only this company&apos;s loads.
+                  </p>
+                </div>
+                <Link
+                  href="/post"
+                  className="shrink-0 rounded-lg bg-emerald-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-800"
+                >
+                  Post a Load
+                </Link>
+              </div>
+
+              <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-zinc-600">
+                <span>
+                  <span className="font-medium text-zinc-800">{summary.open}</span> open
+                </span>
+                <span className="text-zinc-300">·</span>
+                <span>
+                  <span className="font-medium text-zinc-800">{summary.booked}</span> booked
+                </span>
+                <span className="text-zinc-300">·</span>
+                <span>
+                  <span className="font-medium text-zinc-800">{stats.delivered}</span> delivered
+                </span>
+                {showCancelled ? (
+                  <>
+                    <span className="text-zinc-300">·</span>
+                    <span>
+                      <span className="font-medium text-zinc-800">{summary.count}</span> showing
+                      (incl. cancelled)
+                    </span>
+                  </>
+                ) : null}
+              </div>
+
+              <div className="flex flex-wrap items-end gap-3">
+                <label className="text-xs font-medium text-zinc-600">
+                  Sort
+                  <select
+                    className="mt-1 block rounded-lg border border-zinc-300 bg-white px-2 py-2 text-sm"
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                  >
+                    <option value="postedDesc">Recently posted</option>
+                    <option value="pickupAsc">Pickup date (soonest)</option>
+                    <option value="pickupDesc">Pickup date (latest)</option>
+                  </select>
+                </label>
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-xs font-medium text-zinc-700">
+                  <input
+                    type="checkbox"
+                    className="h-3.5 w-3.5 rounded border-zinc-300 text-lob-navy focus:ring-lob-navy/30"
+                    checked={showCancelled}
+                    onChange={(e) => setShowCancelled(e.target.checked)}
+                  />
+                  Show cancelled
+                </label>
+                {isDesktop && (
+                  <div className="ml-auto">
+                    <RadioChoice
+                      label="View mode"
+                      name="load-board-view-mode-shipper"
+                      value={viewMode}
+                      onChange={setViewMode}
+                      options={[
+                        { value: "cards", label: "Cards" },
+                        { value: "table", label: "Table" },
+                      ]}
+                      className="[&_label]:px-3 [&_label]:py-2 [&_label]:text-sm"
+                    />
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+          {isCarrierAccount ? (
             <div className="mb-4">
               <h1 className="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Open loads</h1>
               <p className="mt-1 text-sm text-zinc-600">
@@ -478,42 +572,16 @@ export function LoadBoardWorkspace({
           ) : null}
           <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
             <p className="text-sm text-zinc-600">
-              {isShipper ? (
-                <>
-                  <span className="font-medium text-zinc-800">{summary.count}</span> of your load
-                  {summary.count !== 1 ? "s" : ""}
-                  {originQ || destQ ? " match your filters" : ""}
-                  {summary.count > 0 && !originQ && !destQ ? (
-                    <>
-                      {" "}
-                      · <span className="font-medium text-zinc-800">{summary.open}</span> open
-                      {summary.booked > 0 ? (
-                        <>
-                          {" "}
-                          · <span className="font-medium text-zinc-800">{summary.booked}</span> booked by a carrier
-                        </>
-                      ) : null}
-                    </>
-                  ) : null}
-                </>
-              ) : (
-                <>
-                  <span className="font-medium text-zinc-800">{summary.count}</span> load
-                  {summary.count !== 1 ? "s" : ""}
-                  {originQ || destQ ? " match your search" : " on the board"}
-                </>
-              )}
+              <span className="font-medium text-zinc-800">{summary.count}</span> load
+              {summary.count !== 1 ? "s" : ""}
+              {originQ || destQ ? " match your search" : " on the board"}
             </p>
             <button
               type="button"
               onClick={() => setMoreFilters((v) => !v)}
               className="text-xs font-medium text-lob-navy underline hover:no-underline"
             >
-              {moreFilters
-                ? "Hide extra filters"
-                : isShipper
-                  ? "More filters (sort, dates, equipment…)"
-                  : "More filters (sort, dates, EMR, equipment…)"}
+              {moreFilters ? "Hide extra filters" : "More filters (sort, dates, EMR, equipment…)"}
             </button>
           </div>
 
@@ -667,20 +735,6 @@ export function LoadBoardWorkspace({
                 <option value="pickupDesc">Pickup date (latest)</option>
               </select>
             </label>
-            {isShipper && (
-              <label
-                className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50"
-                title="Hide loads booked by freight brokers"
-              >
-                <input
-                  type="checkbox"
-                  className="h-3.5 w-3.5 rounded border-zinc-300 text-lob-navy focus:ring-lob-navy/30"
-                  checked={hideBrokers}
-                  onChange={(e) => setHideBrokers(e.target.checked)}
-                />
-                Hide brokers
-              </label>
-            )}
             {isDesktop && (
               <div className="ml-auto">
                 <RadioChoice
@@ -963,48 +1017,17 @@ export function LoadBoardWorkspace({
             >
               Refresh list
             </button>
-            {isShipper && (
-              <button
-                type="button"
-                onClick={() => setPostOpen((v) => !v)}
-                className="rounded-lg border border-emerald-600 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-800 hover:bg-emerald-100"
-              >
-                {postOpen ? "Close" : "Post a load"}
-              </button>
-            )}
             {isDispatcher && (
               <span className="text-sm text-zinc-600">Book a load, then create the driver link.</span>
             )}
           </div>
+            </>
+          )}
         </div>
 
-        {isShipper && postOpen && (
-          <SupplierPostLoadForm
-            onCancel={() => setPostOpen(false)}
-            onPosted={async (msg) => {
-              setPostOpen(false);
-              await refresh(msg);
-            }}
-          />
-        )}
-
-        {/* Lane summary strip */}
+        {/* Carrier summary strip */}
+        {!isShipper && (
         <div className="flex flex-wrap items-center gap-4 border-b border-stone-100 bg-white px-6 py-3.5 text-sm sm:px-8">
-          {isShipper ? (
-            <>
-              <span className="text-zinc-600">
-                Avg rate on your loads (≈ USD):{" "}
-                <span className="font-semibold text-zinc-900">
-                  {summary.avgPostedOrBooked != null ? formatMoney(summary.avgPostedOrBooked, "USD") : "—"}
-                </span>
-              </span>
-              <span className="text-zinc-400">·</span>
-              <span className="text-zinc-600">
-                Delivered: <span className="font-semibold text-zinc-900">{stats.delivered}</span>
-              </span>
-            </>
-          ) : (
-            <>
               <span className="text-zinc-600">
                 Avg rate (filtered, ≈ USD):{" "}
                 <span className="font-semibold text-zinc-900">
@@ -1015,9 +1038,8 @@ export function LoadBoardWorkspace({
               <span className="text-zinc-600">
                 Delivered all-time: <span className="font-semibold text-zinc-900">{stats.delivered}</span>
               </span>
-            </>
-          )}
         </div>
+        )}
 
         {/* Results: cards on all small screens; desktop can choose a dense "table" (stacked) list. */}
         {effectiveViewMode === "cards" ? (
@@ -1066,8 +1088,10 @@ export function LoadBoardWorkspace({
                           {load.originCity}, {load.originState} → {load.destinationCity}, {load.destinationState}
                         </p>
                         <p className="mt-0.5 text-xs text-stone-500">
-                          PU {postedDateLabel(load.requestedPickupAt)} · posted {postedDateLabel(load.createdAt)} ·{" "}
-                          {equipmentShortTag(load.equipmentType)} · {load.weightLbs.toLocaleString()} lb
+                          PU {postedDateLabel(load.requestedPickupAt)}
+                          {load.requestedDeliveryAt ? ` · Del ${postedDateLabel(load.requestedDeliveryAt)}` : ""}
+                          {" · "}posted {postedDateLabel(load.createdAt)} · {equipmentShortTag(load.equipmentType)} ·{" "}
+                          {load.weightLbs.toLocaleString()} lb
                         </p>
                         {specPills.length > 0 && (
                           <div className="mt-1.5 flex min-w-0 flex-wrap gap-1">
@@ -1091,6 +1115,11 @@ export function LoadBoardWorkspace({
                             <span className="text-[10px] font-bold uppercase text-amber-600">Rush</span>
                           )}
                         </div>
+                        {isShipper ? (
+                          <p className="max-w-[14rem] truncate text-right text-[11px] font-medium text-stone-700">
+                            {load.booking?.carrierCompany.legalName || "Awaiting booking"}
+                          </p>
+                        ) : (
                         <p
                           className="max-w-[12rem] truncate text-right text-[11px] text-stone-600"
                           title={
@@ -1104,6 +1133,7 @@ export function LoadBoardWorkspace({
                             <span className="text-stone-400 italic">Private until booked</span>
                           )}
                         </p>
+                        )}
                       </div>
                     </div>
                     <div className="mt-3 min-w-0 border-t border-stone-100 pt-3 text-xs text-stone-600">
@@ -1229,7 +1259,7 @@ export function LoadBoardWorkspace({
                   </Button>
                 )}
                 {isShipper && (
-                  <Button type="button" variant="primary" onClick={() => setPostOpen(true)}>
+                  <Button type="button" variant="primary" onClick={() => router.push("/post")}>
                     Post a load
                   </Button>
                 )}
@@ -1239,7 +1269,7 @@ export function LoadBoardWorkspace({
         )}
 
         {isShipper && (
-          <FloatingActionButton onClick={() => setPostOpen(true)} icon={<PlusIcon />} label="Post load" />
+          <FloatingActionButton onClick={() => router.push("/post")} icon={<PlusIcon />} label="Post load" />
         )}
       </div>
     </div>

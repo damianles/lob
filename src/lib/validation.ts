@@ -21,10 +21,18 @@ export const createLoadSchema = z.object({
   isPrivate: z.boolean().default(false),
   /** ISO datetime or YYYY-MM-DD (stored as noon UTC). */
   requestedPickupAt: z.string().min(8),
-  offerCurrency: z.enum(["USD", "CAD"]).default("USD"),
+  /** ISO datetime or YYYY-MM-DD — expected delivery. */
+  requestedDeliveryAt: z.string().min(8).optional(),
+  offerCurrency: z.enum(["USD", "CAD"]).default("CAD"),
   offeredRateUsd: z.number().positive(),
   extendedPosting: z.record(z.string(), z.unknown()).optional(),
   carrierVisibilityMode: z.enum(["OPEN", "TIER_ASSIGNED"]).default("OPEN"),
+  /**
+   * Which saved company-level tier groups (1–3) may see this load.
+   * Server expands membership from ShipperCarrierTier.
+   */
+  visibleTiers: z.array(z.number().int().min(1).max(3)).default([]),
+  /** Legacy per-load assignments; used when visibleTiers is empty. */
   tierAssignments: z
     .array(
       z.object({
@@ -36,12 +44,40 @@ export const createLoadSchema = z.object({
   perLoadExcludedCarrierIds: z.array(z.string().min(1)).default([]),
 })
   .superRefine((d, ctx) => {
-    if (d.carrierVisibilityMode === "TIER_ASSIGNED" && d.tierAssignments.length === 0) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Select at least one carrier in a tier when using tier-based visibility.",
-        path: ["tierAssignments"],
-      });
+    if (d.carrierVisibilityMode === "TIER_ASSIGNED") {
+      const hasGroups = d.visibleTiers.length > 0;
+      const hasLegacy = d.tierAssignments.length > 0;
+      if (!hasGroups && !hasLegacy) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Select at least one tier group (T1–T3) when using tier-based visibility.",
+          path: ["visibleTiers"],
+        });
+      }
+    }
+    if (d.equipmentType === "SPEC") {
+      const ext = d.extendedPosting as { equipmentDetail?: unknown } | undefined;
+      const detail = typeof ext?.equipmentDetail === "string" ? ext.equipmentDetail.trim() : "";
+      if (!detail) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Specialized equipment details are required.",
+          path: ["extendedPosting"],
+        });
+      }
+    }
+    if (d.requestedDeliveryAt && d.requestedPickupAt) {
+      const pu = Date.parse(d.requestedPickupAt.length === 10 ? `${d.requestedPickupAt}T12:00:00.000Z` : d.requestedPickupAt);
+      const del = Date.parse(
+        d.requestedDeliveryAt.length === 10 ? `${d.requestedDeliveryAt}T12:00:00.000Z` : d.requestedDeliveryAt,
+      );
+      if (Number.isFinite(pu) && Number.isFinite(del) && del < pu) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Delivery date cannot be before pickup date.",
+          path: ["requestedDeliveryAt"],
+        });
+      }
     }
   });
 
@@ -73,16 +109,33 @@ export const podUploadSchema = z
     message: "Provide a POD file URL or set receiverAcknowledged to true.",
   });
 
-export const companyOnboardingSchema = z.object({
-  legalName: z.string().min(2),
-  userName: z.string().min(2).optional(),
-  userEmail: z.string().email().optional(),
-  dotNumber: z.string().min(2).optional(),
-  mcNumber: z.string().min(2).optional(),
-  carrierType: z.enum(["ASSET_BASED", "BROKER"]).optional(),
-  role: z.enum(["SHIPPER", "DISPATCHER"]),
-  supplierKind: z.enum(["MILL", "WHOLESALER", "OTHER"]).optional(),
-});
+export const companyOnboardingSchema = z
+  .object({
+    legalName: z.string().min(2),
+    /** 2–3 letter tracking code for LOB load refs (suppliers). */
+    acronym: z
+      .string()
+      .trim()
+      .toUpperCase()
+      .regex(/^[A-Z0-9]{2,3}$/, "Use 2–3 letters or digits")
+      .optional(),
+    userName: z.string().min(2).optional(),
+    userEmail: z.string().email().optional(),
+    dotNumber: z.string().min(2).optional(),
+    mcNumber: z.string().min(2).optional(),
+    carrierType: z.enum(["ASSET_BASED", "BROKER"]).optional(),
+    role: z.enum(["SHIPPER", "DISPATCHER"]),
+    supplierKind: z.enum(["MILL", "WHOLESALER", "OTHER"]).optional(),
+  })
+  .superRefine((d, ctx) => {
+    if (d.role === "SHIPPER" && !d.acronym) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Company acronym (2–3 letters) is required for suppliers.",
+        path: ["acronym"],
+      });
+    }
+  });
 
 export const insuranceUploadSchema = z.object({
   fileUrl: z.string().url(),

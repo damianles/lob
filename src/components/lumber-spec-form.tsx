@@ -4,20 +4,22 @@ import { useMemo, useState } from "react";
 
 import {
   LUMBER_CERTIFICATION_OPTIONS,
-  LUMBER_DRYNESS_OPTIONS,
   LUMBER_EDGE_PROFILE_OPTIONS,
   LUMBER_LOADING_METHOD_OPTIONS,
   LUMBER_PACKAGING_OPTIONS,
   LUMBER_PANEL_TYPE_OPTIONS,
   LUMBER_PRODUCT_CATEGORY_OPTIONS,
-  LUMBER_SPECIES_OPTIONS,
   LUMBER_TREATMENT_OPTIONS,
   type LumberSpec,
 } from "@/lib/lumber-spec";
+import { RadioChoice } from "@/components/ui/radio-choice";
 
 type Props = {
   value: LumberSpec;
   onChange: (next: LumberSpec) => void;
+  /** full = remaining structured fields; basic = category + description only */
+  mode?: "full" | "basic";
+  onModeChange?: (mode: "full" | "basic") => void;
 };
 
 function num(v: string): number | undefined {
@@ -27,13 +29,17 @@ function num(v: string): number | undefined {
 }
 
 /**
- * Lumber-specific spec block for the supplier post-load form.
- *
- * Renders as a collapsible section. The fields shown adapt slightly based on
- * `productCategory` so a panel posting doesn't ask for nominal 2x size, etc.
+ * Product Specs block for supplier post-load.
+ * Basic = category + free-text description.
+ * Full = remaining structured fields (no species/grade/dryness/MC/MBF).
  */
-export function LumberSpecForm({ value, onChange }: Props) {
-  const [open, setOpen] = useState(true);
+export function LumberSpecForm({ value, onChange, mode: modeProp, onModeChange }: Props) {
+  const [internalMode, setInternalMode] = useState<"full" | "basic">("basic");
+  const mode = modeProp ?? internalMode;
+  const setMode = (m: "full" | "basic") => {
+    onModeChange?.(m);
+    if (modeProp == null) setInternalMode(m);
+  };
 
   const set = <K extends keyof LumberSpec>(key: K, val: LumberSpec[K] | undefined) => {
     onChange({ ...value, [key]: val });
@@ -48,99 +54,60 @@ export function LumberSpecForm({ value, onChange }: Props) {
 
   const isPanel = value.productCategory === "PANELS" || value.productCategory === "ENGINEERED";
   const isBulk = value.productCategory === "PELLETS" || value.productCategory === "CHIPS";
-
   const lengthsText = useMemo(() => (value.lengthsFt ?? []).join(","), [value.lengthsFt]);
 
   return (
     <section className="rounded border border-emerald-200 bg-white/90 p-3">
-      <button
-        type="button"
-        className="flex w-full items-center justify-between gap-2 text-left"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-      >
-        <h4 className="text-xs font-bold uppercase tracking-wide text-emerald-900">
-          Lumber details (product specifications)
-        </h4>
-        <span className="text-xs text-emerald-800">{open ? "Hide" : "Show"}</span>
-      </button>
-      <p className="mt-1 text-xs text-zinc-500">
-        Carriers see exactly what they’re hauling — species, grade, dryness, treatment, certifications.
-        Helps the right truck book the right load.
-      </p>
+      <h4 className="text-xs font-bold uppercase tracking-wide text-emerald-900">Product Specs</h4>
+      <p className="mt-1 text-xs text-zinc-500">Tell carriers what they are hauling — keep it simple.</p>
 
-      {open && (
+      <div className="mt-3">
+        <RadioChoice
+          label="Detail level"
+          name="product-specs-mode"
+          value={mode}
+          onChange={setMode}
+          options={[
+            { value: "basic", label: "Basic", description: "Category + short description" },
+            { value: "full", label: "Full", description: "Sizes, packaging, handling flags" },
+          ]}
+          className="[&_label]:max-w-full [&_label]:items-start"
+        />
+      </div>
+
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <label className="flex flex-col text-xs text-zinc-600">
+          Product category
+          <select
+            className="mt-1 rounded border px-2 py-2 text-sm"
+            value={value.productCategory ?? ""}
+            onChange={(e) => set("productCategory", (e.target.value || undefined) as LumberSpec["productCategory"])}
+          >
+            <option value="">— select —</option>
+            {LUMBER_PRODUCT_CATEGORY_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        {mode === "basic" && (
+          <label className="flex flex-col text-xs text-zinc-600 sm:col-span-2">
+            Product description
+            <textarea
+              rows={2}
+              className="mt-1 rounded border px-2 py-2 text-sm"
+              placeholder="e.g. SPF 2x4 studs, kiln-dried, banded bundles"
+              value={value.notes ?? ""}
+              onChange={(e) => set("notes", e.target.value || undefined)}
+            />
+          </label>
+        )}
+      </div>
+
+      {mode === "full" && (
         <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <label className="flex flex-col text-xs text-zinc-600">
-            Product category
-            <select
-              className="mt-1 rounded border px-2 py-2 text-sm"
-              value={value.productCategory ?? ""}
-              onChange={(e) => set("productCategory", (e.target.value || undefined) as LumberSpec["productCategory"])}
-            >
-              <option value="">— select —</option>
-              {LUMBER_PRODUCT_CATEGORY_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="flex flex-col text-xs text-zinc-600">
-            Species
-            <select
-              className="mt-1 rounded border px-2 py-2 text-sm"
-              value={value.species ?? ""}
-              onChange={(e) => set("species", e.target.value || undefined)}
-            >
-              <option value="">— select —</option>
-              {LUMBER_SPECIES_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="flex flex-col text-xs text-zinc-600">
-            Grade
-            <input
-              className="mt-1 rounded border px-2 py-2 text-sm"
-              placeholder="e.g. #2 & Btr, Stud, Select Structural, Premium"
-              value={value.grade ?? ""}
-              onChange={(e) => set("grade", e.target.value || undefined)}
-            />
-          </label>
-
-          <label className="flex flex-col text-xs text-zinc-600">
-            Dryness
-            <select
-              className="mt-1 rounded border px-2 py-2 text-sm"
-              value={value.dryness ?? ""}
-              onChange={(e) => set("dryness", e.target.value || undefined)}
-            >
-              <option value="">— select —</option>
-              {LUMBER_DRYNESS_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="flex flex-col text-xs text-zinc-600">
-            Moisture content (%)
-            <input
-              type="number"
-              step="0.1"
-              className="mt-1 rounded border px-2 py-2 text-sm"
-              placeholder="e.g. 12"
-              value={value.moistureContentPct ?? ""}
-              onChange={(e) => set("moistureContentPct", num(e.target.value))}
-            />
-          </label>
-
           <label className="flex flex-col text-xs text-zinc-600">
             Treatment
             <select
@@ -158,7 +125,7 @@ export function LumberSpecForm({ value, onChange }: Props) {
           </label>
 
           <label className="flex flex-col text-xs text-zinc-600 sm:col-span-2">
-            Certifications (check all that apply)
+            Certifications
             <div className="mt-1 flex flex-wrap gap-2">
               {LUMBER_CERTIFICATION_OPTIONS.map((c) => {
                 const active = (value.certifications ?? []).includes(c.value);
@@ -186,29 +153,9 @@ export function LumberSpecForm({ value, onChange }: Props) {
                 Nominal size
                 <input
                   className="mt-1 rounded border px-2 py-2 text-sm"
-                  placeholder="e.g. 2x4, 2x6, 4x4, 1x6 T&G"
+                  placeholder="e.g. 2x4, 2x6"
                   value={value.nominalSize ?? ""}
                   onChange={(e) => set("nominalSize", e.target.value || undefined)}
-                />
-              </label>
-              <label className="flex flex-col text-xs text-zinc-600">
-                Thickness (in)
-                <input
-                  type="number"
-                  step="0.125"
-                  className="mt-1 rounded border px-2 py-2 text-sm"
-                  value={value.thicknessIn ?? ""}
-                  onChange={(e) => set("thicknessIn", num(e.target.value))}
-                />
-              </label>
-              <label className="flex flex-col text-xs text-zinc-600">
-                Width (in)
-                <input
-                  type="number"
-                  step="0.125"
-                  className="mt-1 rounded border px-2 py-2 text-sm"
-                  value={value.widthIn ?? ""}
-                  onChange={(e) => set("widthIn", num(e.target.value))}
                 />
               </label>
               <label className="flex flex-col text-xs text-zinc-600">
@@ -217,16 +164,15 @@ export function LumberSpecForm({ value, onChange }: Props) {
                   type="number"
                   step="0.5"
                   className="mt-1 rounded border px-2 py-2 text-sm"
-                  placeholder="single length, or use mixed below"
                   value={value.lengthFt ?? ""}
                   onChange={(e) => set("lengthFt", num(e.target.value))}
                 />
               </label>
               <label className="flex flex-col text-xs text-zinc-600 sm:col-span-2">
-                Mixed lengths (comma-separated, ft)
+                Mixed lengths (ft, comma-separated)
                 <input
                   className="mt-1 rounded border px-2 py-2 text-sm"
-                  placeholder="e.g. 8, 10, 12, 14, 16"
+                  placeholder="e.g. 8, 10, 12, 16"
                   value={lengthsText}
                   onChange={(e) => {
                     const parts = e.target.value
@@ -273,19 +219,10 @@ export function LumberSpecForm({ value, onChange }: Props) {
                 </select>
               </label>
               <label className="flex flex-col text-xs text-zinc-600">
-                Panel grade / spec
-                <input
-                  className="mt-1 rounded border px-2 py-2 text-sm"
-                  placeholder='e.g. "1/2" Sheathing", "3/4" T&G", APA-rated'
-                  value={value.panelGrade ?? ""}
-                  onChange={(e) => set("panelGrade", e.target.value || undefined)}
-                />
-              </label>
-              <label className="flex flex-col text-xs text-zinc-600">
                 Panel size
                 <input
                   className="mt-1 rounded border px-2 py-2 text-sm"
-                  placeholder="e.g. 4x8, 4x9, 4x10"
+                  placeholder="e.g. 4x8"
                   value={value.panelSize ?? ""}
                   onChange={(e) => set("panelSize", e.target.value || undefined)}
                 />
@@ -304,7 +241,7 @@ export function LumberSpecForm({ value, onChange }: Props) {
           )}
 
           <label className="flex flex-col text-xs text-zinc-600">
-            Bundles (count)
+            Bundles
             <input
               type="number"
               className="mt-1 rounded border px-2 py-2 text-sm"
@@ -313,7 +250,7 @@ export function LumberSpecForm({ value, onChange }: Props) {
             />
           </label>
           <label className="flex flex-col text-xs text-zinc-600">
-            Pieces (count)
+            Pieces
             <input
               type="number"
               className="mt-1 rounded border px-2 py-2 text-sm"
@@ -328,16 +265,6 @@ export function LumberSpecForm({ value, onChange }: Props) {
               className="mt-1 rounded border px-2 py-2 text-sm"
               value={value.boardFeet ?? ""}
               onChange={(e) => set("boardFeet", num(e.target.value))}
-            />
-          </label>
-          <label className="flex flex-col text-xs text-zinc-600">
-            MBF (1000 BF)
-            <input
-              type="number"
-              step="0.1"
-              className="mt-1 rounded border px-2 py-2 text-sm"
-              value={value.mbf ?? ""}
-              onChange={(e) => set("mbf", num(e.target.value))}
             />
           </label>
 
@@ -382,7 +309,7 @@ export function LumberSpecForm({ value, onChange }: Props) {
                   checked={value.millTallyRequired ?? false}
                   onChange={(e) => set("millTallyRequired", e.target.checked || undefined)}
                 />
-                Mill tally / kiln tickets required at delivery
+                Mill tally / kiln tickets required
               </label>
               <label className="flex items-center gap-2">
                 <input
@@ -390,7 +317,7 @@ export function LumberSpecForm({ value, onChange }: Props) {
                   checked={value.fragile ?? false}
                   onChange={(e) => set("fragile", e.target.checked || undefined)}
                 />
-                Fragile (millwork / finished)
+                Fragile
               </label>
               <label className="flex items-center gap-2">
                 <input
@@ -412,11 +339,11 @@ export function LumberSpecForm({ value, onChange }: Props) {
           </div>
 
           <label className="flex flex-col text-xs text-zinc-600 sm:col-span-2 lg:col-span-4">
-            Lumber notes (visible to carriers)
+            Product notes (visible to carriers)
             <textarea
               rows={2}
               className="mt-1 rounded border px-2 py-2 text-sm"
-              placeholder="Anything specific to this load — bunks, dunnage, mixed sizes, FOB terms, etc."
+              placeholder="Anything specific — bunks, dunnage, mixed sizes, etc."
               value={value.notes ?? ""}
               onChange={(e) => set("notes", e.target.value || undefined)}
             />

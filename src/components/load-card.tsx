@@ -64,7 +64,9 @@ export function LoadCard({
   const [driverName, setDriverName] = useState("");
   const [hours, setHours] = useState("48");
 
-  const isShipper = actor.role === "SHIPPER" && actor.companyId === load.shipperCompanyId;
+  const isShipper = actor.role === "SHIPPER" && Boolean(actor.companyId);
+  // Supplier list cards: any load on a supplier board (already company-scoped).
+  const isSupplierListCard = isShipper;
   const isDispatcher = actor.role === "DISPATCHER" && Boolean(actor.companyId) && actor.carrierApproved;
   const canBook = isDispatcher && load.status === "POSTED";
   const canDispatch =
@@ -76,6 +78,103 @@ export function LoadCard({
   const displayRate = load.booking ? load.booking.agreedRateUsd : (load.offeredRateUsd ?? null);
   const rateCurrency = load.booking ? load.booking.agreedCurrency : load.offerCurrency;
   const specPills = summarizeLumberSpec(load.lumberSpec);
+
+  // Supplier list: key posting details for coordinators — whole card opens detail.
+  if (isSupplierListCard) {
+    return (
+      <Link
+        href={`/loads/${load.id}`}
+        className="block w-full min-w-0 max-w-full rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-lob-navy/30"
+      >
+        <Card
+          hover
+          className="w-full min-w-0 max-w-full transition-all duration-200 border-l-4 border-l-lob-navy/70 hover:border-l-lob-navy"
+        >
+          <CardBody className="py-4">
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-lg font-semibold text-lob-navy truncate">
+                  {load.originCity}, {load.originState} → {load.destinationCity}, {load.destinationState}
+                </p>
+                <p className="text-xs text-stone-500 mt-0.5 font-mono">{load.referenceNumber}</p>
+              </div>
+              <div className="flex flex-col items-end gap-1.5 shrink-0">
+                <Badge variant={statusBadgeVariant(load.status)} pulse={load.status === "IN_TRANSIT"}>
+                  {formatStatusLabel(load.status)}
+                </Badge>
+                {load.isRush && (
+                  <Badge variant="rush" className="text-[10px]">
+                    RUSH
+                  </Badge>
+                )}
+              </div>
+            </div>
+
+            <dl className="grid grid-cols-2 gap-x-3 gap-y-3 text-sm sm:grid-cols-3">
+              <div className="sm:col-span-1">
+                <dt className="text-[10px] font-semibold uppercase tracking-wide text-stone-400">Carrier</dt>
+                <dd className="mt-0.5 font-medium text-stone-800">
+                  {load.booking?.carrierCompany.legalName ? (
+                    <span className="inline-flex flex-wrap items-center gap-1.5">
+                      {load.booking.carrierCompany.legalName}
+                      <CarrierTypeTag
+                        carrierType={load.booking.carrierCompany.carrierType}
+                        isOwnerOperator={load.booking.carrierCompany.isOwnerOperator}
+                        compact
+                      />
+                    </span>
+                  ) : (
+                    <span className="text-stone-400 font-normal">Awaiting booking</span>
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[10px] font-semibold uppercase tracking-wide text-stone-400">Pickup</dt>
+                <dd className="mt-0.5 font-medium text-stone-800">{postedDateLabel(load.requestedPickupAt)}</dd>
+              </div>
+              <div>
+                <dt className="text-[10px] font-semibold uppercase tracking-wide text-stone-400">Delivery</dt>
+                <dd className="mt-0.5 font-medium text-stone-800">
+                  {load.requestedDeliveryAt ? postedDateLabel(load.requestedDeliveryAt) : "Not set"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[10px] font-semibold uppercase tracking-wide text-stone-400">Equipment</dt>
+                <dd className="mt-0.5 font-medium text-stone-800" title={load.equipmentType}>
+                  {equipmentShortTag(load.equipmentType)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[10px] font-semibold uppercase tracking-wide text-stone-400">Weight</dt>
+                <dd className="mt-0.5 font-medium text-stone-800">{load.weightLbs.toLocaleString()} lbs</dd>
+              </div>
+              <div>
+                <dt className="text-[10px] font-semibold uppercase tracking-wide text-stone-400">Rate</dt>
+                <dd className="mt-0.5 font-medium text-stone-800">
+                  {displayRate !== null ? formatMoney(displayRate, rateCurrency) : "—"}
+                </dd>
+              </div>
+            </dl>
+
+            {specPills.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-1">
+                {specPills.slice(0, 6).map((p, i) => (
+                  <span
+                    key={`${p}-${i}`}
+                    className="inline-flex max-w-full truncate rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-medium text-stone-700 ring-1 ring-stone-200"
+                  >
+                    {p}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <p className="mt-3 text-xs font-medium text-lob-navy">View details →</p>
+          </CardBody>
+        </Card>
+      </Link>
+    );
+  }
 
   return (
     <Card

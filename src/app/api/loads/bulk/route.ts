@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { LoadCarrierVisibilityMode, Prisma, RateObservationSource, VerificationStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 
+import { allocateLobReference } from "@/lib/allocate-lob-reference";
 import { canonicalCityKey } from "@/lib/city-canonical";
 import { BULK_MAX_ROWS, parseAllRows, parseCsv, type BulkRowResult } from "@/lib/csv-bulk-load";
 import {
@@ -175,9 +176,11 @@ export async function POST(req: Request) {
     const lumberColumns = lumberSpecToLoadColumns(lumberSpec);
 
     try {
-      const row = await prisma.load.create({
+      const row = await prisma.$transaction(async (tx) => {
+        const referenceNumber = await allocateLobReference(tx, actor.companyId!);
+        return tx.load.create({
         data: {
-          referenceNumber: `LOB-${randomUUID().slice(0, 8).toUpperCase()}`,
+          referenceNumber,
           externalRef: p.externalRef ?? null,
           originCity: p.originCity,
           originState: p.originState.toUpperCase(),
@@ -217,6 +220,7 @@ export async function POST(req: Request) {
             },
           },
         },
+      });
       });
       results.push({
         ok: true,

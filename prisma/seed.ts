@@ -67,9 +67,11 @@ async function main() {
       analyticsSubscriber: true,
       supplierKind: SupplierKind.MILL,
       verificationStatus: VerificationStatus.APPROVED,
+      acronym: "NRL",
     },
     create: {
       legalName: "North Ridge Lumber",
+      acronym: "NRL",
       verificationStatus: VerificationStatus.APPROVED,
       analyticsSubscriber: true,
       supplierKind: SupplierKind.MILL,

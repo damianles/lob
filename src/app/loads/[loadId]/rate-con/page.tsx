@@ -60,14 +60,16 @@ export default async function RateConPage({ params }: { params: Promise<{ loadId
     );
   }
 
-  const isAdmin = actor.role === "ADMIN";
+  const isRealAdmin = actor.realRole === "ADMIN" && !actor.simulated;
+  const effectiveCompanyId = actor.companyId;
   const isShipperOwner =
-    actor.role === "SHIPPER" && appUser.companyId === load.shipperCompanyId;
+    actor.role === "SHIPPER" && effectiveCompanyId === load.shipperCompanyId;
   const isBookedCarrier =
     (actor.role === "DISPATCHER" || actor.role === "ADMIN") &&
-    appUser.companyId === load.booking.carrierCompanyId;
+    Boolean(effectiveCompanyId) &&
+    effectiveCompanyId === load.booking.carrierCompanyId;
 
-  if (!isAdmin && !isShipperOwner && !isBookedCarrier) {
+  if (!isRealAdmin && !isShipperOwner && !isBookedCarrier) {
     return (
       <main className="min-h-screen bg-white p-6 text-sm">
         <p>You don&apos;t have access to this rate confirmation.</p>

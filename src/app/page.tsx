@@ -51,6 +51,7 @@ function toSerializableLoads(loads: LoadRow[], actor: BoardActor): SerializableL
     offerCurrency: l.offerCurrency,
     offeredRateUsd: l.offeredRateUsd != null ? Number(l.offeredRateUsd) : null,
     requestedPickupAt: l.requestedPickupAt.toISOString(),
+    requestedDeliveryAt: l.requestedDeliveryAt ? l.requestedDeliveryAt.toISOString() : null,
     createdAt: l.createdAt.toISOString(),
     booking: l.booking
       ? {
@@ -80,6 +81,7 @@ export default async function Home() {
   let appUser: { id: string; companyId: string | null; role: string } | null = null;
   let carrierApproved = false;
   let supplierApproved = false;
+  let boardCompanyName: string | null = null;
   let clerkSyncError: "missing_email" | null = null;
 
   try {
@@ -108,12 +110,18 @@ export default async function Home() {
   const boardUserId = sessionActor?.userId ?? appUser?.id ?? null;
 
   try {
-    if (boardRole === "DISPATCHER" && boardCompanyId) {
+    if (boardCompanyId) {
       const co = await prisma.company.findUnique({
         where: { id: boardCompanyId },
-        select: { verificationStatus: true },
+        select: { verificationStatus: true, legalName: true },
       });
-      carrierApproved = co?.verificationStatus === VerificationStatus.APPROVED;
+      boardCompanyName = co?.legalName ?? null;
+      if (boardRole === "DISPATCHER") {
+        carrierApproved = co?.verificationStatus === VerificationStatus.APPROVED;
+      }
+      if (boardRole === "SHIPPER") {
+        supplierApproved = co?.verificationStatus === VerificationStatus.APPROVED;
+      }
     }
 
     const pickupCutoff = new Date(Date.now() - 48 * 60 * 60 * 1000);
@@ -140,12 +148,6 @@ export default async function Home() {
     }
 
     if (boardRole === "SHIPPER" && boardCompanyId) {
-      const co = await prisma.company.findUnique({
-        where: { id: boardCompanyId },
-        select: { verificationStatus: true },
-      });
-      supplierApproved = co?.verificationStatus === VerificationStatus.APPROVED;
-
       stalePostedLoads = await prisma.load.findMany({
         where: {
           shipperCompanyId: boardCompanyId,
@@ -166,6 +168,7 @@ export default async function Home() {
   const actor: BoardActor = {
     userId: boardUserId,
     companyId: boardCompanyId,
+    companyName: boardCompanyName,
     role: boardRole,
     carrierApproved,
   };

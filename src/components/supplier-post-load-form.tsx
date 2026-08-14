@@ -4,12 +4,12 @@ import { useEffect, useState } from "react";
 
 import { AddressDataLists } from "@/components/address-datalists";
 import { PlaceAutocomplete } from "@/components/place-autocomplete";
-import { BoardFootHelper } from "@/components/board-foot-helper";
 import { LanePriceChip } from "@/components/lane-price-chip";
 import { LoadTemplatesPanel, type LoadTemplate } from "@/components/load-templates-panel";
 import { LumberSpecForm } from "@/components/lumber-spec-form";
 import { RecentPostsPicker } from "@/components/recent-posts-picker";
 import { SavedLanesPanel, type SavedLane } from "@/components/saved-lanes-panel";
+import { useViewerRole } from "@/components/providers/app-providers";
 import { RadioChoice } from "@/components/ui/radio-choice";
 import { LUMBER_EQUIPMENT } from "@/lib/lumber-equipment";
 import { regionCodeForLob } from "@/lib/place-helpers";
@@ -48,10 +48,26 @@ function hasAnyLumberSpec(spec: LumberSpec): boolean {
 export function SupplierPostLoadForm({
   onCancel,
   onPosted,
+  pageLayout = false,
+  showEntryPanels = true,
+  seedLane = null,
+  seedTemplate = null,
+  clearDatesOnSeed = false,
 }: {
   onCancel: () => void;
   onPosted: (msg: string) => void;
+  /** Full-page chrome (no compact emerald strip header). */
+  pageLayout?: boolean;
+  /** When false, Saved Lanes / Recurring / Recent are handled by the parent chooser. */
+  showEntryPanels?: boolean;
+  seedLane?: SavedLane | null;
+  seedTemplate?: LoadTemplate | null;
+  /** Clear pickup/delivery dates after applying a recurring/recent seed. */
+  clearDatesOnSeed?: boolean;
 }) {
+  const { viewer } = useViewerRole();
+  const showFairMarketAdminCopy = viewer.kind === "ADMIN" && !viewer.simulated;
+
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -61,6 +77,7 @@ export function SupplierPostLoadForm({
   const [customerName, setCustomerName] = useState("");
   const [urgency, setUrgency] = useState("3");
   const [requestedPickupDate, setRequestedPickupDate] = useState("");
+  const [requestedDeliveryDate, setRequestedDeliveryDate] = useState("");
 
   const [originCity, setOriginCity] = useState("");
   const [originState, setOriginState] = useState("");
@@ -78,21 +95,19 @@ export function SupplierPostLoadForm({
   const [deliveries, setDeliveries] = useState<PuDel[]>([{ ...emptyLoc }]);
 
   const [equipmentType, setEquipmentType] = useState<string>(LUMBER_EQUIPMENT[0].code);
+  const [equipmentDetail, setEquipmentDetail] = useState("");
   const [ftlLtl, setFtlLtl] = useState<"FTL" | "LTL">("FTL");
   const [weightLbs, setWeightLbs] = useState("");
+  const [weightUnit, setWeightUnit] = useState<"lb" | "kg">("lb");
   const [lumber, setLumber] = useState<LumberSpec>({});
   const [ltlPallets, setLtlPallets] = useState("");
   const [ltlPieces, setLtlPieces] = useState("");
   const [ltlLengthFt, setLtlLengthFt] = useState("");
 
-  const [cleaning, setCleaning] = useState<"Tarp" | "Wash" | "N/A">("N/A");
-  const [securement, setSecurement] = useState<"Chains" | "Straps" | "N/A" | "Other">("Straps");
-  const [securementOther, setSecurementOther] = useState("");
-
   const [straps, setStraps] = useState(true);
   const [tarp, setTarp] = useState(false);
   const [chains, setChains] = useState(false);
-  const [reqOther, setReqOther] = useState("");
+  const [wash, setWash] = useState(false);
   const [puRequirements, setPuRequirements] = useState("");
   const [delRequirements, setDelRequirements] = useState("");
 
@@ -113,7 +128,7 @@ export function SupplierPostLoadForm({
   const [ppeOther, setPpeOther] = useState("");
 
   const [rateUsd, setRateUsd] = useState("");
-  const [currency, setCurrency] = useState<"USD" | "CAD">("USD");
+  const [currency, setCurrency] = useState<"USD" | "CAD">("CAD");
   const [isRush, setIsRush] = useState(false);
   const [notes, setNotes] = useState("");
   const [tenderUrl, setTenderUrl] = useState("");
@@ -126,9 +141,8 @@ export function SupplierPostLoadForm({
   const [carrierPicklist, setCarrierPicklist] = useState<CarrierPick[]>([]);
   const [blockedCarrierIds, setBlockedCarrierIds] = useState<Set<string>>(new Set());
   const [carrierVisibilityMode, setCarrierVisibilityMode] = useState<"OPEN" | "TIER_ASSIGNED">("OPEN");
-  const [tier1, setTier1] = useState<Set<string>>(new Set());
-  const [tier2, setTier2] = useState<Set<string>>(new Set());
-  const [tier3, setTier3] = useState<Set<string>>(new Set());
+  const [visibleTiers, setVisibleTiers] = useState<Set<1 | 2 | 3>>(new Set([1, 2, 3]));
+  const [tierCounts, setTierCounts] = useState<{ 1: number; 2: number; 3: number }>({ 1: 0, 2: 0, 3: 0 });
   const [perLoadExcluded, setPerLoadExcluded] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -152,65 +166,44 @@ export function SupplierPostLoadForm({
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const [rPick, rBlock] = await Promise.all([
+      const [rPick, rBlock, rTiers] = await Promise.all([
         fetch("/api/shipper/carrier-picklist"),
         fetch("/api/shipper/blocked-carriers"),
+        fetch("/api/shipper/carrier-tiers"),
       ]);
       if (cancelled || !rPick.ok || !rBlock.ok) return;
       const jPick = await rPick.json();
       const jBlock = await rBlock.json();
       setCarrierPicklist(jPick.data ?? []);
       setBlockedCarrierIds(new Set((jBlock.data?.blocked ?? []).map((c: { id: string }) => c.id)));
+      if (rTiers.ok) {
+        const jTiers = await rTiers.json();
+        const counts = jTiers.data?.counts;
+        if (counts) {
+          setTierCounts({
+            1: Number(counts[1] ?? 0),
+            2: Number(counts[2] ?? 0),
+            3: Number(counts[3] ?? 0),
+          });
+        }
+      }
     })();
     return () => {
       cancelled = true;
     };
   }, []);
 
-  function setCarrierTierSlot(tier: 1 | 2 | 3, carrierId: string, checked: boolean) {
-    setTier1((s) => {
-      const n = new Set(s);
-      n.delete(carrierId);
-      return n;
-    });
-    setTier2((s) => {
-      const n = new Set(s);
-      n.delete(carrierId);
-      return n;
-    });
-    setTier3((s) => {
-      const n = new Set(s);
-      n.delete(carrierId);
-      return n;
-    });
-    if (checked) {
-      if (tier === 1) setTier1((s) => new Set(s).add(carrierId));
-      if (tier === 2) setTier2((s) => new Set(s).add(carrierId));
-      if (tier === 3) setTier3((s) => new Set(s).add(carrierId));
-    }
-    setPerLoadExcluded((s) => {
-      const n = new Set(s);
-      n.delete(carrierId);
+  function toggleVisibleTier(tier: 1 | 2 | 3) {
+    setVisibleTiers((prev) => {
+      const n = new Set(prev);
+      if (n.has(tier)) n.delete(tier);
+      else n.add(tier);
       return n;
     });
   }
 
-  function clearCarrierTier(carrierId: string) {
-    setTier1((s) => {
-      const n = new Set(s);
-      n.delete(carrierId);
-      return n;
-    });
-    setTier2((s) => {
-      const n = new Set(s);
-      n.delete(carrierId);
-      return n;
-    });
-    setTier3((s) => {
-      const n = new Set(s);
-      n.delete(carrierId);
-      return n;
-    });
+  function setAllVisibleTiers() {
+    setVisibleTiers(new Set([1, 2, 3]));
   }
 
   function togglePerLoadExclude(carrierId: string) {
@@ -218,21 +211,6 @@ export function SupplierPostLoadForm({
       const n = new Set(s);
       if (n.has(carrierId)) n.delete(carrierId);
       else n.add(carrierId);
-      return n;
-    });
-    setTier1((s) => {
-      const n = new Set(s);
-      n.delete(carrierId);
-      return n;
-    });
-    setTier2((s) => {
-      const n = new Set(s);
-      n.delete(carrierId);
-      return n;
-    });
-    setTier3((s) => {
-      const n = new Set(s);
-      n.delete(carrierId);
       return n;
     });
   }
@@ -304,23 +282,51 @@ export function SupplierPostLoadForm({
     if (t.lumberSpec) setLumber(t.lumberSpec);
   }
 
+  useEffect(() => {
+    if (seedLane) applyLane(seedLane);
+    if (seedTemplate) {
+      applyTemplate(seedTemplate);
+      if (clearDatesOnSeed) {
+        setRequestedPickupDate("");
+        setRequestedDeliveryDate("");
+      }
+    }
+    // One-shot seed when opening the form from the Post workspace chooser.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
-    const w = Number(weightLbs);
-    if (!Number.isFinite(w) || w <= 0) {
+    const rawWeight = Number(weightLbs);
+    if (!Number.isFinite(rawWeight) || rawWeight <= 0) {
       setErr("Weight must be a positive number.");
+      return;
+    }
+    const w = weightUnit === "kg" ? Math.round(rawWeight * 2.2046226218) : Math.round(rawWeight);
+    if (equipmentType === "SPEC" && !equipmentDetail.trim()) {
+      setErr("Describe the specialized equipment needed.");
+      return;
+    }
+    if (permits && !permitNote.trim()) {
+      setErr("Permit details are required when Permits is checked.");
       return;
     }
     if (!requestedPickupDate) {
       setErr("Requested pickup date is required.");
       return;
     }
+    if (!requestedDeliveryDate) {
+      setErr("Expected delivery date is required.");
+      return;
+    }
+    if (requestedDeliveryDate < requestedPickupDate) {
+      setErr("Delivery date cannot be before pickup date.");
+      return;
+    }
     const r = Number(rateUsd);
     if (!Number.isFinite(r) || r <= 0) {
-      setErr(
-        `Posted rate (${currency}) is required and must be within the fair-market band for this lane (USD-equivalent check).`,
-      );
+      setErr(`Posted rate (${currency}) is required.`);
       return;
     }
     if (!originCity.trim() || !originState.trim() || !originZip.trim()) {
@@ -335,13 +341,13 @@ export function SupplierPostLoadForm({
       setErr("Pickup 1 address is required.");
       return;
     }
-    if (!deliveries[0]?.address.trim() || !deliveries[0]?.date) {
-      setErr("Delivery 1 address and delivery date are required.");
+    if (!deliveries[0]?.address.trim()) {
+      setErr("Delivery 1 address is required.");
       return;
     }
 
-    if (carrierVisibilityMode === "TIER_ASSIGNED" && tier1.size + tier2.size + tier3.size === 0) {
-      setErr("Tier visibility: add at least one carrier to tier 1, 2, or 3 — or choose open visibility.");
+    if (carrierVisibilityMode === "TIER_ASSIGNED" && visibleTiers.size === 0) {
+      setErr("Tier visibility: select at least one group (T1, T2, or T3) — or choose open visibility.");
       return;
     }
 
@@ -367,14 +373,15 @@ export function SupplierPostLoadForm({
               lengthFt: ltlLengthFt ? Number(ltlLengthFt) : undefined,
             }
           : undefined,
-      cleaning,
-      securement,
-      securementOther: securement === "Other" ? securementOther.trim() : undefined,
+      cleaning: wash ? "Wash" : tarp ? "Tarp" : "N/A",
+      securement: chains ? "Chains" : straps ? "Straps" : "N/A",
+      equipmentDetail: equipmentType === "SPEC" ? equipmentDetail.trim() : undefined,
+      weightEntered: { value: rawWeight, unit: weightUnit },
       loadRequirements: {
         straps,
         tarp,
         chains,
-        other: reqOther.trim() || undefined,
+        wash,
         pickupNotes: puRequirements.trim() || undefined,
         deliveryNotes: delRequirements.trim() || undefined,
       },
@@ -410,11 +417,6 @@ export function SupplierPostLoadForm({
       lumber: hasAnyLumberSpec(lumber) ? lumber : undefined,
     };
 
-    const tierAssignments: { carrierCompanyId: string; tier: number }[] = [];
-    tier1.forEach((id) => tierAssignments.push({ carrierCompanyId: id, tier: 1 }));
-    tier2.forEach((id) => tierAssignments.push({ carrierCompanyId: id, tier: 2 }));
-    tier3.forEach((id) => tierAssignments.push({ carrierCompanyId: id, tier: 3 }));
-
     setBusy(true);
     const res = await fetch("/api/loads", {
       method: "POST",
@@ -431,11 +433,13 @@ export function SupplierPostLoadForm({
         isRush,
         isPrivate: false,
         requestedPickupAt: requestedPickupDate,
+        requestedDeliveryAt: requestedDeliveryDate,
         offerCurrency: currency,
         offeredRateUsd: r,
         extendedPosting,
         carrierVisibilityMode,
-        tierAssignments: carrierVisibilityMode === "TIER_ASSIGNED" ? tierAssignments : [],
+        visibleTiers: carrierVisibilityMode === "TIER_ASSIGNED" ? [...visibleTiers] : [],
+        tierAssignments: [],
         perLoadExcludedCarrierIds: [...perLoadExcluded],
       }),
     });
@@ -449,51 +453,73 @@ export function SupplierPostLoadForm({
   }
 
   return (
-    <div className="border-b border-emerald-200 bg-emerald-50/80 px-4 py-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold text-emerald-900">Post a lumber load (supplier)</h3>
-        <button type="button" className="text-xs text-emerald-800 underline" onClick={onCancel}>
-          Close
-        </button>
-      </div>
-      {err && <p className="mt-2 text-sm text-red-800">{err}</p>}
+    <div className={pageLayout ? "rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-6" : "border-b border-emerald-200 bg-emerald-50/80 px-4 py-4"}>
+      {!pageLayout && (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold text-emerald-900">Post a lumber load (supplier)</h3>
+          <button type="button" className="text-xs text-emerald-800 underline" onClick={onCancel}>
+            Close
+          </button>
+        </div>
+      )}
+      {err && <p className={`${pageLayout ? "" : "mt-2"} text-sm text-red-800`}>{err}</p>}
       <form className="mt-3 space-y-6" onSubmit={submit}>
         <AddressDataLists />
-        <SavedLanesPanel
-          onPick={applyLane}
-          getCurrentLane={() => ({
-            originCity,
-            originState,
-            originZip,
-            originAddress: pickups[0]?.address,
-            originPhone: pickups[0]?.phone,
-            destinationCity,
-            destinationState,
-            destinationZip,
-            destinationAddress: deliveries[0]?.address,
-            destinationPhone: deliveries[0]?.phone,
-          })}
-        />
-        <LoadTemplatesPanel
-          getCurrentSnapshot={() => ({
-            originCity,
-            originState,
-            originZip,
-            destinationCity,
-            destinationState,
-            destinationZip,
-            equipmentType,
-            weightLbs,
-            isRush,
-            isPrivate: false,
-            rateUsd,
-            currency,
-            notes,
-            lumber,
-          })}
-          onLoad={applyTemplate}
-        />
-        <RecentPostsPicker onLoad={applyTemplate} />
+        {showEntryPanels && (
+          <>
+            <SavedLanesPanel
+              onPick={applyLane}
+              getCurrentLane={() => ({
+                originCity,
+                originState,
+                originZip,
+                originAddress: pickups[0]?.address,
+                originPhone: pickups[0]?.phone,
+                destinationCity,
+                destinationState,
+                destinationZip,
+                destinationAddress: deliveries[0]?.address,
+                destinationPhone: deliveries[0]?.phone,
+              })}
+            />
+            <LoadTemplatesPanel
+              getCurrentSnapshot={() => ({
+                originCity,
+                originState,
+                originZip,
+                destinationCity,
+                destinationState,
+                destinationZip,
+                equipmentType,
+                weightLbs,
+                isRush,
+                isPrivate: false,
+                rateUsd,
+                currency,
+                notes,
+                lumber,
+              })}
+              onLoad={applyTemplate}
+            />
+            <RecentPostsPicker onLoad={applyTemplate} />
+          </>
+        )}
+        <section className="rounded border border-emerald-200 bg-white/90 p-3">
+          <h4 className="text-xs font-bold uppercase tracking-wide text-emerald-900">Priority</h4>
+          <div className="mt-2">
+            <RadioChoice
+              label="Shipment type"
+              name="load-priority"
+              value={isRush ? "rush" : "standard"}
+              onChange={(v) => setIsRush(v === "rush")}
+              options={[
+                { value: "standard", label: "Standard", description: "Normal transit window" },
+                { value: "rush", label: "Rush", description: "Time-critical — flag for carriers" },
+              ]}
+            />
+          </div>
+        </section>
+
         <section className="rounded border border-emerald-200 bg-white/90 p-3">
           <h4 className="text-xs font-bold uppercase tracking-wide text-emerald-900">Basic</h4>
           <div className="mt-2 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -521,36 +547,30 @@ export function SupplierPostLoadForm({
                 onChange={(e) => setRequestedPickupDate(e.target.value)}
               />
             </label>
+            <label className="flex flex-col text-xs text-zinc-600">
+              Expected delivery date *
+              <input
+                type="date"
+                required
+                className="mt-1 rounded border px-2 py-2 text-sm"
+                value={requestedDeliveryDate}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setRequestedDeliveryDate(v);
+                  setDeliveries((rows) =>
+                    rows.map((r, i) => (i === 0 ? { ...r, date: v || r.date } : r)),
+                  );
+                }}
+              />
+            </label>
           </div>
         </section>
 
         <section className="rounded border border-emerald-200 bg-white/90 p-3">
-          <h4 className="text-xs font-bold uppercase tracking-wide text-emerald-900">Lane (search)</h4>
+          <h4 className="text-xs font-bold uppercase tracking-wide text-emerald-900">Lane</h4>
           <p className="mt-1 text-xs text-zinc-500">
-            Use <strong>Search lane</strong> to pick a city, postal code, or address; we fill the fields below. You can
-            still type or edit the lane by hand. Requires <code className="rounded bg-stone-100 px-0.5">GOOGLE_MAPS_API_KEY</code> on the server
-            (local <code className="rounded bg-stone-100 px-0.5">.env</code> and Vercel in production).
+            Origin and destination for this load. Use Saved Lanes when you post often on the same route.
           </p>
-          <div className="mb-2 mt-2 grid gap-2 sm:grid-cols-2">
-            <PlaceAutocomplete
-              mode="geocode"
-              label="Search origin (city, ZIP, or address)"
-              onResolved={(p) => {
-                if (p.city) setOriginCity(p.city);
-                if (p.state) setOriginState(regionCodeForLob(p));
-                if (p.zip) setOriginZip(p.zip);
-              }}
-            />
-            <PlaceAutocomplete
-              mode="geocode"
-              label="Search destination (city, ZIP, or address)"
-              onResolved={(p) => {
-                if (p.city) setDestinationCity(p.city);
-                if (p.state) setDestinationState(regionCodeForLob(p));
-                if (p.zip) setDestinationZip(p.zip);
-              }}
-            />
-          </div>
           <div className="mt-2 grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
             <input
               className="rounded border px-2 py-2 text-sm"
@@ -749,12 +769,40 @@ export function SupplierPostLoadForm({
                 <option value="LTL">LTL</option>
               </select>
             </label>
-            <input className="rounded border px-2 py-2 text-sm" placeholder="Weight lbs *" value={weightLbs} onChange={(e) => setWeightLbs(e.target.value)} required />
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={isRush} onChange={(e) => setIsRush(e.target.checked)} />
-              Rush
+            <label className="text-xs text-zinc-600">
+              Weight *
+              <div className="mt-1 flex gap-1">
+                <input
+                  className="min-w-0 flex-1 rounded border px-2 py-2 text-sm"
+                  placeholder={weightUnit === "kg" ? "Weight kg" : "Weight lbs"}
+                  value={weightLbs}
+                  onChange={(e) => setWeightLbs(e.target.value)}
+                  required
+                />
+                <select
+                  className="rounded border px-2 py-2 text-sm"
+                  value={weightUnit}
+                  onChange={(e) => setWeightUnit(e.target.value as "lb" | "kg")}
+                  aria-label="Weight unit"
+                >
+                  <option value="lb">lb</option>
+                  <option value="kg">kg</option>
+                </select>
+              </div>
             </label>
           </div>
+          {equipmentType === "SPEC" && (
+            <label className="mt-2 block text-xs text-zinc-600">
+              Specialized equipment details *
+              <input
+                className="mt-1 w-full rounded border px-2 py-2 text-sm"
+                placeholder="e.g. lowboy, 53' step deck, oversize escort required"
+                value={equipmentDetail}
+                onChange={(e) => setEquipmentDetail(e.target.value)}
+                required
+              />
+            </label>
+          )}
           {ftlLtl === "LTL" && (
             <div className="mt-2 grid gap-2 sm:grid-cols-3">
               <input className="rounded border px-2 py-2 text-sm" placeholder="# Pallets" value={ltlPallets} onChange={(e) => setLtlPallets(e.target.value)} />
@@ -766,38 +814,10 @@ export function SupplierPostLoadForm({
 
         <LumberSpecForm value={lumber} onChange={setLumber} />
 
-        <BoardFootHelper
-          defaultSpeciesCode={lumber.species}
-          defaultDrynessCode={lumber.dryness}
-          onSuggestWeightLbs={(lbs) => setWeightLbs(String(lbs))}
-        />
-
         <section className="rounded border border-emerald-200 bg-white/90 p-3">
-          <h4 className="text-xs font-bold uppercase tracking-wide text-emerald-900">Cleaning & securement</h4>
-          <div className="mt-2 flex flex-wrap gap-4">
-            <label className="text-xs text-zinc-600">
-              Trailer cleaning
-              <select className="ml-1 rounded border px-2 py-1 text-sm" value={cleaning} onChange={(e) => setCleaning(e.target.value as typeof cleaning)}>
-                <option value="N/A">N/A</option>
-                <option value="Tarp">Tarp</option>
-                <option value="Wash">Wash</option>
-              </select>
-            </label>
-            <label className="text-xs text-zinc-600">
-              Primary securement
-              <select className="ml-1 rounded border px-2 py-1 text-sm" value={securement} onChange={(e) => setSecurement(e.target.value as typeof securement)}>
-                <option value="Straps">Straps</option>
-                <option value="Chains">Chains</option>
-                <option value="N/A">N/A</option>
-                <option value="Other">Other</option>
-              </select>
-            </label>
-            {securement === "Other" && (
-              <input className="rounded border px-2 py-2 text-sm" placeholder="Describe other securement" value={securementOther} onChange={(e) => setSecurementOther(e.target.value)} />
-            )}
-          </div>
-          <p className="mt-3 text-xs font-semibold text-zinc-700">Load requirements (check all that apply)</p>
-          <div className="mt-1 flex flex-wrap gap-4 text-sm">
+          <h4 className="text-xs font-bold uppercase tracking-wide text-emerald-900">Load Requirements</h4>
+          <p className="mt-1 text-xs text-zinc-500">Check all that apply.</p>
+          <div className="mt-2 flex flex-wrap gap-4 text-sm">
             <label className="flex items-center gap-2">
               <input type="checkbox" checked={straps} onChange={(e) => setStraps(e.target.checked)} />
               Straps
@@ -810,24 +830,36 @@ export function SupplierPostLoadForm({
               <input type="checkbox" checked={chains} onChange={(e) => setChains(e.target.checked)} />
               Chains
             </label>
-            <input className="min-w-[12rem] rounded border px-2 py-1 text-sm" placeholder="Other requirement" value={reqOther} onChange={(e) => setReqOther(e.target.value)} />
-          </div>
-          <div className="mt-2 grid gap-2 sm:grid-cols-2">
-            <textarea className="rounded border px-2 py-2 text-sm" rows={2} placeholder="Pickup requirements / instructions" value={puRequirements} onChange={(e) => setPuRequirements(e.target.value)} />
-            <textarea className="rounded border px-2 py-2 text-sm" rows={2} placeholder="Delivery requirements / instructions" value={delRequirements} onChange={(e) => setDelRequirements(e.target.value)} />
-          </div>
-          <div className="mt-3 flex flex-wrap items-center gap-3">
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={permits} onChange={(e) => setPermits(e.target.checked)} />
-              Permits required
+            <label className="flex items-center gap-2">
+              <input type="checkbox" checked={wash} onChange={(e) => setWash(e.target.checked)} />
+              Wash
             </label>
-            {permits && <input className="min-w-[16rem] rounded border px-2 py-2 text-sm" placeholder="Permit type / notes" value={permitNote} onChange={(e) => setPermitNote(e.target.value)} />}
+            <label className="flex items-center gap-2">
+              <input type="checkbox" checked={permits} onChange={(e) => setPermits(e.target.checked)} />
+              Permits
+            </label>
           </div>
+          {permits && (
+            <label className="mt-2 block text-xs text-zinc-600">
+              Permit details *
+              <input
+                className="mt-1 w-full rounded border px-2 py-2 text-sm"
+                placeholder="Oversize, overweight, escort, etc."
+                value={permitNote}
+                onChange={(e) => setPermitNote(e.target.value)}
+                required
+              />
+            </label>
+          )}
         </section>
 
         <section className="rounded border border-emerald-200 bg-white/90 p-3">
           <h4 className="text-xs font-bold uppercase tracking-wide text-emerald-900">Services & PPE</h4>
-          <div className="mt-2 grid gap-3 sm:grid-cols-2">
+          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+            <textarea className="rounded border px-2 py-2 text-sm" rows={2} placeholder="Pickup requirements / instructions" value={puRequirements} onChange={(e) => setPuRequirements(e.target.value)} />
+            <textarea className="rounded border px-2 py-2 text-sm" rows={2} placeholder="Delivery requirements / instructions" value={delRequirements} onChange={(e) => setDelRequirements(e.target.value)} />
+          </div>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <div>
               <p className="text-xs font-semibold text-zinc-600">Pickup</p>
               <label className="flex items-center gap-2 text-sm">
@@ -882,17 +914,17 @@ export function SupplierPostLoadForm({
         </section>
 
         <section className="rounded border border-emerald-200 bg-white/90 p-3">
-          <h4 className="text-xs font-bold uppercase tracking-wide text-emerald-900">Who can see this load</h4>
+          <h4 className="text-xs font-bold uppercase tracking-wide text-emerald-900">Carrier Visibility</h4>
           <p className="mt-1 text-xs text-zinc-600">
-            Carriers blocked in{" "}
+            Manage blocked carriers and tier membership in{" "}
             <a className="font-medium text-lob-navy underline" href="/shipper/carrier-preferences">
               Carrier preferences
-            </a>{" "}
-            never see your loads. Here you can further restrict this posting.
+            </a>
+            . On each post, choose Open or which tier groups can see this load.
           </p>
           <div className="mt-3">
             <RadioChoice
-              label="Load visibility"
+              label="Carrier Visibility"
               name="load-carrier-visibility"
               value={carrierVisibilityMode}
               onChange={setCarrierVisibilityMode}
@@ -905,88 +937,86 @@ export function SupplierPostLoadForm({
                 {
                   value: "TIER_ASSIGNED",
                   label: "Tiers only",
-                  description: "Only carriers you place in tiers below (blocked list still cannot be added).",
+                  description: "Only carriers in the tier groups you select below.",
                 },
               ]}
               className="[&_label]:max-w-full [&_label]:items-start"
             />
           </div>
+          {carrierVisibilityMode === "TIER_ASSIGNED" && (
+            <div className="mt-4 space-y-3 rounded border border-zinc-200 bg-zinc-50/80 p-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  className="rounded border border-lob-navy/30 bg-white px-2.5 py-1 text-xs font-semibold text-lob-navy hover:bg-[#eef1f7]"
+                  onClick={setAllVisibleTiers}
+                >
+                  All tiers
+                </button>
+                <span className="text-[11px] text-zinc-500">Select which saved groups can see this load</span>
+              </div>
+              <div className="flex flex-wrap gap-4 text-sm">
+                {(
+                  [
+                    { tier: 1 as const, label: "T1 — Preferred", hint: "Primary carriers you call first" },
+                    { tier: 2 as const, label: "T2 — Backup", hint: "Trusted backup capacity" },
+                    { tier: 3 as const, label: "T3 — Overflow", hint: "Wider net when needed" },
+                  ] as const
+                ).map(({ tier, label, hint }) => (
+                  <label key={tier} className="flex min-w-[10rem] cursor-pointer items-start gap-2">
+                    <input
+                      type="checkbox"
+                      className="mt-1"
+                      checked={visibleTiers.has(tier)}
+                      onChange={() => toggleVisibleTier(tier)}
+                    />
+                    <span>
+                      <span className="font-medium text-zinc-900">{label}</span>
+                      <span className="mt-0.5 block text-[11px] text-zinc-500">
+                        {hint} · {tierCounts[tier]} saved
+                      </span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+              {tierCounts[1] + tierCounts[2] + tierCounts[3] === 0 && (
+                <p className="text-xs text-amber-800">
+                  No carriers in your tiers yet. Add them under Carrier preferences before publishing with Tiers only.
+                </p>
+              )}
+            </div>
+          )}
           {carrierPicklist.length > 0 && (
-            <div className="mt-4 max-h-56 overflow-y-auto rounded border border-zinc-200 bg-zinc-50/80">
-              <table className="w-full text-left text-xs">
-                <thead className="sticky top-0 bg-zinc-100 text-[10px] font-semibold uppercase text-zinc-600">
-                  <tr>
-                    <th className="px-2 py-2">Carrier</th>
-                    {carrierVisibilityMode === "TIER_ASSIGNED" && (
-                      <>
-                        <th className="px-1 py-2 text-center">T1</th>
-                        <th className="px-1 py-2 text-center">T2</th>
-                        <th className="px-1 py-2 text-center">T3</th>
-                        <th className="px-1 py-2 text-center">—</th>
-                      </>
-                    )}
-                    <th className="px-1 py-2 text-center">Exclude load</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {carrierPicklist
-                    .filter((c) => !blockedCarrierIds.has(c.id))
-                    .map((c) => (
-                      <tr key={c.id} className="border-t border-zinc-200/80">
-                        <td className="px-2 py-1.5 text-sm text-zinc-800">{c.legalName}</td>
-                        {carrierVisibilityMode === "TIER_ASSIGNED" && (
-                          <>
-                            <td className="px-1 py-1.5 text-center">
-                              <input
-                                type="radio"
-                                name={`tier-${c.id}`}
-                                checked={tier1.has(c.id)}
-                                onChange={() => setCarrierTierSlot(1, c.id, true)}
-                                className="h-3.5 w-3.5"
-                              />
-                            </td>
-                            <td className="px-1 py-1.5 text-center">
-                              <input
-                                type="radio"
-                                name={`tier-${c.id}`}
-                                checked={tier2.has(c.id)}
-                                onChange={() => setCarrierTierSlot(2, c.id, true)}
-                                className="h-3.5 w-3.5"
-                              />
-                            </td>
-                            <td className="px-1 py-1.5 text-center">
-                              <input
-                                type="radio"
-                                name={`tier-${c.id}`}
-                                checked={tier3.has(c.id)}
-                                onChange={() => setCarrierTierSlot(3, c.id, true)}
-                                className="h-3.5 w-3.5"
-                              />
-                            </td>
-                            <td className="px-1 py-1.5 text-center">
-                              <input
-                                type="radio"
-                                name={`tier-${c.id}`}
-                                checked={!tier1.has(c.id) && !tier2.has(c.id) && !tier3.has(c.id)}
-                                onChange={() => clearCarrierTier(c.id)}
-                                className="h-3.5 w-3.5"
-                                title="Not in a tier for this load"
-                              />
-                            </td>
-                          </>
-                        )}
-                        <td className="px-1 py-1.5 text-center">
-                          <input
-                            type="checkbox"
-                            checked={perLoadExcluded.has(c.id)}
-                            onChange={() => togglePerLoadExclude(c.id)}
-                            className="h-3.5 w-3.5"
-                          />
-                        </td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
+            <div className="mt-4">
+              <p className="text-xs font-semibold text-zinc-600">Exclude from this load only (optional)</p>
+              <div className="mt-2 max-h-40 overflow-y-auto rounded border border-zinc-200 bg-zinc-50/80">
+                <table className="w-full text-left text-xs">
+                  <thead className="sticky top-0 bg-zinc-100 text-[10px] font-semibold uppercase text-zinc-600">
+                    <tr>
+                      <th className="px-2 py-2">Carrier</th>
+                      <th className="px-1 py-2 text-center">Off</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {carrierPicklist
+                      .filter((c) => !blockedCarrierIds.has(c.id))
+                      .map((c) => (
+                        <tr key={c.id} className="border-t border-zinc-200/80">
+                          <td className="px-2 py-1.5 text-sm text-zinc-800">{c.legalName}</td>
+                          <td className="px-1 py-1.5 text-center">
+                            <input
+                              type="checkbox"
+                              checked={perLoadExcluded.has(c.id)}
+                              onChange={() => togglePerLoadExclude(c.id)}
+                              className="h-3.5 w-3.5"
+                              title="Hide this load from this carrier"
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
           {carrierPicklist.length === 0 && (
@@ -1005,10 +1035,10 @@ export function SupplierPostLoadForm({
               required
             />
             <label className="text-xs text-zinc-600">
-              Display currency
+              Currency
               <select className="ml-1 rounded border px-2 py-2 text-sm" value={currency} onChange={(e) => setCurrency(e.target.value as "USD" | "CAD")}>
-                <option value="USD">USD</option>
                 <option value="CAD">CAD</option>
+                <option value="USD">USD</option>
               </select>
             </label>
             <LanePriceChip
@@ -1022,12 +1052,14 @@ export function SupplierPostLoadForm({
               currency={currency}
               className="self-center"
             />
+            {showFairMarketAdminCopy && (
             <p className="text-xs text-zinc-500">
               Fair-market check: live DB averages when enough samples in the rolling window; otherwise your wholesaler base
               in <code className="rounded bg-zinc-100 px-1">data/market-benchmarks.json</code> (see{" "}
               <code className="rounded bg-zinc-100 px-1">LOB_MIN_SAMPLES_FOR_DB_BENCHMARK</code>). Band ±30% if ≥5 samples,
               ±50% if fewer.
             </p>
+            )}
           </div>
         </section>
 
@@ -1037,11 +1069,31 @@ export function SupplierPostLoadForm({
           <input className="mt-2 w-full rounded border px-2 py-2 text-sm" placeholder="BOL / tender URL (upload to your storage for now)" value={tenderUrl} onChange={(e) => setTenderUrl(e.target.value)} />
         </section>
 
-        <div className="flex flex-wrap gap-2">
-          <button type="submit" disabled={busy} className="rounded bg-emerald-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+        <div className="flex flex-wrap items-center gap-2 border-t border-stone-100 pt-4">
+          <button type="submit" disabled={busy} className="rounded-lg bg-emerald-700 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
             {busy ? "Publishing…" : "Publish to board"}
           </button>
-          <button type="button" className="rounded border border-zinc-300 px-4 py-2 text-sm" onClick={onCancel}>
+          <LoadTemplatesPanel
+            variant="save-only"
+            onLoad={applyTemplate}
+            getCurrentSnapshot={() => ({
+              originCity,
+              originState,
+              originZip,
+              destinationCity,
+              destinationState,
+              destinationZip,
+              equipmentType,
+              weightLbs,
+              isRush,
+              isPrivate: false,
+              rateUsd,
+              currency,
+              notes,
+              lumber,
+            })}
+          />
+          <button type="button" className="rounded-lg border border-zinc-300 px-4 py-2.5 text-sm" onClick={onCancel}>
             Cancel
           </button>
         </div>

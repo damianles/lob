@@ -45,27 +45,30 @@ export default async function BolStripPage({ params }: { params: Promise<{ loadI
   }
 
   let carrierApproved = false;
-  if (appUser.role === "DISPATCHER" && appUser.companyId) {
+  if (actor.role === "DISPATCHER" && actor.companyId) {
     const co = await prisma.company.findUnique({
-      where: { id: appUser.companyId },
+      where: { id: actor.companyId },
       select: { verificationStatus: true },
     });
     carrierApproved = co?.verificationStatus === VerificationStatus.APPROVED;
   }
 
-  const isAdmin = actor.role === "ADMIN";
+  const effectiveCompanyId = actor.companyId;
+  const isRealAdmin = actor.realRole === "ADMIN" && !actor.simulated;
   const isShipperOwner =
-    actor.role === "SHIPPER" && appUser.companyId && load.shipperCompanyId === appUser.companyId;
+    actor.role === "SHIPPER" &&
+    Boolean(effectiveCompanyId) &&
+    load.shipperCompanyId === effectiveCompanyId;
   const isBookedCarrier =
-    load.booking &&
-    appUser.companyId &&
-    load.booking.carrierCompanyId === appUser.companyId &&
+    Boolean(load.booking) &&
+    Boolean(effectiveCompanyId) &&
+    load.booking!.carrierCompanyId === effectiveCompanyId &&
     (actor.role === "DISPATCHER" || actor.role === "ADMIN");
 
   let canBrowsePosted = false;
   if (
     actor.role === "DISPATCHER" &&
-    appUser.companyId &&
+    effectiveCompanyId &&
     carrierApproved &&
     load.status === LoadStatus.POSTED
   ) {
@@ -76,11 +79,11 @@ export default async function BolStripPage({ params }: { params: Promise<{ loadI
         shipperCompanyId: load.shipperCompanyId,
         carrierVisibilityMode: load.carrierVisibilityMode,
       },
-      appUser.companyId,
+      effectiveCompanyId,
     );
   }
 
-  const canView = isAdmin || isShipperOwner || isBookedCarrier || canBrowsePosted;
+  const canView = isRealAdmin || isShipperOwner || isBookedCarrier || canBrowsePosted;
   if (!canView) {
     notFound();
   }
@@ -112,7 +115,7 @@ export default async function BolStripPage({ params }: { params: Promise<{ loadI
     ? `${basePickup}${basePickup.includes("?") ? "&" : "?"}code=${encodeURIComponent(load.uniquePickupCode)}`
     : basePickup;
 
-  const visibilityActor = { companyId: appUser.companyId, role: actor.role };
+  const visibilityActor = { companyId: effectiveCompanyId, role: actor.role };
   const millName = shipperCompanyNameForViewer(load.shipperCompany.legalName, load, visibilityActor);
   const lumberSpec = extractLumberSpec(load.extendedPosting);
 

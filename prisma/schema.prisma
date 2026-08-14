@@ -78,6 +78,10 @@ enum LoadCarrierVisibilityMode {
 model Company {
   id                    String             @id @default(cuid())
   legalName             String             @unique
+  /**
+   * 2–3 letter tracking acronym for LOB load refs (e.g. NRL for North Ridge Lumber).
+   */
+  acronym               String?            @unique @db.VarChar(3)
   dotNumber             String?            @unique
   mcNumber              String?            @unique
   carrierType           CarrierType?
@@ -117,6 +121,8 @@ model Company {
   capacityOffers        CapacityOffer[]
   blocksCarriers        ShipperCarrierExclusion[] @relation("ShipperBlocksCarrier")
   blockedByShippers     ShipperCarrierExclusion[] @relation("CarrierBlockedByShipper")
+  shipperCarrierTiers   ShipperCarrierTier[]      @relation("ShipperSavesCarrierTiers")
+  carrierInShipperTiers ShipperCarrierTier[]      @relation("CarrierInShipperTiers")
   loadCarrierTiers      LoadCarrierTier[]
   loadExclusionsAgainst LoadCarrierExclusion[]    @relation("CarrierLoadExclusion")
   loadTemplates         LoadTemplate[]            @relation("CompanyLoadTemplates")
@@ -137,6 +143,29 @@ model ShipperCarrierExclusion {
 
   @@unique([shipperCompanyId, carrierCompanyId])
   @@index([shipperCompanyId])
+  @@index([carrierCompanyId])
+}
+
+/**
+ * Company-level preferred carrier groups (T1 / T2 / T3). Membership is edited rarely;
+ * each load picks which groups can see it.
+ */
+model ShipperCarrierTier {
+  id               String   @id @default(cuid())
+  shipperCompanyId String
+  carrierCompanyId String
+  /**
+   * 1 = primary / preferred; 2–3 = backup groups.
+   */
+  tier             Int
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  shipperCompany Company @relation("ShipperSavesCarrierTiers", fields: [shipperCompanyId], references: [id], onDelete: Cascade)
+  carrierCompany Company @relation("CarrierInShipperTiers", fields: [carrierCompanyId], references: [id], onDelete: Cascade)
+
+  @@unique([shipperCompanyId, carrierCompanyId])
+  @@index([shipperCompanyId, tier])
   @@index([carrierCompanyId])
 }
 
@@ -186,6 +215,10 @@ model Load {
   shipperCompanyId      String
   createdByUserId       String
   requestedPickupAt     DateTime
+  /**
+   * Expected delivery date (optional on legacy rows; required on new supplier posts).
+   */
+  requestedDeliveryAt   DateTime?
   /**
    * Free-form structured payload (legacy + supplier extras). lumber.* mirrors first-class columns.
    */
@@ -516,4 +549,13 @@ model CapacityOffer {
   @@index([status])
   @@index([originZip, destinationZip])
   @@index([availableUntil])
+}
+
+/**
+ * Global forever counter for LOB load reference sequence (starts at 1000).
+ * Format: LOB-{ACRONYM}-{YY}-{NNNN}
+ */
+model LoadRefCounter {
+  id    String @id @default("global")
+  next  Int    @default(1000)
 }

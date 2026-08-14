@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { LoadCarrierVisibilityMode, LoadStatus, Prisma, RateObservationSource, VerificationStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 
+import { allocateLobReference } from "@/lib/allocate-lob-reference";
 import { canonicalCityKey } from "@/lib/city-canonical";
 import {
   findLaneBenchmark,
@@ -180,6 +181,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid requestedPickupAt (use YYYY-MM-DD or ISO datetime)." }, { status: 400 });
   }
 
+  let deliveryAt: Date | null = null;
+  if (payload.requestedDeliveryAt) {
+    deliveryAt = parseRequestedPickupAt(payload.requestedDeliveryAt);
+    if (!deliveryAt) {
+      return NextResponse.json(
+        { error: "Invalid requestedDeliveryAt (use YYYY-MM-DD or ISO datetime)." },
+        { status: 400 },
+      );
+    }
+  }
+
   const rateCheck = await validateOfferedRateFloor({
     originState: payload.originState,
     destinationState: payload.destinationState,
@@ -217,7 +229,37 @@ export async function POST(req: Request) {
       ? LoadCarrierVisibilityMode.TIER_ASSIGNED
       : LoadCarrierVisibilityMode.OPEN;
 
-  const tierCarrierIds = [...new Set(payload.tierAssignments.map((t) => t.carrierCompanyId))];
+  const uniqueVisibleTiers = [...new Set(payload.visibleTiers.filter((t) => t >= 1 && t <= 3))];
+
+  let resolvedTierAssignments = payload.tierAssignments.map((t) => ({
+    carrierCompanyId: t.carrierCompanyId,
+    tier: t.tier,
+  }));
+
+  if (visibilityMode === LoadCarrierVisibilityMode.TIER_ASSIGNED && uniqueVisibleTiers.length > 0) {
+    const saved = await prisma.shipperCarrierTier.findMany({
+      where: {
+        shipperCompanyId: actor.companyId!,
+        tier: { in: uniqueVisibleTiers },
+      },
+      select: { carrierCompanyId: true, tier: true },
+    });
+    resolvedTierAssignments = saved.map((s) => ({
+      carrierCompanyId: s.carrierCompanyId,
+      tier: s.tier,
+    }));
+    if (resolvedTierAssignments.length === 0) {
+      return NextResponse.json(
+        {
+          error:
+            "No carriers in the selected tier groups. Set membership under Carrier preferences, then try again.",
+        },
+        { status: 400 },
+      );
+    }
+  }
+
+  const tierCarrierIds = [...new Set(resolvedTierAssignments.map((t) => t.carrierCompanyId))];
   const excludeIds = [...new Set(payload.perLoadExcludedCarrierIds)];
 
   const referencedIds = [...new Set([...tierCarrierIds, ...excludeIds])];
@@ -268,9 +310,10 @@ export async function POST(req: Request) {
   let load;
   try {
     load = await prisma.$transaction(async (tx) => {
+    const referenceNumber = await allocateLobReference(tx, shipperCompanyId!);
     const row = await tx.load.create({
       data: {
-        referenceNumber: `LOB-${randomUUID().slice(0, 8).toUpperCase()}`,
+        referenceNumber,
         externalRef: payload.externalRef ? payload.externalRef : null,
         originCity: payload.originCity,
         originState: payload.originState.toUpperCase(),
@@ -289,6 +332,7 @@ export async function POST(req: Request) {
         createdByUserId,
         uniquePickupCode: randomUUID().slice(0, 6).toUpperCase(),
         requestedPickupAt: pickupAt,
+        requestedDeliveryAt: deliveryAt,
         carrierVisibilityMode: visibilityMode,
         extendedPosting: payload.extendedPosting
           ? (payload.extendedPosting as Prisma.InputJsonValue)
@@ -312,9 +356,9 @@ export async function POST(req: Request) {
       },
     });
 
-    if (visibilityMode === LoadCarrierVisibilityMode.TIER_ASSIGNED && payload.tierAssignments.length) {
+    if (visibilityMode === LoadCarrierVisibilityMode.TIER_ASSIGNED && resolvedTierAssignments.length) {
       await tx.loadCarrierTier.createMany({
-        data: payload.tierAssignments.map((t) => ({
+        data: resolvedTierAssignments.map((t) => ({
           loadId: row.id,
           carrierCompanyId: t.carrierCompanyId,
           tier: t.tier,

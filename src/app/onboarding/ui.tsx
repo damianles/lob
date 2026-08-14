@@ -24,6 +24,7 @@ type FormState = {
 
 type ShipperFormState = FormState & {
   supplierKind: "MILL" | "WHOLESALER" | "OTHER";
+  acronym: string;
 };
 
 const emptyState: FormState = {
@@ -38,6 +39,7 @@ const emptyState: FormState = {
 const emptyShipper: ShipperFormState = {
   ...emptyState,
   supplierKind: "MILL",
+  acronym: "",
 };
 
 function persistIntent(next: LobOnboardingIntent) {
@@ -115,6 +117,11 @@ export function OnboardingForms() {
       setMessage("Company name is required (mill, wholesaler, or reload).");
       return;
     }
+    const acronym = shipper.acronym.trim().toUpperCase();
+    if (!/^[A-Z0-9]{2,3}$/.test(acronym)) {
+      setMessage("Enter a 2–3 letter company acronym for load references (e.g. NRL).");
+      return;
+    }
     if (!isSignedIn && !shipper.userName.trim()) {
       setMessage("Your name is required when you are not signed in.");
       return;
@@ -129,6 +136,7 @@ export function OnboardingForms() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         legalName: shipper.legalName,
+        acronym,
         userName: shipper.userName,
         userEmail: shipper.userEmail,
         role: "SHIPPER",
@@ -300,6 +308,25 @@ export function OnboardingForms() {
                 onChange={(e) => setShipper((s) => ({ ...s, legalName: e.target.value }))}
                 required
               />
+              <label className="block text-xs font-medium text-zinc-600">
+                Load ref acronym (2–3 letters)
+                <input
+                  className="mt-1 w-full rounded border px-3 py-2 font-mono text-sm uppercase tracking-wider"
+                  placeholder="e.g. NRL"
+                  maxLength={3}
+                  value={shipper.acronym}
+                  onChange={(e) =>
+                    setShipper((s) => ({
+                      ...s,
+                      acronym: e.target.value.replace(/[^a-zA-Z0-9]/g, "").slice(0, 3),
+                    }))
+                  }
+                  required
+                />
+                <span className="mt-1 block font-normal text-zinc-500">
+                  {`Appears on every load as LOB-${shipper.acronym.trim().toUpperCase() || "XXX"}-YY-NNNN`}
+                </span>
+              </label>
               <input
                 className="w-full rounded border px-3 py-2 text-sm"
                 placeholder="Your name"

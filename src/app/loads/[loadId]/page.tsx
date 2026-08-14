@@ -79,27 +79,33 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
   }
 
   let carrierApproved = false;
-  if (appUser.role === "DISPATCHER" && appUser.companyId) {
+  if (actor.role === "DISPATCHER" && actor.companyId) {
     const co = await prisma.company.findUnique({
-      where: { id: appUser.companyId },
+      where: { id: actor.companyId },
       select: { verificationStatus: true },
     });
     carrierApproved = co?.verificationStatus === VerificationStatus.APPROVED;
   }
 
-  const isAdmin = actor.role === "ADMIN";
+  // Use effective actor company/role (respects admin view-as). Never gate on
+  // appUser.companyId alone — admins simulating a supplier have companyId null
+  // on the User row but a seed company on actor.companyId.
+  const effectiveCompanyId = actor.companyId;
+  const isRealAdmin = actor.realRole === "ADMIN" && !actor.simulated;
   const isShipperOwner =
-    actor.role === "SHIPPER" && appUser.companyId && load.shipperCompanyId === appUser.companyId;
+    actor.role === "SHIPPER" &&
+    Boolean(effectiveCompanyId) &&
+    load.shipperCompanyId === effectiveCompanyId;
   const isBookedCarrier =
-    load.booking &&
-    appUser.companyId &&
-    load.booking.carrierCompanyId === appUser.companyId &&
+    Boolean(load.booking) &&
+    Boolean(effectiveCompanyId) &&
+    load.booking!.carrierCompanyId === effectiveCompanyId &&
     (actor.role === "DISPATCHER" || actor.role === "ADMIN");
 
   let canBrowsePosted = false;
   if (
     actor.role === "DISPATCHER" &&
-    appUser.companyId &&
+    effectiveCompanyId &&
     carrierApproved &&
     load.status === LoadStatus.POSTED
   ) {
@@ -110,14 +116,14 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
         shipperCompanyId: load.shipperCompanyId,
         carrierVisibilityMode: load.carrierVisibilityMode,
       },
-      appUser.companyId,
+      effectiveCompanyId,
     );
   }
 
-  const canView = isAdmin || isShipperOwner || isBookedCarrier || canBrowsePosted;
+  const canView = isRealAdmin || isShipperOwner || isBookedCarrier || canBrowsePosted;
 
   const carrierDocs =
-    load.booking && (isShipperOwner || isAdmin)
+    load.booking && (isShipperOwner || isRealAdmin)
       ? await prisma.document.findMany({
           where: { companyId: load.booking.carrierCompanyId, dispatchLinkId: null },
           orderBy: { createdAt: "desc" },
@@ -142,7 +148,7 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
     );
   }
 
-  const visibilityActor = { companyId: appUser.companyId, role: actor.role };
+  const visibilityActor = { companyId: effectiveCompanyId, role: actor.role };
   const millName = shipperCompanyNameForViewer(load.shipperCompany.legalName, load, visibilityActor);
   const supplierKindVisible = supplierKindForViewer(load.shipperCompany.supplierKind, load, visibilityActor);
   const carrierNameVisible = load.booking
@@ -150,8 +156,8 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
     : null;
 
   const supplierStatsScope =
-    actor.role === "SHIPPER" && appUser.companyId
-      ? { shipperCompanyId: appUser.companyId }
+    actor.role === "SHIPPER" && effectiveCompanyId
+      ? { shipperCompanyId: effectiveCompanyId }
       : undefined;
 
   const [active, rush, delivered] = await Promise.all([
@@ -177,7 +183,10 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
           <div className="mx-auto max-w-3xl">
             <Breadcrumb
               items={[
-                { label: actor.role === "SHIPPER" ? "Your loads" : "Loads", href: "/" },
+                {
+                  label: isShipperOwner && millName ? `${millName} Loads` : "Loads",
+                  href: "/",
+                },
                 { label: load.referenceNumber },
               ]}
               className="mb-4"
@@ -202,6 +211,19 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
                   day: "numeric",
                   year: "numeric",
                 })}
+              </span>
+            </p>
+            <p className="mt-1 text-sm text-zinc-600">
+              Expected delivery:{" "}
+              <span className="font-medium text-zinc-900">
+                {load.requestedDeliveryAt
+                  ? load.requestedDeliveryAt.toLocaleDateString("en-US", {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })
+                  : "—"}
               </span>
             </p>
 
@@ -256,7 +278,7 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
               return lumber ? <LumberSpecPanel spec={lumber} className="mt-4" /> : null;
             })()}
 
-            {load.booking && (isShipperOwner || isAdmin) && (
+            {load.booking && (isShipperOwner || isRealAdmin) && (
               <div className="mt-6">
                 <div className="mb-2 flex items-center justify-between">
                   <h2 className="text-base font-semibold text-zinc-900">Carrier scorecard</h2>
@@ -287,7 +309,7 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
               </div>
             )}
 
-            {load.extendedPosting != null && (isShipperOwner || isAdmin || isBookedCarrier) && (
+            {load.extendedPosting != null && (isShipperOwner || isRealAdmin || isBookedCarrier) && (
               <details className="mt-4 rounded-lg border border-zinc-200 bg-white p-4 text-sm">
                 <summary className="cursor-pointer font-medium text-zinc-900">Full post details (supplier)</summary>
                 <pre className="mt-2 max-h-80 overflow-auto whitespace-pre-wrap break-words text-xs text-zinc-700">
@@ -326,7 +348,7 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
               />
             </div>
 
-            {load.dispatchLink && (isShipperOwner || isBookedCarrier || isAdmin) && (
+            {load.dispatchLink && (isShipperOwner || isBookedCarrier || isRealAdmin) && (
               <div className="mt-6 space-y-3">
                 <p className="text-sm text-zinc-600">
                   Driver page:{" "}
