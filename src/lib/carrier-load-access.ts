@@ -34,7 +34,7 @@ export async function fetchPostedLoadVisibilityContext(
       select: { shipperCompanyId: true },
     }),
     db.loadCarrierTier.findMany({
-      where: { loadId: { in: loadIds }, carrierCompanyId },
+      where: { loadId: { in: loadIds }, carrierCompanyId, unlockAt: { lte: new Date() } },
       select: { loadId: true },
     }),
     db.loadCarrierExclusion.findMany({

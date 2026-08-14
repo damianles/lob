@@ -143,6 +143,9 @@ export function SupplierPostLoadForm({
   const [carrierVisibilityMode, setCarrierVisibilityMode] = useState<"OPEN" | "TIER_ASSIGNED">("OPEN");
   const [visibleTiers, setVisibleTiers] = useState<Set<1 | 2 | 3>>(new Set([1, 2, 3]));
   const [tierCounts, setTierCounts] = useState<{ 1: number; 2: number; 3: number }>({ 1: 0, 2: 0, 3: 0 });
+  const [tierStagingEnabled, setTierStagingEnabled] = useState(false);
+  const [tier1Hours, setTier1Hours] = useState("24");
+  const [tier2Hours, setTier2Hours] = useState("24");
   const [perLoadExcluded, setPerLoadExcluded] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -440,6 +443,16 @@ export function SupplierPostLoadForm({
         carrierVisibilityMode,
         visibleTiers: carrierVisibilityMode === "TIER_ASSIGNED" ? [...visibleTiers] : [],
         tierAssignments: [],
+        tierStagingEnabled:
+          carrierVisibilityMode === "TIER_ASSIGNED" && !isRush && tierStagingEnabled,
+        tier1ExclusiveHours:
+          carrierVisibilityMode === "TIER_ASSIGNED" && !isRush && tierStagingEnabled
+            ? Number(tier1Hours) || 24
+            : undefined,
+        tier2ExclusiveHours:
+          carrierVisibilityMode === "TIER_ASSIGNED" && !isRush && tierStagingEnabled
+            ? Number(tier2Hours) || 24
+            : undefined,
         perLoadExcludedCarrierIds: [...perLoadExcluded],
       }),
     });
@@ -982,6 +995,58 @@ export function SupplierPostLoadForm({
               {tierCounts[1] + tierCounts[2] + tierCounts[3] === 0 && (
                 <p className="text-xs text-amber-800">
                   No carriers in your tiers yet. Add them under Carrier preferences before publishing with Tiers only.
+                </p>
+              )}
+              {!isRush && (
+                <div className="rounded border border-dashed border-zinc-300 bg-white p-3">
+                  <label className="flex items-start gap-2 text-sm text-zinc-800">
+                    <input
+                      type="checkbox"
+                      className="mt-1"
+                      checked={tierStagingEnabled}
+                      onChange={(e) => setTierStagingEnabled(e.target.checked)}
+                    />
+                    <span>
+                      <span className="font-medium">Staged release</span>
+                      <span className="mt-0.5 block text-[11px] text-zinc-500">
+                        Post to T1 first, then expand to T2 and T3 after the hours you set. Rush loads always release immediately.
+                      </span>
+                    </span>
+                  </label>
+                  {tierStagingEnabled && (
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                      <label className="text-xs font-medium text-zinc-600">
+                        Hours T1-only before T2
+                        <input
+                          type="number"
+                          min={1}
+                          max={168}
+                          className="mt-1 w-full rounded border px-2 py-2 text-sm"
+                          value={tier1Hours}
+                          onChange={(e) => setTier1Hours(e.target.value)}
+                        />
+                      </label>
+                      <label className="text-xs font-medium text-zinc-600">
+                        Extra hours before T3 (after T2)
+                        <input
+                          type="number"
+                          min={1}
+                          max={168}
+                          className="mt-1 w-full rounded border px-2 py-2 text-sm"
+                          value={tier2Hours}
+                          onChange={(e) => setTier2Hours(e.target.value)}
+                        />
+                      </label>
+                      <p className="sm:col-span-2 text-[11px] text-zinc-500">
+                        Example: 24 / 24 → T1 now, T1+T2 after 24h, all three after 48h.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+              {isRush && (
+                <p className="text-[11px] text-amber-800">
+                  Rush selected — selected tiers all see this load immediately (no staging).
                 </p>
               )}
             </div>

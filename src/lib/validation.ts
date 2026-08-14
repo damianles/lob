@@ -42,6 +42,12 @@ export const createLoadSchema = z.object({
     )
     .default([]),
   perLoadExcludedCarrierIds: z.array(z.string().min(1)).default([]),
+  /**
+   * Staged tier release (standard loads only). When true, T2/T3 unlock after hour windows.
+   */
+  tierStagingEnabled: z.boolean().default(false),
+  tier1ExclusiveHours: z.number().int().min(1).max(168).optional(),
+  tier2ExclusiveHours: z.number().int().min(1).max(168).optional(),
 })
   .superRefine((d, ctx) => {
     if (d.carrierVisibilityMode === "TIER_ASSIGNED") {
@@ -54,6 +60,20 @@ export const createLoadSchema = z.object({
           path: ["visibleTiers"],
         });
       }
+    }
+    if (d.tierStagingEnabled && d.isRush) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Rush loads cannot use staged tier release — they go to selected tiers immediately.",
+        path: ["tierStagingEnabled"],
+      });
+    }
+    if (d.tierStagingEnabled && d.carrierVisibilityMode !== "TIER_ASSIGNED") {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Staged release only applies when Carrier Visibility is Tiers only.",
+        path: ["tierStagingEnabled"],
+      });
     }
     if (d.equipmentType === "SPEC") {
       const ext = d.extendedPosting as { equipmentDetail?: unknown } | undefined;
@@ -80,6 +100,55 @@ export const createLoadSchema = z.object({
       }
     }
   });
+
+export const updateLoadSchema = z
+  .object({
+    originCity: z.string().min(2).optional(),
+    originState: z.string().min(2).max(2).optional(),
+    originZip: z.string().min(3).max(12).optional(),
+    destinationCity: z.string().min(2).optional(),
+    destinationState: z.string().min(2).max(2).optional(),
+    destinationZip: z.string().min(3).max(12).optional(),
+    weightLbs: z.number().int().positive().optional(),
+    equipmentType: z.string().min(2).optional(),
+    isRush: z.boolean().optional(),
+    requestedPickupAt: z.string().min(8).optional(),
+    requestedDeliveryAt: z.string().min(8).nullable().optional(),
+    offerCurrency: z.enum(["USD", "CAD"]).optional(),
+    offeredRateUsd: z.number().positive().optional(),
+    extendedPosting: z.record(z.string(), z.unknown()).optional(),
+    changeSummary: z.string().trim().max(500).optional(),
+  })
+  .superRefine((d, ctx) => {
+    if (d.requestedDeliveryAt && d.requestedPickupAt) {
+      const pu = Date.parse(d.requestedPickupAt.length === 10 ? `${d.requestedPickupAt}T12:00:00.000Z` : d.requestedPickupAt);
+      const del = Date.parse(
+        d.requestedDeliveryAt.length === 10 ? `${d.requestedDeliveryAt}T12:00:00.000Z` : d.requestedDeliveryAt,
+      );
+      if (Number.isFinite(pu) && Number.isFinite(del) && del < pu) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Delivery date cannot be before pickup date.",
+          path: ["requestedDeliveryAt"],
+        });
+      }
+    }
+  });
+
+export const createDateChangeRequestSchema = z
+  .object({
+    proposedPickupAt: z.string().min(8).optional(),
+    proposedDeliveryAt: z.string().min(8).optional(),
+    note: z.string().trim().max(500).optional(),
+  })
+  .refine((d) => Boolean(d.proposedPickupAt || d.proposedDeliveryAt), {
+    message: "Propose at least a pickup or delivery date.",
+  });
+
+export const reviewDateChangeRequestSchema = z.object({
+  decision: z.enum(["APPROVE", "REJECT"]),
+  reviewNote: z.string().trim().max(500).optional(),
+});
 
 export const createBookingSchema = z.object({
   carrierCompanyId: z.string().min(1).optional(),

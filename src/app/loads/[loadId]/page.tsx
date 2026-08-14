@@ -9,6 +9,7 @@ import { CarrierScorecard } from "@/components/carrier-scorecard";
 import { CarrierTypeTag } from "@/components/carrier-type-tag";
 import { DispatchQrPanel } from "@/components/dispatch-qr-panel";
 import { ExtendedPostingPanel } from "@/components/extended-posting-panel";
+import { LoadDateChangePanel } from "@/components/load-date-change-panel";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { LobBrandStrip } from "@/components/lob-brand-strip";
 import { LobSidebar } from "@/components/lob-sidebar";
@@ -277,6 +278,16 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
 
             {(isShipperOwner || isRealAdmin) && (
               <div className="mt-4 flex flex-wrap items-center gap-3">
+                {(load.status === LoadStatus.POSTED ||
+                  load.status === LoadStatus.BOOKED ||
+                  load.status === LoadStatus.ASSIGNED) && (
+                  <Link
+                    href={`/loads/${load.id}/edit`}
+                    className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-50"
+                  >
+                    Edit load
+                  </Link>
+                )}
                 {load.status === LoadStatus.BOOKED && (
                   <Link
                     href={`/loads/${load.id}/rate-con`}
@@ -339,6 +350,23 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
 
             {load.extendedPosting != null && (isShipperOwner || isRealAdmin || isBookedCarrier) && (
               <ExtendedPostingPanel data={load.extendedPosting} className="mt-4" />
+            )}
+
+            {load.booking && isShipperOwner && (
+              <LoadDateChangePanel
+                loadId={load.id}
+                mode="supplier"
+                currentPickup={load.requestedPickupAt.toISOString()}
+                currentDelivery={load.requestedDeliveryAt?.toISOString() ?? null}
+              />
+            )}
+            {load.booking && isBookedCarrier && (
+              <LoadDateChangePanel
+                loadId={load.id}
+                mode="carrier"
+                currentPickup={load.requestedPickupAt.toISOString()}
+                currentDelivery={load.requestedDeliveryAt?.toISOString() ?? null}
+              />
             )}
 
             <div className="mt-6">

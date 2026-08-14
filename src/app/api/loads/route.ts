@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 
 import { allocateLobReference } from "@/lib/allocate-lob-reference";
 import { canonicalCityKey } from "@/lib/city-canonical";
+import { tierUnlockAt } from "@/lib/load-change-notices";
 import {
   findLaneBenchmark,
   validateOfferedRateFloor,
@@ -334,6 +335,15 @@ export async function POST(req: Request) {
         requestedPickupAt: pickupAt,
         requestedDeliveryAt: deliveryAt,
         carrierVisibilityMode: visibilityMode,
+        tierStagingEnabled: Boolean(payload.tierStagingEnabled && !payload.isRush),
+        tier1ExclusiveHours:
+          payload.tierStagingEnabled && !payload.isRush
+            ? (payload.tier1ExclusiveHours ?? 24)
+            : null,
+        tier2ExclusiveHours:
+          payload.tierStagingEnabled && !payload.isRush
+            ? (payload.tier2ExclusiveHours ?? 24)
+            : null,
         extendedPosting: payload.extendedPosting
           ? (payload.extendedPosting as Prisma.InputJsonValue)
           : undefined,
@@ -357,11 +367,18 @@ export async function POST(req: Request) {
     });
 
     if (visibilityMode === LoadCarrierVisibilityMode.TIER_ASSIGNED && resolvedTierAssignments.length) {
+      const postedAt = new Date();
+      const staging = {
+        enabled: Boolean(payload.tierStagingEnabled && !payload.isRush),
+        t1Hours: payload.tier1ExclusiveHours ?? 24,
+        t2Hours: payload.tier2ExclusiveHours ?? 24,
+      };
       await tx.loadCarrierTier.createMany({
         data: resolvedTierAssignments.map((t) => ({
           loadId: row.id,
           carrierCompanyId: t.carrierCompanyId,
           tier: t.tier,
+          unlockAt: tierUnlockAt(postedAt, t.tier, staging),
         })),
       });
     }

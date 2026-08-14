@@ -75,6 +75,24 @@ enum LoadCarrierVisibilityMode {
   TIER_ASSIGNED
 }
 
+enum LoadNoticeChannel {
+  IN_APP
+  EMAIL
+}
+
+enum LoadNoticeStatus {
+  PENDING
+  DELIVERED
+  SKIPPED
+}
+
+enum DateChangeRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  WITHDRAWN
+}
+
 model Company {
   id                    String             @id @default(cuid())
   legalName             String             @unique
@@ -125,6 +143,8 @@ model Company {
   carrierInShipperTiers ShipperCarrierTier[]      @relation("CarrierInShipperTiers")
   loadCarrierTiers      LoadCarrierTier[]
   loadExclusionsAgainst LoadCarrierExclusion[]    @relation("CarrierLoadExclusion")
+  loadChangeNotices     LoadChangeNotice[]         @relation("CarrierLoadNotices")
+  dateChangesProposed   LoadDateChangeRequest[]   @relation("DateChangeFromCarrier")
   loadTemplates         LoadTemplate[]            @relation("CompanyLoadTemplates")
   savedLanes            SavedLane[]               @relation("CompanySavedLanes")
 }
@@ -184,6 +204,9 @@ model User {
   assignedDispatches DispatchLink[] @relation("DispatchAssignedBy")
   loadTemplates      LoadTemplate[] @relation("LoadTemplateCreator")
   savedLanes         SavedLane[]    @relation("SavedLaneCreator")
+  loadChangeNotices  LoadChangeNotice[] @relation("LoadNoticeRecipient")
+  dateChangesProposed LoadDateChangeRequest[] @relation("DateChangeProposer")
+  dateChangesReviewed LoadDateChangeRequest[] @relation("DateChangeReviewer")
 }
 
 model Load {
@@ -224,6 +247,18 @@ model Load {
    */
   extendedPosting       Json?
   carrierVisibilityMode LoadCarrierVisibilityMode @default(OPEN)
+  /**
+   * When true (and not rush), tier groups unlock on a schedule instead of all at once.
+   */
+  tierStagingEnabled    Boolean                   @default(false)
+  /**
+   * Hours T1-only before T2 carriers unlock (staging). Typical default 24.
+   */
+  tier1ExclusiveHours   Int?
+  /**
+   * Additional hours after T2 unlock before T3 unlocks (staging). Typical default 24.
+   */
+  tier2ExclusiveHours   Int?
 
   /**
    * ---- First-class lumber spec columns (mirrored from extendedPosting.lumber) ----
@@ -279,6 +314,8 @@ model Load {
   laneRateObservation LaneRateObservation?
   carrierTiers        LoadCarrierTier[]
   excludedCarriers    LoadCarrierExclusion[] @relation("LoadExcludesCarrier")
+  changeNotices       LoadChangeNotice[]
+  dateChangeRequests  LoadDateChangeRequest[]
 
   @@unique([shipperCompanyId, externalRef], name: "Load_shipper_externalRef_unique")
   @@index([lumberSpecies])
@@ -377,6 +414,7 @@ model SavedLane {
 
 /**
  * When carrierVisibilityMode is TIER_ASSIGNED, only listed carriers may see the posted load.
+ * unlockAt supports staged release (T1 now, T2/T3 later) without a background job.
  */
 model LoadCarrierTier {
   id               String   @id @default(cuid())
@@ -386,6 +424,10 @@ model LoadCarrierTier {
    * 1 = first preference group; same-day visibility for all tiers in MVP.
    */
   tier             Int      @default(1)
+  /**
+   * Carrier may see the load once this timestamp is reached (UTC).
+   */
+  unlockAt         DateTime @default(now())
   createdAt        DateTime @default(now())
 
   load           Load    @relation(fields: [loadId], references: [id], onDelete: Cascade)
@@ -393,6 +435,60 @@ model LoadCarrierTier {
 
   @@unique([loadId, carrierCompanyId])
   @@index([loadId])
+  @@index([unlockAt])
+}
+
+/**
+ * In-app / email-pending notice when a booked load changes (edit, date approve, etc.).
+ * Email delivery is deferred (Outlook/manual for now); rows stay PENDING for EMAIL.
+ */
+model LoadChangeNotice {
+  id                 String            @id @default(cuid())
+  loadId             String
+  carrierCompanyId   String
+  recipientUserId    String?
+  recipientEmail     String?
+  title              String
+  summary            String
+  changes            Json?
+  channel            LoadNoticeChannel @default(EMAIL)
+  status             LoadNoticeStatus  @default(PENDING)
+  createdAt          DateTime          @default(now())
+
+  load             Load     @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  carrierCompany   Company  @relation("CarrierLoadNotices", fields: [carrierCompanyId], references: [id], onDelete: Cascade)
+  recipientUser    User?    @relation("LoadNoticeRecipient", fields: [recipientUserId], references: [id], onDelete: SetNull)
+
+  @@index([loadId, createdAt])
+  @@index([carrierCompanyId, status])
+  @@index([recipientUserId, status])
+}
+
+/**
+ * Carrier proposes a new pickup/delivery date; supplier approves or rejects.
+ */
+model LoadDateChangeRequest {
+  id                   String                  @id @default(cuid())
+  loadId               String
+  proposedByUserId     String
+  proposedByCompanyId  String
+  proposedPickupAt     DateTime?
+  proposedDeliveryAt   DateTime?
+  note                 String?
+  status               DateChangeRequestStatus @default(PENDING)
+  reviewedByUserId     String?
+  reviewedAt           DateTime?
+  reviewNote           String?
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+
+  load              Load    @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  proposedByUser    User    @relation("DateChangeProposer", fields: [proposedByUserId], references: [id], onDelete: Restrict)
+  proposedByCompany Company @relation("DateChangeFromCarrier", fields: [proposedByCompanyId], references: [id], onDelete: Cascade)
+  reviewedByUser    User?   @relation("DateChangeReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([loadId, status])
+  @@index([proposedByCompanyId, status])
 }
 
 /**
