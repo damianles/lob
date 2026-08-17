@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import marketBenchmarks from "../../data/market-benchmarks.json";
 import { canonicalCityKey } from "@/lib/city-canonical";
 import { inferOfferCurrency } from "@/lib/lane-currency";
+import { minSamplesForDbBenchmark } from "@/lib/market-rate-lane";
 import {
   convertMoney,
   spreadsheetUsdEquivalentToNative,
@@ -35,6 +36,9 @@ export type SpreadsheetBenchmarkViewRow = {
   benchmarkScope: "state" | "city";
   sourceSampleCount: number | null;
   rowKey: string;
+  /** File average until this city pair has enough live LOB bookings. */
+  effectiveAvgUsd: number;
+  rateSource: "file" | "live";
 };
 
 function equipmentMatchesBenchmark(benchEq: string, loadEq: string): boolean {
@@ -104,6 +108,8 @@ function toSpreadsheetView(
     sourceSampleCount: typeof b.sampleCount === "number" ? b.sampleCount : null,
     rowKey: rowKeyForBenchmark(b),
     ...rows,
+    effectiveAvgUsd: b.benchmarkAvgUsd,
+    rateSource: "file" as const,
   };
 }
 
@@ -217,13 +223,16 @@ function buildBookedLaneExplorer(
 
 function parseQuickLane(quickLane?: string) {
   if (!quickLane) return {};
-  const m = quickLane.match(/^(.+),\s*([A-Z]{2})\s*->\s*(.+),\s*([A-Z]{2})$/i);
+  const t = quickLane.trim();
+  const m = t.match(
+    /^(.+?)(?:,\s*([A-Za-z]{2}))?\s*(?:->|→|to)\s*(.+?)(?:,\s*([A-Za-z]{2}))?$/i,
+  );
   if (!m) return {};
   return {
     originCity: m[1].trim(),
-    originState: m[2].toUpperCase(),
+    originState: m[2]?.toUpperCase(),
     destinationCity: m[3].trim(),
-    destinationState: m[4].toUpperCase(),
+    destinationState: m[4]?.toUpperCase(),
   };
 }
 
@@ -241,8 +250,17 @@ function bucketLabel(date: Date, period: AnalyticsPeriod): string {
   return d.toISOString().slice(0, 10);
 }
 
-export async function getLaneQuickOptions(limit = 50): Promise<string[]> {
-  const lanes = await prisma.load.findMany({
+export async function getLaneQuickOptions(limit = 80): Promise<string[]> {
+  const file = (marketBenchmarks as BenchmarkRow[])
+    .filter((b) => Boolean(b.originCity && b.destinationCity))
+    .sort((a, b) => (b.sampleCount ?? 0) - (a.sampleCount ?? 0))
+    .slice(0, limit)
+    .map(
+      (b) =>
+        `${b.originCity}, ${b.originState.toUpperCase()} -> ${b.destinationCity}, ${b.destinationState.toUpperCase()}`,
+    );
+
+  const live = await prisma.load.findMany({
     distinct: ["originCity", "originState", "destinationCity", "destinationState"],
     select: {
       originCity: true,
@@ -254,9 +272,14 @@ export async function getLaneQuickOptions(limit = 50): Promise<string[]> {
     take: limit,
   });
 
-  return lanes.map(
-    (l) => `${l.originCity}, ${l.originState.toUpperCase()} -> ${l.destinationCity}, ${l.destinationState.toUpperCase()}`,
-  );
+  const seen = new Set(file);
+  const extra = live
+    .map(
+      (l) =>
+        `${l.originCity}, ${l.originState.toUpperCase()} -> ${l.destinationCity}, ${l.destinationState.toUpperCase()}`,
+    )
+    .filter((s) => !seen.has(s));
+  return [...file, ...extra];
 }
 
 export async function getAnalyticsOverview(
@@ -265,10 +288,10 @@ export async function getAnalyticsOverview(
   displayCurrency: OfferCurrencyCode = "CAD",
 ) {
   const quick = parseQuickLane(filters.quickLane);
-  const originCity = normalize(filters.originCity ?? quick.originCity);
-  const originState = normalize(filters.originState ?? quick.originState)?.toUpperCase();
-  const destinationCity = normalize(filters.destinationCity ?? quick.destinationCity);
-  const destinationState = normalize(filters.destinationState ?? quick.destinationState)?.toUpperCase();
+  const originCity = normalize(filters.originCity || quick.originCity);
+  const originState = normalize(filters.originState || quick.originState)?.toUpperCase();
+  const destinationCity = normalize(filters.destinationCity || quick.destinationCity);
+  const destinationState = normalize(filters.destinationState || quick.destinationState)?.toUpperCase();
   const periodStart = startDateForPeriod(filters.period);
   const prevPeriodStart = new Date(periodStart);
   prevPeriodStart.setFullYear(prevPeriodStart.getFullYear() - 1);
@@ -519,6 +542,8 @@ export async function getAnalyticsOverview(
 
   const benchmarks = marketBenchmarks as BenchmarkRow[];
 
+  const washOutAt = minSamplesForDbBenchmark();
+
   function mapSpreadsheetList(list: BenchmarkRow[], scope: "state" | "city"): SpreadsheetBenchmarkViewRow[] {
     const out = list.map((b) => {
       const matching = bookings.filter((x) => bookingMatchesSpreadsheetRow(b, x));
@@ -535,7 +560,8 @@ export async function getAnalyticsOverview(
         b.destinationState,
         displayCurrency,
       );
-      return toSpreadsheetView(
+      const live = matching.length >= washOutAt && yourAvg != null;
+      const row = toSpreadsheetView(
         { ...b, benchmarkAvgUsd: bench },
         {
           yourBookedAvgUsd: yourAvg,
@@ -544,17 +570,53 @@ export async function getAnalyticsOverview(
         },
         scope,
       );
+      row.rateSource = live ? "live" : "file";
+      row.effectiveAvgUsd = live ? yourAvg : bench;
+      return row;
     });
     out.sort((a, b) => (b.sourceSampleCount ?? 0) - (a.sourceSampleCount ?? 0));
     return out;
   }
 
   // Static file is city-pair only (no state/province aggregates). Ignore any legacy state-only rows.
-  const cityBenchmarkRows = benchmarks.filter((b) => Boolean(b.originCity && b.destinationCity));
+  const cityBenchmarkRows = benchmarks.filter((b) => {
+    if (!b.originCity || !b.destinationCity) return false;
+    if (originState && b.originState.toUpperCase() !== originState) return false;
+    if (destinationState && b.destinationState.toUpperCase() !== destinationState) return false;
+    if (originCity && canonicalCityKey(b.originCity) !== canonicalCityKey(originCity)) return false;
+    if (destinationCity && canonicalCityKey(b.destinationCity) !== canonicalCityKey(destinationCity)) {
+      return false;
+    }
+    return true;
+  });
 
   const spreadsheetBenchmarks = {
     cityLevel: mapSpreadsheetList(cityBenchmarkRows, "city"),
   };
+
+  const fileRows = spreadsheetBenchmarks.cityLevel;
+  const laneFocused = Boolean(originCity && destinationCity);
+  let effectiveAvg = avgRate;
+  let rateSource: "file" | "live" = "live";
+  if (fileRows.length > 0) {
+    if (laneFocused) {
+      const top = fileRows[0];
+      effectiveAvg = top.effectiveAvgUsd;
+      rateSource = top.rateSource;
+    } else {
+      let weighted = 0;
+      let samples = 0;
+      for (const r of fileRows) {
+        const n = r.sourceSampleCount ?? 1;
+        weighted += r.effectiveAvgUsd * n;
+        samples += n;
+      }
+      if (samples > 0) {
+        effectiveAvg = weighted / samples;
+        rateSource = fileRows.every((r) => r.rateSource === "live") ? "live" : "file";
+      }
+    }
+  }
 
   return {
     filtersApplied: {
@@ -566,9 +628,12 @@ export async function getAnalyticsOverview(
       quickLane: filters.quickLane ?? "",
     },
     pricing: {
-      averageRateUsd: avgRate,
+      averageRateUsd: effectiveAvg,
       previousYearAverageRateUsd: prevAvgRate,
-      yoyRateChangePct: prevAvgRate === 0 ? null : ((avgRate - prevAvgRate) / prevAvgRate) * 100,
+      yoyRateChangePct:
+        rateSource === "live" && prevAvgRate !== 0 ? ((avgRate - prevAvgRate) / prevAvgRate) * 100 : null,
+      rateSource,
+      washOutAt,
     },
     volume: {
       loadsPosted: loads.length,

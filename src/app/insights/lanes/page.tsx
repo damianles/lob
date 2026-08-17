@@ -96,10 +96,10 @@ export default async function LaneAnalyticsPage({
           <div>
             <h1 className="text-2xl font-bold sm:text-3xl">Lane rates &amp; trends</h1>
             <p className="mt-2 text-sm text-zinc-600">
-              Pricing, volume, how often loads book, equipment mix, and lane snapshots—using your data and benchmark
-              file. Amounts below are shown in <strong>{displayCurrency}</strong>
-              {displayCurrency === "CAD" ? " (Canada-first). Switch to USD if you prefer." : " (converted from native CAD/USD)."}.
-              Canada–Canada freight is CAD; US–US is USD.
+              Current rates come from the wholesaler posted-loads file. Live LOB bookings replace a city pair once it
+              has {overview.pricing.washOutAt}+ bookings in the selected period. Amounts are{" "}
+              <strong>{displayCurrency}</strong>
+              {displayCurrency === "CAD" ? " (Canada-first)." : "."} Canada–Canada is CAD; US–US is USD.
             </p>
           </div>
           <DisplayCurrencyPreference compact />
@@ -115,11 +115,56 @@ export default async function LaneAnalyticsPage({
           laneOptions={laneOptions}
         />
 
+        <section className="mt-6 rounded-lg border border-zinc-200 bg-white p-4">
+          <h2 className="text-lg font-semibold text-zinc-900">Current lane averages</h2>
+          <p className="mt-1 text-sm text-zinc-600">
+            Wholesaler file is the working data set. A lane switches to live LOB when it has{" "}
+            {overview.pricing.washOutAt}+ bookings here in the selected period.
+          </p>
+          {overview.spreadsheetBenchmarks.cityLevel.length === 0 ? (
+            <p className="mt-3 text-sm text-zinc-500">
+              {originCity || destinationCity || quickLane
+                ? "No city pair in the file matched this search. Try Fort McMurray, AB -> Edmonton, AB in the quick-lane box."
+                : "No city-pair rows in the benchmark file."}
+            </p>
+          ) : (
+            <ul className="mt-3 max-h-[28rem] space-y-2 overflow-auto text-sm">
+              {overview.spreadsheetBenchmarks.cityLevel.map((row) => (
+                <li key={row.rowKey} className="border-b border-zinc-100 pb-2">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <div className="font-medium leading-snug text-zinc-900">{row.laneLabel}</div>
+                    <div className="tabular-nums font-semibold text-zinc-900">
+                      {formatMoney(row.effectiveAvgUsd, displayCurrency)}
+                    </div>
+                  </div>
+                  <div className="mt-0.5 text-[11px] text-zinc-500">
+                    {row.rateSource === "live"
+                      ? `Live LOB · ${row.bookingCount} bookings (replaced file)`
+                      : `Wholesaler file${row.sourceSampleCount != null ? ` · ${row.sourceSampleCount.toLocaleString()} rows` : ""}`}
+                    {row.rateSource === "live" && row.sourceSampleCount != null && (
+                      <> · file was {formatMoney(row.benchmarkAvgUsd, displayCurrency)}</>
+                    )}
+                    {row.rateSource === "file" && row.yourBookedAvgUsd != null && (
+                      <>
+                        {" "}
+                        · LOB so far {formatMoney(row.yourBookedAvgUsd, displayCurrency)} ({row.bookingCount}/
+                        {overview.pricing.washOutAt} to replace)
+                      </>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
         <KPICardGrid className="mt-6">
           <KPICard
             title={`Average rate (${displayCurrency})`}
             value={formatMoney(overview.pricing.averageRateUsd, displayCurrency)}
-            change={formatPct(overview.pricing.yoyRateChangePct)}
+            change={
+              overview.pricing.rateSource === "live" ? formatPct(overview.pricing.yoyRateChangePct) : undefined
+            }
             trend={
               overview.pricing.yoyRateChangePct === null
                 ? "neutral"
@@ -137,7 +182,11 @@ export default async function LaneAnalyticsPage({
                 />
               </svg>
             }
-            subtitle="Year-over-year change"
+            subtitle={
+              overview.pricing.rateSource === "file"
+                ? `Wholesaler file · live replaces a lane at ${overview.pricing.washOutAt}+ LOB bookings`
+                : "LOB bookings on this lane"
+            }
           />
           <KPICard
             title="Loads posted"
@@ -195,13 +244,12 @@ export default async function LaneAnalyticsPage({
         </KPICardGrid>
 
         <section className="mt-6 rounded-lg border border-emerald-200 bg-emerald-50/50 p-4">
-          <h2 className="text-lg font-semibold text-emerald-950">Booked lanes — live 30 / 60 / 90 day averages</h2>
+          <h2 className="text-lg font-semibold text-emerald-950">Live LOB overlay — 30 / 60 / 90 day booked averages</h2>
           <p className="mt-2 max-w-3xl text-sm text-emerald-900/90">
-            These numbers come only from loads <strong>booked on LOB</strong> (agreed rate at booking). Each column
-            counts bookings whose <strong>booked date</strong> falls in the last 30, 60, or 90 days—three separate
-            windows, not nested. Mills see lanes for their freight; carriers see lanes they booked. Use the filters above
-            to focus a lane or state pair. A contact directory spreadsheet is useful for outreach, but it does not
-            replace lane pricing; as volume grows, this table is your ground truth.
+            Overlay only — not the working rate set. These numbers come from loads <strong>booked on LOB</strong>. A
+            city pair in the list above switches from the wholesaler file to live once it has{" "}
+            {overview.pricing.washOutAt}+ bookings in the selected period. Each column is a separate window (last 30,
+            60, or 90 days), not nested.
           </p>
           <div className="mt-4 overflow-x-auto rounded border border-emerald-100 bg-white">
             <table className="w-full min-w-[920px] border-collapse text-left text-sm">
@@ -246,8 +294,8 @@ export default async function LaneAnalyticsPage({
             </table>
             {overview.bookedLaneExplorer.length === 0 && (
               <p className="p-6 text-center text-sm text-zinc-500">
-                No bookings in the last 90 days for this scope. Book a few loads on the board, then refresh—benchmarks
-                below still work from your file until then.
+                No bookings on LOB in the last 90 days for this search. Current rates stay on the wholesaler file
+                above until a city pair reaches {overview.pricing.washOutAt}+ live bookings.
               </p>
             )}
           </div>
@@ -322,7 +370,7 @@ export default async function LaneAnalyticsPage({
           </article>
         </section>
 
-        <section className="mt-6 grid gap-4 md:grid-cols-2">
+        <section className="mt-6">
           <article className="rounded-lg border bg-white p-4">
             <h2 className="text-lg font-semibold">Equipment — posted loads</h2>
             <ul className="mt-3 space-y-2 text-sm">
@@ -338,44 +386,6 @@ export default async function LaneAnalyticsPage({
                 <li className="text-zinc-500">No loads in period.</li>
               )}
             </ul>
-          </article>
-          <article className="rounded-lg border bg-white p-4">
-            <h2 className="text-lg font-semibold">Base lane averages vs your bookings</h2>
-            <p className="mt-1 text-xs text-zinc-500">
-              Benchmarks are <strong>city to city</strong> only (provincial aggregations are too wide for pricing). &quot;Your
-              avg booked&quot; uses bookings on the <em>same origin and destination cities</em> as the row. Source:{" "}
-              <code className="rounded bg-zinc-100 px-1">data/market-benchmarks.json</code> from{" "}
-              <code className="rounded bg-zinc-100 px-1">npx tsx scripts/build-benchmarks-from-posted-xlsx.ts</code>.
-              Fair-rate / lane logic can still use the DB window when enough samples exist (
-              <code className="rounded bg-zinc-100 px-1">LOB_MIN_SAMPLES_FOR_DB_BENCHMARK</code>).
-            </p>
-            <ul className="mt-3 max-h-80 space-y-2 overflow-auto text-sm">
-              {overview.spreadsheetBenchmarks.cityLevel.map((row) => (
-                <li key={row.rowKey} className="border-b border-zinc-100 pb-2">
-                  <div className="font-medium leading-snug">{row.laneLabel}</div>
-                  <div className="mt-0.5 text-[11px] text-zinc-500">Equipment: {row.equipmentType}</div>
-                  <div className="mt-1 text-xs text-zinc-600">
-                    Benchmark {formatMoney(row.benchmarkAvgUsd, displayCurrency)}
-                    {row.sourceSampleCount != null && ` · ${row.sourceSampleCount.toLocaleString()} rows in source sheet`}
-                    {row.yourBookedAvgUsd != null && (
-                      <>
-                        {" "}
-                        · Your avg {formatMoney(row.yourBookedAvgUsd, displayCurrency)} ({row.bookingCount} on this city lane in period)
-                        {row.deltaVsBenchmarkPct != null && (
-                          <span> · {formatPct(row.deltaVsBenchmarkPct)} vs benchmark</span>
-                        )}
-                      </>
-                    )}
-                    {row.yourBookedAvgUsd == null && (
-                      <span> · No booked loads on this exact city lane in period</span>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
-            {overview.spreadsheetBenchmarks.cityLevel.length === 0 && (
-              <p className="mt-2 text-sm text-zinc-500">No city-pair rows in the benchmark file (rebuild the JSON).</p>
-            )}
           </article>
         </section>
 
