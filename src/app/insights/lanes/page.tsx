@@ -12,12 +12,6 @@ import { getActorContext } from "@/lib/request-context";
 
 export const dynamic = "force-dynamic";
 
-function formatPct(value: number | null) {
-  if (value === null) return "N/A";
-  const sign = value > 0 ? "+" : "";
-  return `${sign}${value.toFixed(1)}%`;
-}
-
 function toPeriod(value: string | undefined): AnalyticsPeriod {
   if (!value) return "30d";
   if (value === "week" || value === "30d" || value === "60d" || value === "90d" || value === "yoy") return value;
@@ -96,9 +90,7 @@ export default async function LaneAnalyticsPage({
           <div>
             <h1 className="text-2xl font-bold sm:text-3xl">Lane rates &amp; trends</h1>
             <p className="mt-2 text-sm text-zinc-600">
-              Current rates come from the wholesaler posted-loads file. Live LOB bookings replace a city pair once it
-              has {overview.pricing.washOutAt}+ bookings in the selected period. Amounts are{" "}
-              <strong>{displayCurrency}</strong>
+              Market rates and historical load volumes by city pair. Amounts are <strong>{displayCurrency}</strong>
               {displayCurrency === "CAD" ? " (Canada-first)." : "."} Canada–Canada is CAD; US–US is USD.
             </p>
           </div>
@@ -116,16 +108,13 @@ export default async function LaneAnalyticsPage({
         />
 
         <section className="mt-6 rounded-lg border border-zinc-200 bg-white p-4">
-          <h2 className="text-lg font-semibold text-zinc-900">Current lane averages</h2>
-          <p className="mt-1 text-sm text-zinc-600">
-            Wholesaler file is the working data set. A lane switches to live LOB when it has{" "}
-            {overview.pricing.washOutAt}+ bookings here in the selected period.
-          </p>
+          <h2 className="text-lg font-semibold text-zinc-900">Market rates</h2>
+          <p className="mt-1 text-sm text-zinc-600">Typical rate and historical volume by city pair.</p>
           {overview.spreadsheetBenchmarks.cityLevel.length === 0 ? (
             <p className="mt-3 text-sm text-zinc-500">
               {originCity || destinationCity || quickLane
-                ? "No city pair in the file matched this search. Try Fort McMurray, AB -> Edmonton, AB in the quick-lane box."
-                : "No city-pair rows in the benchmark file."}
+                ? "No market rates matched this search. Try Fort McMurray, AB -> Edmonton, AB in the quick-lane box."
+                : "No market rates available."}
             </p>
           ) : (
             <ul className="mt-3 max-h-[28rem] space-y-2 overflow-auto text-sm">
@@ -137,21 +126,11 @@ export default async function LaneAnalyticsPage({
                       {formatMoney(row.effectiveAvgUsd, displayCurrency)}
                     </div>
                   </div>
-                  <div className="mt-0.5 text-[11px] text-zinc-500">
-                    {row.rateSource === "live"
-                      ? `Live LOB · ${row.bookingCount} bookings (replaced file)`
-                      : `Wholesaler file${row.sourceSampleCount != null ? ` · ${row.sourceSampleCount.toLocaleString()} rows` : ""}`}
-                    {row.rateSource === "live" && row.sourceSampleCount != null && (
-                      <> · file was {formatMoney(row.benchmarkAvgUsd, displayCurrency)}</>
-                    )}
-                    {row.rateSource === "file" && row.yourBookedAvgUsd != null && (
-                      <>
-                        {" "}
-                        · LOB so far {formatMoney(row.yourBookedAvgUsd, displayCurrency)} ({row.bookingCount}/
-                        {overview.pricing.washOutAt} to replace)
-                      </>
-                    )}
-                  </div>
+                  {row.sourceSampleCount != null && (
+                    <div className="mt-0.5 text-[11px] text-zinc-500">
+                      {row.sourceSampleCount.toLocaleString()} loads
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>
@@ -162,16 +141,7 @@ export default async function LaneAnalyticsPage({
           <KPICard
             title={`Average rate (${displayCurrency})`}
             value={formatMoney(overview.pricing.averageRateUsd, displayCurrency)}
-            change={
-              overview.pricing.rateSource === "live" ? formatPct(overview.pricing.yoyRateChangePct) : undefined
-            }
-            trend={
-              overview.pricing.yoyRateChangePct === null
-                ? "neutral"
-                : overview.pricing.yoyRateChangePct > 0
-                  ? "up"
-                  : "down"
-            }
+            subtitle="Market rate"
             icon={
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -181,11 +151,6 @@ export default async function LaneAnalyticsPage({
                   d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                 />
               </svg>
-            }
-            subtitle={
-              overview.pricing.rateSource === "file"
-                ? `Wholesaler file · live replaces a lane at ${overview.pricing.washOutAt}+ LOB bookings`
-                : "LOB bookings on this lane"
             }
           />
           <KPICard
@@ -204,32 +169,9 @@ export default async function LaneAnalyticsPage({
             }
           />
           <KPICard
-            title="Bookings"
-            value={overview.volume.bookings}
-            subtitle={`${overview.frequency.bookingsPerWeek.toFixed(1)} per week`}
-            change={formatPct(overview.frequency.yoyBookingChangePct)}
-            trend={
-              overview.frequency.yoyBookingChangePct === null
-                ? "neutral"
-                : overview.frequency.yoyBookingChangePct > 0
-                  ? "up"
-                  : "down"
-            }
-            icon={
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            }
-          />
-          <KPICard
             title="Total volume"
             value={`${overview.volume.totalWeightLbs.toLocaleString()} lbs`}
-            subtitle={`Booking YoY: ${formatPct(overview.frequency.yoyBookingChangePct)}`}
+            subtitle="Posted in this period"
             icon={
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -243,107 +185,15 @@ export default async function LaneAnalyticsPage({
           />
         </KPICardGrid>
 
-        <section className="mt-6 rounded-lg border border-emerald-200 bg-emerald-50/50 p-4">
-          <h2 className="text-lg font-semibold text-emerald-950">Live LOB overlay — 30 / 60 / 90 day booked averages</h2>
-          <p className="mt-2 max-w-3xl text-sm text-emerald-900/90">
-            Overlay only — not the working rate set. These numbers come from loads <strong>booked on LOB</strong>. A
-            city pair in the list above switches from the wholesaler file to live once it has{" "}
-            {overview.pricing.washOutAt}+ bookings in the selected period. Each column is a separate window (last 30,
-            60, or 90 days), not nested.
-          </p>
-          <div className="mt-4 overflow-x-auto rounded border border-emerald-100 bg-white">
-            <table className="w-full min-w-[920px] border-collapse text-left text-sm">
-              <thead>
-                <tr className="border-b border-zinc-200 bg-zinc-50 text-xs font-semibold uppercase text-zinc-600">
-                  <th className="px-3 py-2">Lane</th>
-                  <th className="px-3 py-2">Equipment</th>
-                  <th className="px-3 py-2 text-right">30d #</th>
-                  <th className="px-3 py-2 text-right">30d avg</th>
-                  <th className="px-3 py-2 text-right">60d #</th>
-                  <th className="px-3 py-2 text-right">60d avg</th>
-                  <th className="px-3 py-2 text-right">90d #</th>
-                  <th className="px-3 py-2 text-right">90d avg</th>
-                </tr>
-              </thead>
-              <tbody>
-                {overview.bookedLaneExplorer.map((row) => (
-                  <tr key={`${row.lane}-${row.equipmentType}`} className="border-b border-zinc-100">
-                    <td className="max-w-[280px] px-3 py-2 text-zinc-800">{row.lane}</td>
-                    <td className="whitespace-nowrap px-3 py-2 text-zinc-600">{row.equipmentType}</td>
-                    <td className="px-3 py-2 text-right tabular-nums">{row.last30Days.bookingCount}</td>
-                    <td className="px-3 py-2 text-right tabular-nums font-medium">
-                      {row.last30Days.averageAgreedRateUsd != null
-                        ? formatMoney(row.last30Days.averageAgreedRateUsd, displayCurrency)
-                        : "—"}
-                    </td>
-                    <td className="px-3 py-2 text-right tabular-nums">{row.last60Days.bookingCount}</td>
-                    <td className="px-3 py-2 text-right tabular-nums font-medium">
-                      {row.last60Days.averageAgreedRateUsd != null
-                        ? formatMoney(row.last60Days.averageAgreedRateUsd, displayCurrency)
-                        : "—"}
-                    </td>
-                    <td className="px-3 py-2 text-right tabular-nums">{row.last90Days.bookingCount}</td>
-                    <td className="px-3 py-2 text-right tabular-nums font-medium">
-                      {row.last90Days.averageAgreedRateUsd != null
-                        ? formatMoney(row.last90Days.averageAgreedRateUsd, displayCurrency)
-                        : "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {overview.bookedLaneExplorer.length === 0 && (
-              <p className="p-6 text-center text-sm text-zinc-500">
-                No bookings on LOB in the last 90 days for this search. Current rates stay on the wholesaler file
-                above until a city pair reaches {overview.pricing.washOutAt}+ live bookings.
-              </p>
-            )}
-          </div>
-        </section>
-
-        <section className="mt-6 grid gap-4 md:grid-cols-2">
-          <article className="rounded-lg border bg-white p-4">
-            <h2 className="text-lg font-semibold">Equipment / truck style mix</h2>
-            <ul className="mt-3 space-y-2 text-sm">
-              {overview.equipmentMix.map((item) => (
-                <li key={item.equipmentType} className="flex justify-between">
-                  <span>{item.equipmentType}</span>
-                  <span>
-                    {item.count} ({item.sharePct.toFixed(1)}%)
-                  </span>
-                </li>
-              ))}
-              {overview.equipmentMix.length === 0 && <li className="text-zinc-500">No booking data for selected filters.</li>}
-            </ul>
-          </article>
-
-          <article className="rounded-lg border bg-white p-4">
-            <h2 className="text-lg font-semibold">Booking frequency trends</h2>
-            <ul className="mt-3 max-h-56 space-y-2 overflow-auto text-sm">
-              {overview.trends.map((t) => (
-                <li key={t.bucket} className="flex justify-between">
-                  <span>{t.bucket}</span>
-                  <span>
-                    {t.bookings} bookings | {formatMoney(t.averageRate, displayCurrency)}
-                  </span>
-                </li>
-              ))}
-              {overview.trends.length === 0 && <li className="text-zinc-500">No trend points in selected period.</li>}
-            </ul>
-          </article>
-        </section>
-
         <section className="mt-6 grid gap-4 md:grid-cols-2">
           <article className="rounded-lg border bg-white p-4">
             <h2 className="text-lg font-semibold">Lanes by state pair</h2>
-            <p className="mt-1 text-xs text-zinc-500">Origin state → destination state (loads posted vs bookings).</p>
+            <p className="mt-1 text-xs text-zinc-500">Origin state → destination state (loads posted).</p>
             <ul className="mt-3 max-h-64 space-y-2 overflow-auto text-sm">
               {overview.lanes.byStatePair.map((row) => (
                 <li key={row.statePair} className="flex justify-between gap-2 border-b border-zinc-100 pb-1">
                   <span className="font-medium">{row.statePair}</span>
-                  <span className="text-zinc-600">
-                    {row.loadsPosted} loads · {row.bookings} booked
-                  </span>
+                  <span className="text-zinc-600">{row.loadsPosted} loads</span>
                 </li>
               ))}
               {overview.lanes.byStatePair.length === 0 && (
@@ -353,14 +203,12 @@ export default async function LaneAnalyticsPage({
           </article>
           <article className="rounded-lg border bg-white p-4">
             <h2 className="text-lg font-semibold">Lanes by city (detail)</h2>
-            <p className="mt-1 text-xs text-zinc-500">Finer OD pairs matching spreadsheet-style lanes.</p>
+            <p className="mt-1 text-xs text-zinc-500">Origin city → destination city (loads posted).</p>
             <ul className="mt-3 max-h-64 space-y-2 overflow-auto text-sm">
               {overview.lanes.byCityPair.map((row) => (
                 <li key={row.lane} className="flex flex-col gap-1 border-b border-zinc-100 pb-2">
                   <span>{row.lane}</span>
-                  <span className="text-xs text-zinc-600">
-                    {row.loadsPosted} loads · {row.bookings} booked
-                  </span>
+                  <span className="text-xs text-zinc-600">{row.loadsPosted} loads</span>
                 </li>
               ))}
               {overview.lanes.byCityPair.length === 0 && (

@@ -129,7 +129,7 @@ export function LanePriceChip({
         className={`inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-3 py-1.5 text-[11px] text-stone-500 ${className ?? ""}`}
       >
         <span className="inline-block h-2 w-2 rounded-full bg-stone-400" />
-        No lane benchmark yet for this OD — use your judgment, you&apos;re seeding the data.
+        No market rate yet for this lane — use your judgment.
       </div>
     );
   }
@@ -152,7 +152,7 @@ export function LanePriceChip({
       title={`Rolling ${quote.windowDays ?? 60}-day average from ${quote.sampleCount ?? "?"} sample(s) ${matchSuffix}`}
     >
       <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
-      <span>Lane avg:</span>
+      <span>Market rate:</span>
       <span className="font-semibold tabular-nums">{formatLaneAvg(quote)}</span>
       {yoyLabel && <span className={`tabular-nums ${yoyColor}`}>{yoyLabel}</span>}
       <span className="text-emerald-800/70">{matchSuffix}</span>

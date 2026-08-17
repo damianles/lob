@@ -42,8 +42,7 @@ export function InsightsLanesFilterForm({
   return (
     <form method="get" action="/insights/lanes" className="mt-5 rounded-lg border bg-white p-4">
       <p className="mb-3 text-xs text-zinc-500">
-        The list and average-rate card use the <strong>wholesaler file</strong> until a city pair has enough live LOB
-        bookings to replace it. The green table is live bookings only. Example:{" "}
+        Search a city pair to see <strong>market rates</strong> and volume. Example:{" "}
         <code className="rounded bg-zinc-100 px-1">Fort McMurray, AB -&gt; Edmonton, AB</code>
       </p>
       <div className="grid gap-3 md:grid-cols-3">
