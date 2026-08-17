@@ -23,8 +23,8 @@ export default async function DriverHubPage() {
           <ul className="mt-6 list-inside list-decimal space-y-3 text-sm text-zinc-700">
             <li>
               <strong>Carriers:</strong> open{" "}
-              <Link className="font-medium text-lob-navy underline" href="/booked">
-                Booked freight
+              <Link className="font-medium text-lob-navy underline" href="/shipments">
+                Shipments
               </Link>
               , choose a load, then create a dispatch from the load detail page. Share the driver link and show QR codes
               at pickup and delivery.

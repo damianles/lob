@@ -4,7 +4,7 @@ export type LobNavId =
   | "loads"
   | "capacity"
   | "insights"
-  | "booked"
+  | "shipments"
   | "driver"
   | "facilityPickup"
   | "facilityDelivery"
@@ -19,8 +19,20 @@ export type LobNavItem = {
   hint: string;
 };
 
+/** Order here is display order. Shipments is first for every persona that has it. */
 export const LOB_NAV_ITEMS: LobNavItem[] = [
-  { id: "loads", href: "/", label: "Loads", hint: "Posted loads from mills & wholesalers" },
+  {
+    id: "shipments",
+    href: "/shipments",
+    label: "Shipments",
+    hint: "Track your shipments — sortable, filterable, exportable",
+  },
+  {
+    id: "loads",
+    href: "/",
+    label: "Open Loads",
+    hint: "Posted loads from mills & wholesalers available to book",
+  },
   {
     id: "capacity",
     href: "/capacity",
@@ -28,12 +40,6 @@ export const LOB_NAV_ITEMS: LobNavItem[] = [
     hint: "Carrier truck availability by lane & dates",
   },
   { id: "insights", href: "/insights", label: "Insights", hint: "Lane rate analytics & fuel pricing" },
-  {
-    id: "booked",
-    href: "/booked",
-    label: "Shipments",
-    hint: "Track all your loads — sortable, filterable, exportable",
-  },
   { id: "driver", href: "/driver", label: "Driver", hint: "Dispatch links & QR for drivers" },
   {
     id: "facilityPickup",
@@ -63,27 +69,26 @@ export const LOB_NAV_ITEMS: LobNavItem[] = [
 ];
 
 const CARRIER_IDS: LobNavId[] = [
+  "shipments",
   "loads",
   "capacity",
   "insights",
-  "booked",
   "driver",
   "carrierProfile",
   "onboarding",
 ];
 
 const SHIPPER_IDS: LobNavId[] = [
-  "loads",
+  "shipments",
   "capacity",
   "insights",
-  "booked",
   "facilityPickup",
   "facilityDelivery",
   "carrierPrefs",
   "onboarding",
 ];
 
-const SETUP_IDS: LobNavId[] = ["loads", "capacity", "onboarding"];
+const SETUP_IDS: LobNavId[] = ["shipments", "capacity", "onboarding"];
 
 function navIdsForKind(kind: ViewerKind): Set<LobNavId> {
   switch (kind) {
@@ -96,7 +101,7 @@ function navIdsForKind(kind: ViewerKind): Set<LobNavId> {
     case "ADMIN":
       return new Set(LOB_NAV_ITEMS.map((i) => i.id));
     default:
-      return new Set(["loads", "capacity", "insights", "booked", "onboarding"]);
+      return new Set(["shipments", "loads", "capacity", "insights", "onboarding"]);
   }
 }
 
@@ -111,14 +116,17 @@ export function lobNavItemsForViewer(
     if (item.id === "onboarding" && !showOnboarding) return false;
     return allowed.has(item.id);
   }).map((item) => {
-    if (item.id === "loads" && kind === "SHIPPER") {
-      return { ...item, hint: "Post loads and track your company's postings" };
+    if (item.id === "loads") {
+      return {
+        ...item,
+        hint: "Browse open freight posted by mills and wholesalers (unless you are excluded)",
+      };
     }
-    if (item.id === "loads" && kind === "CARRIER") {
-      return { ...item, hint: "Browse open freight and book loads for your fleet" };
+    if (item.id === "shipments" && kind === "SHIPPER") {
+      return { ...item, hint: "Your company's shipments only — post, track, and export" };
     }
-    if (item.id === "booked" && kind === "CARRIER") {
-      return { ...item, hint: "Loads you've booked — dispatch, pickup, and delivery history" };
+    if (item.id === "shipments" && kind === "CARRIER") {
+      return { ...item, hint: "Your booked shipments — dispatch, pickup, and delivery history" };
     }
     return item;
   });

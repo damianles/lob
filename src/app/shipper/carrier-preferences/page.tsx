@@ -143,8 +143,8 @@ export default function ShipperCarrierPreferencesPage() {
       <main className="min-h-[calc(100vh-3.5rem)] bg-lob-paper p-6">
         <div className="mx-auto max-w-lg rounded-lg border border-stone-200 bg-white p-6 text-center">
           <p className="text-sm text-stone-600">This page is for supplier (shipper) accounts.</p>
-          <Link href="/" className="mt-4 inline-block text-sm font-medium text-lob-navy underline">
-            Back to loads
+          <Link href="/shipments" className="mt-4 inline-block text-sm font-medium text-lob-navy underline">
+            Back to shipments
           </Link>
         </div>
       </main>

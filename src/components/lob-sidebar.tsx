@@ -29,7 +29,7 @@ export function LobSidebar({
     <aside className="hidden w-[15.5rem] shrink-0 flex-col border-r border-stone-200/50 bg-stone-50/30 lg:flex">
       <div className="border-b border-stone-200/50 px-4 pb-4 pt-6">
         <Link
-          href="/"
+          href={viewer.kind === "SHIPPER" ? "/shipments" : "/"}
           className="flex min-w-0 items-start gap-2.5 rounded-xl p-1.5 transition hover:bg-white/70"
           aria-label={`${BRAND_PRODUCT_NAME} — home`}
         >

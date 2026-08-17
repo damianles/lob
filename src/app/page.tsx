@@ -1,11 +1,13 @@
 import { auth } from "@clerk/nextjs/server";
 import { LoadStatus, VerificationStatus, type Prisma } from "@prisma/client";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { DbWarmingBanner } from "@/components/db-warming-banner";
 import { LandingEntry } from "@/components/landing-entry";
 import { LoadBoardWorkspace, type BoardActor, type SerializableLoad } from "@/components/load-board-workspace";
 import { prisma } from "@/lib/prisma";
+import { fetchPostedLoadVisibilityContext, postedLoadVisibleToCarrier } from "@/lib/carrier-load-access";
 import { carrierCompanyNameForViewer } from "@/lib/carrier-visibility";
 import { shipperCompanyNameForViewer } from "@/lib/shipper-visibility";
 import { getDatabaseErrorGuidance } from "@/lib/db-connection-hints";
@@ -75,12 +77,10 @@ export default async function Home() {
   const { userId } = await auth();
 
   let loads: LoadRow[] = [];
-  let stalePostedLoads: { id: string; referenceNumber: string }[] = [];
   let dbError: string | null = null;
   let profileSyncDbError: string | null = null;
   let appUser: { id: string; companyId: string | null; role: string } | null = null;
   let carrierApproved = false;
-  let supplierApproved = false;
   let boardCompanyName: string | null = null;
   let clerkSyncError: "missing_email" | null = null;
 
@@ -109,6 +109,12 @@ export default async function Home() {
   const boardCompanyId = sessionActor?.companyId ?? appUser?.companyId ?? null;
   const boardUserId = sessionActor?.userId ?? appUser?.id ?? null;
 
+  if (userId && boardRole === "SHIPPER") {
+    redirect("/shipments");
+  }
+
+  let deliveredAllTime = 0;
+
   try {
     if (boardCompanyId) {
       const co = await prisma.company.findUnique({
@@ -119,45 +125,51 @@ export default async function Home() {
       if (boardRole === "DISPATCHER") {
         carrierApproved = co?.verificationStatus === VerificationStatus.APPROVED;
       }
-      if (boardRole === "SHIPPER") {
-        supplierApproved = co?.verificationStatus === VerificationStatus.APPROVED;
-      }
     }
 
     const pickupCutoff = new Date(Date.now() - 48 * 60 * 60 * 1000);
-    const isSupplierWithCompany = boardRole === "SHIPPER" && Boolean(boardCompanyId);
 
-    if (boardRole === "SHIPPER" && !boardCompanyId) {
-      loads = [];
-    } else {
-      loads = await prisma.load.findMany({
-        where: isSupplierWithCompany
-          ? { shipperCompanyId: boardCompanyId! }
-          : {
-              OR: [
-                { status: { not: LoadStatus.POSTED } },
-                {
-                  AND: [{ status: LoadStatus.POSTED }, { requestedPickupAt: { gte: pickupCutoff } }],
-                },
-              ],
-            },
-        orderBy: [{ isRush: "desc" }, { createdAt: "desc" }],
-        include: loadBoardInclude,
-        take: isSupplierWithCompany ? 100 : 50,
-      });
+    loads = await prisma.load.findMany({
+      where: {
+        status: LoadStatus.POSTED,
+        requestedPickupAt: { gte: pickupCutoff },
+      },
+      orderBy: [{ isRush: "desc" }, { createdAt: "desc" }],
+      include: loadBoardInclude,
+      take: 200,
+    });
+
+    if (boardRole === "DISPATCHER" && boardCompanyId && loads.length > 0) {
+      const ctx = await fetchPostedLoadVisibilityContext(
+        prisma,
+        boardCompanyId,
+        loads.map((l) => ({
+          id: l.id,
+          shipperCompanyId: l.shipperCompanyId,
+          carrierVisibilityMode: l.carrierVisibilityMode,
+        })),
+      );
+      loads = loads.filter((l) =>
+        postedLoadVisibleToCarrier(
+          {
+            id: l.id,
+            shipperCompanyId: l.shipperCompanyId,
+            carrierVisibilityMode: l.carrierVisibilityMode,
+          },
+          ctx,
+        ),
+      );
     }
 
-    if (boardRole === "SHIPPER" && boardCompanyId) {
-      stalePostedLoads = await prisma.load.findMany({
+    if (boardRole === "DISPATCHER" && boardCompanyId) {
+      deliveredAllTime = await prisma.load.count({
         where: {
-          shipperCompanyId: boardCompanyId,
-          status: LoadStatus.POSTED,
-          requestedPickupAt: { lt: pickupCutoff },
+          status: LoadStatus.DELIVERED,
+          booking: { is: { carrierCompanyId: boardCompanyId } },
         },
-        select: { id: true, referenceNumber: true },
-        orderBy: { requestedPickupAt: "asc" },
-        take: 15,
       });
+    } else if (boardRole === "ADMIN") {
+      deliveredAllTime = await prisma.load.count({ where: { status: LoadStatus.DELIVERED } });
     }
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Database error";
@@ -173,9 +185,9 @@ export default async function Home() {
     carrierApproved,
   };
 
-  const active = loads.filter((l) => l.status !== LoadStatus.DELIVERED).length;
+  const active = loads.length;
   const rush = loads.filter((l) => l.isRush).length;
-  const delivered = loads.filter((l) => l.status === LoadStatus.DELIVERED).length;
+  const delivered = deliveredAllTime;
 
   if (!userId) {
     return (
@@ -263,28 +275,6 @@ export default async function Home() {
             </section>
           )}
 
-        {userId &&
-          boardRole === "SHIPPER" &&
-          boardCompanyId &&
-          !supplierApproved && (
-            <section className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-4">
-              <h2 className="font-semibold text-amber-900">Supplier verification pending</h2>
-              <p className="mt-1 text-sm text-amber-800">
-                LOB must approve your company before you can post loads.
-              </p>
-              {sessionActor && isRealAdmin(sessionActor) && (
-                <p className="mt-2 text-sm text-amber-900/90">
-                  Preview / admin: set{" "}
-                  <code className="rounded bg-amber-100 px-1">LOB_AUTO_APPROVE_SUPPLIERS=true</code> or approve in{" "}
-                  <Link className="font-medium underline" href="/admin/suppliers">
-                    admin · Suppliers
-                  </Link>
-                  .
-                </p>
-              )}
-            </section>
-          )}
-
         {userId && appUser && !appUser.companyId && appUser.role !== "ADMIN" && (
           <section className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-4">
             <h2 className="font-semibold text-amber-900">One step left — link your company</h2>
@@ -341,25 +331,6 @@ export default async function Home() {
           <section className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-950">
             <p className="font-semibold">Could not load your profile</p>
             <p className="mt-1">Check the banners above, then refresh.</p>
-          </section>
-        )}
-
-        {userId && boardRole === "SHIPPER" && stalePostedLoads.length > 0 && (
-          <section className="mx-auto mb-4 max-w-[1600px] rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
-            <p className="font-semibold">Loads past the pickup window</p>
-            <p className="mt-1 text-amber-900">
-              These are no longer on the public board (48 hours after the requested pickup date). Update the pickup date
-              and repost, or cancel in your TMS.
-            </p>
-            <ul className="mt-2 list-inside list-disc">
-              {stalePostedLoads.map((l) => (
-                <li key={l.id}>
-                  <Link className="font-medium underline" href={`/loads/${l.id}`}>
-                    {l.referenceNumber}
-                  </Link>
-                </li>
-              ))}
-            </ul>
           </section>
         )}
 

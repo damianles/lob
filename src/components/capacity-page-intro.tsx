@@ -25,8 +25,8 @@ export function CapacityPageIntro() {
         " "
       )}
       Booked freight and dispatch stay on the{" "}
-      <Link className="font-medium text-lob-navy underline" href="/booked">
-        Booked freight
+      <Link className="font-medium text-lob-navy underline" href="/shipments">
+        Shipments
       </Link>{" "}
       page.
     </p>

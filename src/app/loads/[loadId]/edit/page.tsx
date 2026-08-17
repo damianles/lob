@@ -58,14 +58,14 @@ export default async function EditLoadPage({ params }: { params: Promise<{ loadI
   return (
     <main className="min-h-[calc(100vh-3.5rem)] bg-zinc-100 p-3 text-zinc-900 sm:p-4">
       <div className="mx-auto flex max-w-[1600px] gap-0 overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
-        <LobSidebar active="loads" />
+        <LobSidebar active="shipments" />
         <div className="min-w-0 flex-1 bg-zinc-50">
           <LobBrandStrip />
           <div className="p-4 sm:p-6">
             <div className="mx-auto max-w-2xl">
               <Breadcrumb
                 items={[
-                  { label: `${load.shipperCompany.legalName} Loads`, href: "/" },
+                  { label: `${load.shipperCompany.legalName} Shipments`, href: "/shipments" },
                   { label: load.referenceNumber, href: `/loads/${load.id}` },
                   { label: "Edit" },
                 ]}

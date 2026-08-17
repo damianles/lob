@@ -8,21 +8,16 @@ import { LobBrandStrip } from "@/components/lob-brand-strip";
 import { LobSidebar, type LobSidebarStats } from "@/components/lob-sidebar";
 import { useDistanceUnitPreference } from "@/components/providers/app-providers";
 import { SavedSearchesBar } from "@/components/saved-searches-bar";
-import { LoadCard } from "@/components/load-card";
-import { Badge, type BadgeVariant } from "@/components/ui/badge";
 import { EmptyState, SearchIcon, TruckIcon } from "@/components/ui/empty-state";
 import { FilterChip, FilterChipGroup } from "@/components/ui/filter-chip";
-import { FloatingActionButton, PlusIcon } from "@/components/ui/floating-action-button";
 import { Button } from "@/components/ui/button";
-import { RadioChoice } from "@/components/ui/radio-choice";
 import { PlaceAutocomplete } from "@/components/place-autocomplete";
-import { LUMBER_EQUIPMENT, equipmentShortTag } from "@/lib/lumber-equipment";
+import { LUMBER_EQUIPMENT } from "@/lib/lumber-equipment";
 import { laneQueryTokenString } from "@/lib/place-helpers";
 import {
   LUMBER_PANEL_TYPE_OPTIONS,
   LUMBER_SPECIES_OPTIONS,
   LUMBER_TREATMENT_OPTIONS,
-  summarizeLumberSpec,
 } from "@/lib/lumber-spec";
 import { formatDisplayDate } from "@/lib/format-display-date";
 import { formatMoney } from "@/lib/money";
@@ -32,22 +27,49 @@ import { milesBetweenZips } from "@/lib/zip-distance";
 /** Client-side summary only; server uses LOB_CAD_TO_USD_RATE for validation. */
 const CAD_TO_USD_SUMMARY = 0.73;
 
-const LOAD_BOARD_VIEW_KEY = "lob.loadBoardViewMode";
+type BoardSortKey = "pickupAt" | "deliveryAt" | "postedAt" | "rate" | "lane" | "status" | "reference";
 
-function boardStatusBadgeVariant(status: string): BadgeVariant {
-  const map: Record<string, BadgeVariant> = {
-    POSTED: "posted",
-    BOOKED: "booked",
-    ASSIGNED: "assigned",
-    IN_TRANSIT: "in-transit",
-    DELIVERED: "delivered",
-    CANCELLED: "error",
-  };
-  return map[status] ?? "default";
+function statusLabel(status: string) {
+  return status.replace(/_/g, " ");
 }
 
-function formatStatusLabel(status: string) {
-  return status.replace(/_/g, " ");
+function statusBadgeClass(status: string) {
+  switch (status) {
+    case "POSTED":
+      return "bg-stone-100 text-stone-700 ring-stone-200";
+    case "BOOKED":
+      return "bg-blue-50 text-blue-900 ring-blue-200";
+    case "ASSIGNED":
+      return "bg-indigo-50 text-indigo-900 ring-indigo-200";
+    case "IN_TRANSIT":
+      return "bg-amber-50 text-amber-900 ring-amber-200";
+    case "DELIVERED":
+      return "bg-emerald-50 text-emerald-900 ring-emerald-200";
+    case "CANCELLED":
+      return "bg-rose-50 text-rose-900 ring-rose-200";
+    default:
+      return "bg-stone-100 text-stone-700 ring-stone-200";
+  }
+}
+
+function csvEscape(v: unknown): string {
+  if (v == null) return "";
+  const s = String(v);
+  if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
+function downloadCsv(filename: string, rows: string[][]) {
+  const csv = rows.map((r) => r.map(csvEscape).join(",")).join("\n");
+  const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 export type SerializableLoad = {
@@ -92,7 +114,6 @@ export type SerializableLoad = {
 export type BoardActor = {
   userId: string | null;
   companyId: string | null;
-  /** Linked company legal name — used for supplier Loads title. */
   companyName: string | null;
   role: string | null;
   carrierApproved: boolean;
@@ -105,20 +126,6 @@ function toUsdEquivalentForSummary(l: SerializableLoad): number {
   }
   const o = l.offeredRateUsd ?? 0;
   return l.offerCurrency === "CAD" ? o * CAD_TO_USD_SUMMARY : o;
-}
-
-function ageLabel(iso: string) {
-  const ms = Date.now() - new Date(iso).getTime();
-  const h = Math.floor(ms / 3600000);
-  if (h < 1) return "<1h";
-  if (h < 72) return `${h}h`;
-  const d = Math.floor(h / 24);
-  return `${d}d`;
-}
-
-function postedDateLabel(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleDateString("en-US", { month: "numeric", day: "numeric" });
 }
 
 type BoardStats = LobSidebarStats;
@@ -174,7 +181,6 @@ export function LoadBoardWorkspace({
   const [message, setMessage] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [bookRate, setBookRate] = useState<Record<string, string>>({});
-  const [dispatchForm, setDispatchForm] = useState<Record<string, { driverName: string; hours: string }>>({});
 
   const [originQ, setOriginQ] = useState("");
   const [destQ, setDestQ] = useState("");
@@ -186,9 +192,8 @@ export function LoadBoardWorkspace({
   const [postedTo, setPostedTo] = useState("");
   const [pickupFrom, setPickupFrom] = useState("");
   const [pickupTo, setPickupTo] = useState("");
-  const [sortBy, setSortBy] = useState<"postedDesc" | "pickupAsc" | "pickupDesc">("postedDesc");
-  const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
-  const [isDesktop, setIsDesktop] = useState(false);
+  const [sortKey, setSortKey] = useState<BoardSortKey>("postedAt");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [emrZip, setEmrZip] = useState("");
   const [emrOriginRadius, setEmrOriginRadius] = useState("");
   const [emrDestRadius, setEmrDestRadius] = useState("");
@@ -198,7 +203,6 @@ export function LoadBoardWorkspace({
   const [lumberTreatment, setLumberTreatment] = useState("");
   const [lumberFragileOnly, setLumberFragileOnly] = useState(false);
   const [lumberWeatherSensitiveOnly, setLumberWeatherSensitiveOnly] = useState(false);
-  const [showCancelled, setShowCancelled] = useState(false);
   const { distanceUnit, setDistanceUnit } = useDistanceUnitPreference();
 
   useEffect(() => {
@@ -209,28 +213,6 @@ export function LoadBoardWorkspace({
       window.history.replaceState({}, "", "/");
     }
   }, []);
-
-  useEffect(() => {
-    const mq = window.matchMedia("(min-width: 768px)");
-    const onChange = () => setIsDesktop(mq.matches);
-    onChange();
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, []);
-
-  useEffect(() => {
-    const raw = window.localStorage.getItem(LOAD_BOARD_VIEW_KEY);
-    if (raw === "cards" || raw === "table") {
-      setViewMode(raw);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!isDesktop) return;
-    window.localStorage.setItem(LOAD_BOARD_VIEW_KEY, viewMode);
-  }, [isDesktop, viewMode]);
-
-  const effectiveViewMode = isDesktop ? viewMode : "cards";
 
   const isShipper = actor.role === "SHIPPER" && Boolean(actor.companyId);
   const isCarrierAccount = actor.role === "DISPATCHER" && Boolean(actor.companyId);
@@ -282,16 +264,6 @@ export function LoadBoardWorkspace({
     const emrZipTrim = emrZip.trim();
 
     const list = loads.filter((l) => {
-      // Hard boundary: suppliers never see another company's loads in this workspace.
-      if (isShipper && actor.companyId && l.shipperCompanyId !== actor.companyId) return false;
-      if (isShipper) {
-        if (showCancelled) {
-          if (l.status !== "CANCELLED") return false;
-        } else if (l.status === "CANCELLED") {
-          return false;
-        }
-      }
-
       const o = `${l.originCity} ${l.originState} ${l.originZip}`.toLowerCase();
       const d = `${l.destinationCity} ${l.destinationState} ${l.destinationZip}`.toLowerCase();
       if (originQ.trim() && !o.includes(originQ.trim().toLowerCase())) return false;
@@ -344,14 +316,36 @@ export function LoadBoardWorkspace({
       return true;
     });
 
+    const dir = sortDir === "asc" ? 1 : -1;
     const sorted = [...list];
     sorted.sort((a, b) => {
-      if (sortBy === "postedDesc") {
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      }
-      const ap = new Date(a.requestedPickupAt).getTime();
-      const bp = new Date(b.requestedPickupAt).getTime();
-      return sortBy === "pickupAsc" ? ap - bp : bp - ap;
+      const v = (() => {
+        switch (sortKey) {
+          case "pickupAt":
+            return new Date(a.requestedPickupAt).getTime() - new Date(b.requestedPickupAt).getTime();
+          case "deliveryAt":
+            return (
+              (a.requestedDeliveryAt ? new Date(a.requestedDeliveryAt).getTime() : 0) -
+              (b.requestedDeliveryAt ? new Date(b.requestedDeliveryAt).getTime() : 0)
+            );
+          case "postedAt":
+            return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          case "rate": {
+            const ar = a.booking ? a.booking.agreedRateUsd : (a.offeredRateUsd ?? 0);
+            const br = b.booking ? b.booking.agreedRateUsd : (b.offeredRateUsd ?? 0);
+            return ar - br;
+          }
+          case "lane":
+            return `${a.originState}${a.destinationState}`.localeCompare(`${b.originState}${b.destinationState}`);
+          case "status":
+            return a.status.localeCompare(b.status);
+          case "reference":
+            return a.referenceNumber.localeCompare(b.referenceNumber);
+          default:
+            return 0;
+        }
+      })();
+      return v * dir;
     });
     return sorted;
   }, [
@@ -365,7 +359,8 @@ export function LoadBoardWorkspace({
     postedTo,
     pickupFrom,
     pickupTo,
-    sortBy,
+    sortKey,
+    sortDir,
     emrZip,
     emrOriginRadius,
     emrDestRadius,
@@ -376,19 +371,66 @@ export function LoadBoardWorkspace({
     lumberTreatment,
     lumberFragileOnly,
     lumberWeatherSensitiveOnly,
-    isShipper,
-    showCancelled,
-    actor.companyId,
   ]);
 
   const summary = useMemo(() => {
     const withRate = filteredLoads.filter((l) => l.offeredRateUsd != null || l.booking);
     const sum = withRate.reduce((acc, l) => acc + toUsdEquivalentForSummary(l), 0);
     const avg = withRate.length ? sum / withRate.length : null;
-    const booked = filteredLoads.filter((l) => l.booking).length;
-    const open = filteredLoads.filter((l) => l.status === "POSTED").length;
-    return { count: filteredLoads.length, avgPostedOrBooked: avg, booked, open };
+    return { count: filteredLoads.length, avgPostedOrBooked: avg };
   }, [filteredLoads]);
+
+  function toggleSort(key: BoardSortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("desc");
+    }
+  }
+
+  function exportCsv() {
+    const headers = [
+      "Reference",
+      "Status",
+      "Posted",
+      "Pickup date",
+      "Expected delivery",
+      "Origin city",
+      "Origin state",
+      "Origin zip",
+      "Destination city",
+      "Destination state",
+      "Destination zip",
+      "Equipment",
+      "Weight (lbs)",
+      "Rate",
+      "Currency",
+    ];
+    const rows: string[][] = [headers];
+    for (const l of filteredLoads) {
+      const rate = l.booking ? l.booking.agreedRateUsd : l.offeredRateUsd;
+      const currency = l.booking ? l.booking.agreedCurrency : l.offerCurrency;
+      rows.push([
+        l.referenceNumber,
+        l.status,
+        l.createdAt,
+        l.requestedPickupAt,
+        l.requestedDeliveryAt ?? "",
+        l.originCity,
+        l.originState,
+        l.originZip,
+        l.destinationCity,
+        l.destinationState,
+        l.destinationZip,
+        l.equipmentType,
+        String(l.weightLbs),
+        rate != null ? String(rate) : "",
+        currency,
+      ]);
+    }
+    downloadCsv(`lob-open-loads-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+  }
 
   function swapOriginDest() {
     const t = originQ;
@@ -424,45 +466,7 @@ export function LoadBoardWorkspace({
       setMessage(data.error ?? "Book failed.");
       return;
     }
-    await refresh("Booked.");
-  }
-
-  async function dispatchLoad(
-    loadId: string,
-    override?: { driverName: string; hours: number },
-  ) {
-    const d = override
-      ? { driverName: override.driverName, hours: String(override.hours) }
-      : (dispatchForm[loadId] ?? { driverName: "", hours: "48" });
-    if (!d.driverName.trim()) {
-      setMessage("Driver name is required.");
-      return;
-    }
-    const hours = Number(d.hours) || 48;
-    setBusyId(`d-${loadId}`);
-    const res = await fetch(`/api/loads/${loadId}/dispatch`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        driverName: d.driverName.trim(),
-        expiresInHours: hours,
-      }),
-    });
-    const data = await res.json().catch(() => ({}));
-    setBusyId(null);
-    if (!res.ok) {
-      setMessage(data.error ?? "Dispatch failed.");
-      return;
-    }
-    const path = data.driverViewUrl as string;
-    const absolute =
-      typeof window !== "undefined" ? `${window.location.origin}${path}` : path;
-    await refresh(`Driver link: ${absolute}`);
-  }
-
-  function copyText(text: string) {
-    void navigator.clipboard.writeText(text);
-    setMessage("Copied to clipboard.");
+    await refresh("Booked. Open Shipments to create a driver link.");
   }
 
   return (
@@ -479,102 +483,15 @@ export function LoadBoardWorkspace({
 
         {/* Search header */}
         <div className="border-b border-stone-100 bg-stone-50/50 px-6 py-6 sm:px-8 sm:py-8">
-          {isShipper ? (
-            <>
-              <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div className="min-w-0">
-                  <h1 className="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">
-                    {actor.companyName ? `${actor.companyName} Loads` : "Your Loads"}
-                  </h1>
-                  <p className="mt-1 text-sm text-zinc-600">
-                    Posted, booked, in transit, and delivered — only this company&apos;s loads.
-                  </p>
-                </div>
-                <Link
-                  href="/post"
-                  className="shrink-0 rounded-lg bg-emerald-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-800"
-                >
-                  Post a Load
-                </Link>
-              </div>
-
-              <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-zinc-600">
-                <span>
-                  <span className="font-medium text-zinc-800">{summary.open}</span> open
-                </span>
-                <span className="text-zinc-300">·</span>
-                <span>
-                  <span className="font-medium text-zinc-800">{summary.booked}</span> booked
-                </span>
-                <span className="text-zinc-300">·</span>
-                <span>
-                  <span className="font-medium text-zinc-800">{stats.delivered}</span> delivered
-                </span>
-                {showCancelled ? (
-                  <>
-                    <span className="text-zinc-300">·</span>
-                    <span>
-                      <span className="font-medium text-zinc-800">{summary.count}</span> cancelled
-                    </span>
-                  </>
-                ) : null}
-              </div>
-
-              <div className="flex flex-wrap items-end gap-3">
-                <label className="text-xs font-medium text-zinc-600">
-                  Sort
-                  <select
-                    className="mt-1 block rounded-lg border border-zinc-300 bg-white px-2 py-2 text-sm"
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-                  >
-                    <option value="postedDesc">Recently posted</option>
-                    <option value="pickupAsc">Pickup date (soonest)</option>
-                    <option value="pickupDesc">Pickup date (latest)</option>
-                  </select>
-                </label>
-                <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-xs font-medium text-zinc-700">
-                  <input
-                    type="checkbox"
-                    className="h-3.5 w-3.5 rounded border-zinc-300 text-lob-navy focus:ring-lob-navy/30"
-                    checked={showCancelled}
-                    onChange={(e) => setShowCancelled(e.target.checked)}
-                  />
-                  {showCancelled ? "Showing cancelled only" : "Show cancelled"}
-                </label>
-                {isDesktop && (
-                  <div className="ml-auto">
-                    <RadioChoice
-                      label="View mode"
-                      name="load-board-view-mode-shipper"
-                      value={viewMode}
-                      onChange={setViewMode}
-                      options={[
-                        { value: "cards", label: "Cards" },
-                        { value: "table", label: "Table" },
-                      ]}
-                      className="[&_label]:px-3 [&_label]:py-2 [&_label]:text-sm"
-                    />
-                  </div>
-                )}
-              </div>
-            </>
-          ) : (
-            <>
-          {isCarrierAccount ? (
-            <div className="mb-4">
-              <h1 className="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Open loads</h1>
-              <p className="mt-1 text-sm text-zinc-600">
-                Search freight posted by mills and wholesalers. Supplier names stay private until you book a load.
-                {!actor.carrierApproved ? (
-                  <>
-                    {" "}
-                    Your company is still pending approval — you can browse but not book yet.
-                  </>
-                ) : null}
-              </p>
-            </div>
-          ) : null}
+          <div className="mb-4">
+            <h1 className="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Open Loads</h1>
+            <p className="mt-1 text-sm text-zinc-600">
+              Search freight posted by mills and wholesalers. Supplier names stay private until you book a load.
+              {isCarrierAccount && !actor.carrierApproved ? (
+                <> Your company is still pending approval — you can browse but not book yet.</>
+              ) : null}
+            </p>
+          </div>
           <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
             <p className="text-sm text-zinc-600">
               <span className="font-medium text-zinc-800">{summary.count}</span> load
@@ -586,7 +503,7 @@ export function LoadBoardWorkspace({
               onClick={() => setMoreFilters((v) => !v)}
               className="text-xs font-medium text-lob-navy underline hover:no-underline"
             >
-              {moreFilters ? "Hide extra filters" : "More filters (sort, dates, EMR, equipment…)"}
+              {moreFilters ? "Hide extra filters" : "More filters (dates, EMR, equipment…)"}
             </button>
           </div>
 
@@ -728,33 +645,18 @@ export function LoadBoardWorkspace({
           )}
 
           <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
-            <label className="text-xs font-medium text-zinc-600">
-              Sort
-              <select
-                className="mt-1 block rounded-lg border border-zinc-300 bg-white px-2 py-2 text-sm"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-              >
-                <option value="postedDesc">Recently posted</option>
-                <option value="pickupAsc">Pickup date (soonest)</option>
-                <option value="pickupDesc">Pickup date (latest)</option>
-              </select>
-            </label>
-            {isDesktop && (
-              <div className="ml-auto">
-                <RadioChoice
-                  label="View mode"
-                  name="load-board-view-mode"
-                  value={viewMode}
-                  onChange={setViewMode}
-                  options={[
-                    { value: "cards", label: "Cards" },
-                    { value: "table", label: "Table" },
-                  ]}
-                  className="[&_label]:px-3 [&_label]:py-2 [&_label]:text-sm"
-                />
-              </div>
-            )}
+            <p className="text-xs text-zinc-600">
+              Click a column header to sort. Showing {filteredLoads.length} open load
+              {filteredLoads.length !== 1 ? "s" : ""}.
+            </p>
+            <button
+              type="button"
+              onClick={exportCsv}
+              disabled={filteredLoads.length === 0}
+              className="rounded-md bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Export CSV ({filteredLoads.length})
+            </button>
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
@@ -1023,15 +925,18 @@ export function LoadBoardWorkspace({
               Refresh list
             </button>
             {isDispatcher && (
-              <span className="text-sm text-zinc-600">Book a load, then create the driver link.</span>
+              <span className="text-sm text-zinc-600">
+                Book a load, then create the driver link from{" "}
+                <Link href="/shipments" className="font-medium text-lob-navy underline">
+                  Shipments
+                </Link>
+                .
+              </span>
             )}
           </div>
-            </>
-          )}
         </div>
 
         {/* Carrier summary strip */}
-        {!isShipper && (
         <div className="flex flex-wrap items-center gap-4 border-b border-stone-100 bg-white px-6 py-3.5 text-sm sm:px-8">
               <span className="text-zinc-600">
                 Avg rate (filtered, ≈ USD):{" "}
@@ -1044,239 +949,163 @@ export function LoadBoardWorkspace({
                 Delivered all-time: <span className="font-semibold text-zinc-900">{stats.delivered}</span>
               </span>
         </div>
-        )}
 
-        {/* Results: cards on all small screens; desktop can choose a dense "table" (stacked) list. */}
-        {effectiveViewMode === "cards" ? (
-          <div className="p-3 max-w-full overflow-x-hidden min-w-0 sm:p-6">
-            <div className="grid min-w-0 max-w-full gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {filteredLoads.map((load) => (
-                <LoadCard
-                  key={load.id}
-                  load={load}
-                  actor={actor}
-                  busyId={busyId}
-                  onBook={(loadId, rate) => void bookLoad(loadId, rate)}
-                  onDispatch={(loadId, driverName, hours) => void dispatchLoad(loadId, { driverName, hours })}
-                  onCopyDriverLink={(url) => copyText(url)}
-                />
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className="max-w-full min-w-0 space-y-2.5 overflow-x-hidden px-3 py-1 pb-6 sm:px-6 sm:py-2">
-            <div className="mx-auto max-w-5xl">
-              {filteredLoads.map((load) => {
-                const displayRate = load.booking ? load.booking.agreedRateUsd : (load.offeredRateUsd ?? null);
-                const rateCurrency = load.booking ? load.booking.agreedCurrency : load.offerCurrency;
-                const specPills = summarizeLumberSpec(load.lumberSpec);
-                return (
-                  <article
-                    key={load.id}
-                    className="rounded-2xl border border-stone-200/80 bg-white p-4 shadow-[0_1px_0_rgba(0,0,0,0.03)] transition hover:border-stone-300/80"
-                  >
-                    <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-                          <Link
-                            href={`/loads/${load.id}`}
-                            className="font-semibold text-lob-navy underline decoration-lob-gold/40"
-                          >
-                            {load.referenceNumber}
-                          </Link>
-                          <span className="text-xs font-medium text-stone-500">{ageLabel(load.createdAt)}</span>
-                          <span className="text-sm font-bold text-stone-900">
-                            {formatMoney(displayRate, rateCurrency)}
+        <div className="p-4 sm:p-6">
+          <div className="overflow-x-auto rounded-lg border border-zinc-200 bg-white">
+            <table className="w-full min-w-[1100px] text-left text-sm">
+              <thead className="border-b bg-zinc-50 text-xs font-semibold uppercase text-zinc-600">
+                <tr>
+                  <BoardSortableTh label="Reference" k="reference" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
+                  <BoardSortableTh label="Lane" k="lane" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
+                  <BoardSortableTh label="Posted" k="postedAt" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
+                  <BoardSortableTh label="Pickup" k="pickupAt" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
+                  <BoardSortableTh
+                    label="Expected Delivery"
+                    k="deliveryAt"
+                    sortKey={sortKey}
+                    sortDir={sortDir}
+                    onClick={toggleSort}
+                  />
+                  <BoardSortableTh label="Status" k="status" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
+                  <th className="px-3 py-2">Equipment</th>
+                  <BoardSortableTh
+                    label="Rate"
+                    k="rate"
+                    sortKey={sortKey}
+                    sortDir={sortDir}
+                    onClick={toggleSort}
+                    align="right"
+                  />
+                  {isDispatcher ? <th className="px-3 py-2">Actions</th> : null}
+                </tr>
+              </thead>
+              <tbody>
+                {filteredLoads.map((load) => {
+                  const displayRate = load.offeredRateUsd;
+                  const rateCurrency = load.offerCurrency;
+                  const canBook = isDispatcher && load.status === "POSTED";
+                  return (
+                    <tr key={load.id} className="border-b border-zinc-100 align-top hover:bg-zinc-50/50">
+                      <td className="px-3 py-2 font-medium">
+                        <Link href={`/loads/${load.id}`} className="text-lob-navy underline">
+                          {load.referenceNumber}
+                        </Link>
+                        {load.isRush && (
+                          <span className="ml-1.5 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-amber-900">
+                            Rush
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-zinc-700">
+                        {load.originCity}, {load.originState} → {load.destinationCity}, {load.destinationState}
+                      </td>
+                      <td className="px-3 py-2 text-zinc-700 tabular-nums">{formatDisplayDate(load.createdAt)}</td>
+                      <td className="px-3 py-2 text-zinc-700 tabular-nums">
+                        {formatDisplayDate(load.requestedPickupAt)}
+                      </td>
+                      <td className="px-3 py-2 text-zinc-700 tabular-nums">
+                        {load.requestedDeliveryAt ? formatDisplayDate(load.requestedDeliveryAt) : "—"}
+                      </td>
+                      <td className="px-3 py-2">
+                        <span
+                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${statusBadgeClass(load.status)}`}
+                        >
+                          {statusLabel(load.status)}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-zinc-700">
+                        <div className="flex flex-col">
+                          <span>{load.equipmentType}</span>
+                          <span className="text-[11px] text-zinc-500 tabular-nums">
+                            {load.weightLbs.toLocaleString()} lbs
                           </span>
                         </div>
-                        <p className="mt-1.5 min-w-0 break-words text-sm font-medium text-stone-800">
-                          {load.originCity}, {load.originState} → {load.destinationCity}, {load.destinationState}
-                        </p>
-                        <p className="mt-0.5 text-xs text-stone-500">
-                          PU {postedDateLabel(load.requestedPickupAt)}
-                          {load.requestedDeliveryAt ? ` · Del ${postedDateLabel(load.requestedDeliveryAt)}` : ""}
-                          {" · "}posted {postedDateLabel(load.createdAt)} · {equipmentShortTag(load.equipmentType)} ·{" "}
-                          {load.weightLbs.toLocaleString()} lb
-                        </p>
-                        {specPills.length > 0 && (
-                          <div className="mt-1.5 flex min-w-0 flex-wrap gap-1">
-                            {specPills.map((p, i) => (
-                              <span
-                                key={`${load.id}-spec-${i}`}
-                                className="inline-flex max-w-full truncate rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-medium text-stone-700"
-                              >
-                                {p}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex min-w-0 flex-shrink-0 flex-col items-end gap-1.5">
-                        <div className="flex flex-wrap items-center justify-end gap-1.5">
-                          <Badge variant={boardStatusBadgeVariant(load.status)} pulse={load.status === "IN_TRANSIT"}>
-                            {formatStatusLabel(load.status)}
-                          </Badge>
-                          {load.isRush && (
-                            <span className="text-[10px] font-bold uppercase text-amber-600">Rush</span>
-                          )}
-                        </div>
-                        {isShipper ? (
-                          <p className="max-w-[14rem] truncate text-right text-[11px] font-medium text-stone-700">
-                            {load.booking?.carrierCompany.legalName || "Awaiting booking"}
-                          </p>
-                        ) : (
-                        <p
-                          className="max-w-[12rem] truncate text-right text-[11px] text-stone-600"
-                          title={
-                            load.shipperCompanyName ??
-                            "Not shown on the open board. After you book, the mill or wholesaler name appears here."
-                          }
-                        >
-                          {load.shipperCompanyName ? (
-                            <span>{load.shipperCompanyName}</span>
-                          ) : (
-                            <span className="text-stone-400 italic">Private until booked</span>
-                          )}
-                        </p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="mt-3 min-w-0 border-t border-stone-100 pt-3 text-xs text-stone-600">
-                      <p className="min-w-0 break-words font-medium text-stone-800">
-                        {load.booking ? (
-                          load.booking.carrierCompany.legalName || (
-                            <span className="text-stone-500 italic">Booked</span>
-                          )
-                        ) : (
-                          "—"
-                        )}
-                      </p>
-                      {load.status === "POSTED" && isDispatcher && (
-                        <div className="mt-2 flex min-w-0 max-w-md flex-wrap items-center gap-2">
-                          <span className="text-stone-500">{load.offerCurrency}</span>
-                          <input
-                            className="min-w-0 max-w-[7rem] flex-1 rounded-lg border border-stone-200 px-2 py-1.5"
-                            placeholder="Rate"
-                            value={bookRate[load.id] ?? ""}
-                            onChange={(e) => setBookRate((m) => ({ ...m, [load.id]: e.target.value }))}
-                          />
-                          <Button
-                            type="button"
-                            size="sm"
-                            disabled={busyId === load.id}
-                            isLoading={busyId === load.id}
-                            onClick={() => bookLoad(load.id)}
-                          >
-                            Book
-                          </Button>
-                        </div>
-                      )}
-                      {load.status === "BOOKED" &&
-                        load.booking?.carrierCompanyId === actor.companyId &&
-                        isDispatcher &&
-                        !load.dispatchLink && (
-                          <div className="mt-2 max-w-md space-y-1.5 rounded-xl border border-purple-200/90 bg-violet-50/60 p-2.5">
-                            <input
-                              className="w-full min-w-0 rounded-lg border border-stone-200 bg-white px-2 py-1.5"
-                              placeholder="Driver name"
-                              value={dispatchForm[load.id]?.driverName ?? ""}
-                              onChange={(e) =>
-                                setDispatchForm((m) => ({
-                                  ...m,
-                                  [load.id]: {
-                                    driverName: e.target.value,
-                                    hours: m[load.id]?.hours ?? "48",
-                                  },
-                                }))
-                              }
-                            />
-                            <div className="flex flex-wrap items-stretch gap-2">
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums">
+                        {displayRate != null ? formatMoney(displayRate, rateCurrency) : "—"}
+                      </td>
+                      {isDispatcher ? (
+                        <td className="px-3 py-2">
+                          {canBook ? (
+                            <div className="flex min-w-[12rem] flex-wrap items-center gap-1.5">
+                              <span className="text-[11px] text-zinc-500">{load.offerCurrency}</span>
                               <input
-                                className="w-20 rounded-lg border border-stone-200 bg-white px-2 py-1.5"
-                                placeholder="Hrs"
-                                value={dispatchForm[load.id]?.hours ?? "48"}
-                                onChange={(e) =>
-                                  setDispatchForm((m) => ({
-                                    ...m,
-                                    [load.id]: {
-                                      driverName: m[load.id]?.driverName ?? "",
-                                      hours: e.target.value,
-                                    },
-                                  }))
-                                }
+                                className="w-20 rounded border border-stone-300 px-2 py-1 text-xs"
+                                placeholder="Rate"
+                                value={bookRate[load.id] ?? ""}
+                                onChange={(e) => setBookRate((m) => ({ ...m, [load.id]: e.target.value }))}
                               />
                               <Button
                                 type="button"
                                 size="sm"
-                                variant="primary"
-                                className="!bg-violet-600 shadow-sm hover:!bg-violet-700"
-                                disabled={busyId === `d-${load.id}`}
-                                isLoading={busyId === `d-${load.id}`}
-                                onClick={() => dispatchLoad(load.id)}
+                                disabled={busyId === load.id}
+                                isLoading={busyId === load.id}
+                                onClick={() => void bookLoad(load.id)}
                               >
-                                Driver link
+                                Book
                               </Button>
                             </div>
-                          </div>
-                        )}
-                      {load.dispatchLink && (
-                        <div className="mt-2 min-w-0 break-words">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() =>
-                              copyText(
-                                `${typeof window !== "undefined" ? window.location.origin : ""}/driver/${load.dispatchLink!.token}`,
-                              )
-                            }
-                          >
-                            Copy driver URL
-                          </Button>
-                          {load.uniquePickupCode && (
-                            <p className="mt-1 text-amber-900/90">Pickup code {load.uniquePickupCode}</p>
+                          ) : (
+                            <span className="text-xs text-zinc-400">—</span>
                           )}
-                        </div>
-                      )}
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
+                        </td>
+                      ) : null}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-        )}
+        </div>
         {filteredLoads.length === 0 && (
           <EmptyState
             icon={hasActiveFilters ? <SearchIcon /> : <TruckIcon />}
-            title={hasActiveFilters ? "No loads match your filters" : isShipper ? "No loads posted yet" : "No loads on the board yet"}
+            title={hasActiveFilters ? "No loads match your filters" : "No open loads on the board yet"}
             description={
               hasActiveFilters
-                ? "Try adjusting your filters or clearing them to see your postings."
-                : isShipper
-                  ? "Post a load to make it available to approved carriers on LOB."
-                  : "Check back soon for new load postings"
+                ? "Try adjusting your filters or clearing them to see posted freight."
+                : "Check back soon for new load postings."
             }
             action={
-              <>
-                {hasActiveFilters && (
-                  <Button type="button" variant="outline" onClick={clearAllFilters}>
-                    Clear all filters
-                  </Button>
-                )}
-                {isShipper && (
-                  <Button type="button" variant="primary" onClick={() => router.push("/post")}>
-                    Post a load
-                  </Button>
-                )}
-              </>
+              hasActiveFilters ? (
+                <Button type="button" variant="outline" onClick={clearAllFilters}>
+                  Clear all filters
+                </Button>
+              ) : undefined
             }
           />
         )}
-
-        {isShipper && (
-          <FloatingActionButton onClick={() => router.push("/post")} icon={<PlusIcon />} label="Post load" />
-        )}
       </div>
     </div>
+  );
+}
+
+function BoardSortableTh({
+  label,
+  k,
+  sortKey,
+  sortDir,
+  onClick,
+  align = "left",
+}: {
+  label: string;
+  k: BoardSortKey;
+  sortKey: BoardSortKey;
+  sortDir: "asc" | "desc";
+  onClick: (k: BoardSortKey) => void;
+  align?: "left" | "right";
+}) {
+  const active = sortKey === k;
+  return (
+    <th className={`px-3 py-2 ${align === "right" ? "text-right" : ""}`}>
+      <button
+        type="button"
+        onClick={() => onClick(k)}
+        className={`inline-flex items-center gap-1 ${active ? "text-zinc-900" : "text-zinc-600 hover:text-zinc-900"}`}
+      >
+        <span>{label}</span>
+        <span className="text-[10px]">{active ? (sortDir === "asc" ? "▲" : "▼") : "↕"}</span>
+      </button>
+    </th>
   );
 }

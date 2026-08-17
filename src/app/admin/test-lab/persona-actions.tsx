@@ -79,7 +79,7 @@ export function PersonaActions({ personaSwitchEnabled }: Props) {
         <p className="rounded-md border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-800">{message}</p>
       )}
       <p className="text-xs text-zinc-600">
-        After switching, open Loads, Capacity, and Booked to exercise each side. Use{" "}
+        After switching, open Shipments, Open Loads, and Capacity to exercise each side. Use{" "}
         <strong>Admin only</strong> before using the admin bar links (Carriers / Companies).
       </p>
     </div>

@@ -36,23 +36,23 @@ export function SupplierPostWorkspace({ companyName }: { companyName: string | n
 
   function goHome(msg?: string) {
     if (msg) {
-      router.push(`/?posted=${encodeURIComponent(msg)}`);
+      router.push(`/shipments?posted=${encodeURIComponent(msg)}`);
       return;
     }
-    router.push("/");
+    router.push("/shipments");
   }
 
   return (
     <div className="mx-auto flex max-w-[1680px] gap-0 overflow-hidden rounded-[1.25rem] border border-stone-200/35 bg-white shadow-[0_2px_40px_-12px_rgba(0,18,51,0.07)]">
-      <LobSidebar active="loads" />
+      <LobSidebar active="shipments" />
       <div className="min-w-0 flex-1 overflow-x-hidden bg-stone-50/40">
         <LobBrandStrip />
         <div className="px-4 py-6 sm:px-8 sm:py-8">
           <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-stone-400">
-                <Link href="/" className="hover:text-lob-navy hover:underline">
-                  {companyName ? `${companyName} Loads` : "Loads"}
+                <Link href="/shipments" className="hover:text-lob-navy hover:underline">
+                  {companyName ? `${companyName} Shipments` : "Shipments"}
                 </Link>
                 <span className="mx-1.5 text-stone-300">/</span>
                 Post
@@ -63,10 +63,10 @@ export function SupplierPostWorkspace({ companyName }: { companyName: string | n
               </p>
             </div>
             <Link
-              href="/"
+              href="/shipments"
               className="rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50"
             >
-              Back to loads
+              Back to shipments
             </Link>
           </div>
 
@@ -109,12 +109,6 @@ export function SupplierPostWorkspace({ companyName }: { companyName: string | n
                   Recent posts
                 </button>
               </div>
-              <p className="text-center text-xs text-stone-500">
-                Or{" "}
-                <Link href="/post/bulk" className="font-medium text-lob-navy underline hover:no-underline">
-                  bulk upload CSV
-                </Link>
-              </p>
             </div>
           )}
 

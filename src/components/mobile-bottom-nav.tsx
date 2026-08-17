@@ -2,101 +2,90 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactElement } from "react";
+import { useMemo, type ReactElement } from "react";
 
 import { useAuth } from "@clerk/nextjs";
 
+import { useViewerRole } from "@/components/providers/app-providers";
 import { cn } from "@/lib/cn";
 import { signUpUrlForAppPath } from "@/lib/guest-auth-routes";
+import { lobNavItemsForViewer, type LobNavId } from "@/lib/lob-nav";
 
-interface NavItem {
-  href: string;
-  label: string;
-  icon: (props: { className?: string; active?: boolean }) => ReactElement;
+interface IconProps {
+  className?: string;
+  active?: boolean;
 }
 
-const navItems: NavItem[] = [
-  {
-    href: "/",
-    label: "Loads",
-    icon: ({ className, active }) => (
-      <svg
-        className={className}
-        fill={active ? "currentColor" : "none"}
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={active ? 0 : 2}
-          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-        />
-      </svg>
-    ),
-  },
-  {
-    href: "/capacity",
-    label: "Capacity",
-    icon: ({ className, active }) => (
-      <svg
-        className={className}
-        fill={active ? "currentColor" : "none"}
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={active ? 0 : 2}
-          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-        />
-      </svg>
-    ),
-  },
-  {
-    href: "/booked",
-    label: "Booked",
-    icon: ({ className, active }) => (
-      <svg
-        className={className}
-        fill={active ? "currentColor" : "none"}
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={active ? 0 : 2}
-          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-        />
-      </svg>
-    ),
-  },
-  {
-    href: "/insights",
-    label: "Insights",
-    icon: ({ className, active }) => (
-      <svg
-        className={className}
-        fill={active ? "currentColor" : "none"}
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={active ? 0 : 2}
-          d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-        />
-      </svg>
-    ),
-  },
-];
+function LoadsIcon({ className, active }: IconProps) {
+  return (
+    <svg className={className} fill={active ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={active ? 0 : 2}
+        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+      />
+    </svg>
+  );
+}
+
+function CapacityIcon({ className, active }: IconProps) {
+  return (
+    <svg className={className} fill={active ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={active ? 0 : 2}
+        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+      />
+    </svg>
+  );
+}
+
+function ShipmentsIcon({ className, active }: IconProps) {
+  return (
+    <svg className={className} fill={active ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={active ? 0 : 2}
+        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+      />
+    </svg>
+  );
+}
+
+function InsightsIcon({ className, active }: IconProps) {
+  return (
+    <svg className={className} fill={active ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={active ? 0 : 2}
+        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+      />
+    </svg>
+  );
+}
+
+const ICONS: Record<string, (props: IconProps) => ReactElement> = {
+  shipments: ShipmentsIcon,
+  loads: LoadsIcon,
+  capacity: CapacityIcon,
+  insights: InsightsIcon,
+};
+
+const MOBILE_IDS: LobNavId[] = ["shipments", "loads", "capacity", "insights"];
 
 export function MobileBottomNav() {
   const pathname = usePathname();
   const { isSignedIn, isLoaded } = useAuth();
+  const { viewer, loading } = useViewerRole();
+
+  const items = useMemo(() => {
+    const kind = loading ? "GUEST" : viewer.kind;
+    return lobNavItemsForViewer(kind, { showOnboarding: false }).filter((i) => MOBILE_IDS.includes(i.id));
+  }, [loading, viewer.kind]);
 
   if (pathname?.startsWith("/sign-in") || pathname?.startsWith("/sign-up")) {
     return null;
@@ -117,10 +106,10 @@ export function MobileBottomNav() {
       aria-label="Mobile navigation"
     >
       <div className="flex justify-around items-center h-16">
-        {navItems.map((item) => {
+        {items.map((item) => {
           const isActive =
             pathname === item.href || (item.href !== "/" && pathname?.startsWith(item.href));
-          const Icon = item.icon;
+          const Icon = ICONS[item.id] ?? LoadsIcon;
 
           return (
             <Link
@@ -131,7 +120,7 @@ export function MobileBottomNav() {
                 "min-w-0 flex-1 px-2 py-1.5",
                 "transition-all duration-200",
                 "active:scale-95",
-                isActive ? "text-lob-navy" : "text-stone-500 hover:text-stone-700"
+                isActive ? "text-lob-navy" : "text-stone-500 hover:text-stone-700",
               )}
             >
               <div className={cn("transition-transform duration-200", isActive && "scale-110")}>

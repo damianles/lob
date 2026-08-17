@@ -86,7 +86,11 @@ export default async function AdminTestLabPage() {
         <section className="mt-6 text-sm text-zinc-600">
           <p>
             <Link className="font-medium text-lob-navy underline" href="/">
-              Loads
+              Open Loads
+            </Link>
+            {" · "}
+            <Link className="font-medium text-lob-navy underline" href="/shipments">
+              Shipments
             </Link>
             {" · "}
             <Link className="font-medium text-lob-navy underline" href="/capacity">

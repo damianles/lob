@@ -31,8 +31,8 @@ export default async function PostLoadPage() {
                 Account setup
               </Link>
             ) : null}
-            <Link href="/" className="font-medium text-lob-navy underline">
-              Back to loads
+            <Link href="/shipments" className="font-medium text-lob-navy underline">
+              Back to shipments
             </Link>
           </div>
         </div>

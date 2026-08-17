@@ -21,7 +21,7 @@ B2B load board for forest products: **suppliers** post loads, **carriers** book 
 |-------|------|
 | Frontend | Next.js 16 App Router, React 19, Tailwind 4 |
 | Auth | Clerk (`@clerk/nextjs`), `ClerkProvider` in `src/app/layout.tsx` |
-| Middleware | `src/proxy.ts` (`clerkMiddleware`) — protected: `/admin`, `/insights`, `/booked`, related APIs |
+| Middleware | `src/proxy.ts` (`clerkMiddleware`) — protected: `/admin`, `/insights`, `/shipments`, related APIs |
 | Database | Prisma 7 + PostgreSQL |
 | Validation | Zod (`src/lib/validation.ts`) |
 
@@ -41,7 +41,7 @@ src/
     loads/[loadId]/ # Shipment detail, BOL, rate con
     capacity/       # Carrier capacity offers
     insights/       # Lane / fuel analytics
-    booked/         # Shipments list
+    shipments/      # Shipments list (`/booked` redirects here)
     sign-in/ sign-up/
   components/       # UI (load-board-workspace, app-nav, lob-sidebar, …)
   lib/              # Business logic, prisma client, auth sync, permissions

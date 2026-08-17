@@ -7,6 +7,7 @@ import { notFound, redirect } from "next/navigation";
 import { CancelLoadButton } from "@/components/cancel-load-button";
 import { CarrierScorecard } from "@/components/carrier-scorecard";
 import { CarrierTypeTag } from "@/components/carrier-type-tag";
+import { CreateDispatchForm } from "@/components/create-dispatch-form";
 import { DispatchQrPanel } from "@/components/dispatch-qr-panel";
 import { ExtendedPostingPanel } from "@/components/extended-posting-panel";
 import { LoadDateChangePanel } from "@/components/load-date-change-panel";
@@ -143,8 +144,8 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
           <p className="mt-2 text-sm text-zinc-600">
             Only the posting mill, the booked carrier, or approved carriers browsing open loads can view this page.
           </p>
-          <Link href="/" className="mt-4 inline-block text-sm font-medium text-lob-navy underline">
-            {actor.role === "SHIPPER" ? "Back to your loads" : "Back to load board"}
+          <Link href={actor.role === "SHIPPER" ? "/shipments" : "/"} className="mt-4 inline-block text-sm font-medium text-lob-navy underline">
+            {actor.role === "SHIPPER" ? "Back to shipments" : "Back to open loads"}
           </Link>
         </div>
       </main>
@@ -179,7 +180,10 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
   return (
     <main className="min-h-[calc(100vh-3.5rem)] bg-zinc-100 p-3 text-zinc-900 sm:p-4">
       <div className="mx-auto flex max-w-[1600px] gap-0 overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
-        <LobSidebar active="loads" stats={{ active, rush, delivered }} />
+        <LobSidebar
+          active={isShipperOwner || isBookedCarrier ? "shipments" : "loads"}
+          stats={{ active, rush, delivered }}
+        />
         <div className="min-w-0 flex-1 bg-zinc-50">
           <LobBrandStrip />
           <div className="p-4 sm:p-6">
@@ -187,8 +191,13 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
             <Breadcrumb
               items={[
                 {
-                  label: isShipperOwner && millName ? `${millName} Loads` : "Loads",
-                  href: "/",
+                  label:
+                    isShipperOwner && millName
+                      ? `${millName} Shipments`
+                      : isBookedCarrier
+                        ? "Shipments"
+                        : "Open Loads",
+                  href: isShipperOwner || isBookedCarrier ? "/shipments" : "/",
                 },
                 { label: load.referenceNumber },
               ]}
@@ -398,6 +407,10 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
                 }
               />
             </div>
+
+            {isBookedCarrier && !load.dispatchLink && load.status === LoadStatus.BOOKED && (
+              <CreateDispatchForm loadId={load.id} />
+            )}
 
             {load.dispatchLink && (isShipperOwner || isBookedCarrier || isRealAdmin) && (
               <div className="mt-6 space-y-3">
