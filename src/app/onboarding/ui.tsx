@@ -20,6 +20,7 @@ type FormState = {
   dotNumber: string;
   mcNumber: string;
   carrierType: "ASSET_BASED" | "BROKER";
+  isOwnerOperator: boolean;
 };
 
 type ShipperFormState = FormState & {
@@ -34,6 +35,7 @@ const emptyState: FormState = {
   dotNumber: "",
   mcNumber: "",
   carrierType: "ASSET_BASED",
+  isOwnerOperator: false,
 };
 
 const emptyShipper: ShipperFormState = {
@@ -191,6 +193,7 @@ export function OnboardingForms() {
         dotNumber: carrier.dotNumber || undefined,
         mcNumber: carrier.mcNumber || undefined,
         carrierType: carrier.carrierType,
+        isOwnerOperator: carrier.isOwnerOperator,
         role: "DISPATCHER",
       }),
     });
@@ -362,7 +365,8 @@ export function OnboardingForms() {
           >
             <h2 className="text-lg font-semibold text-emerald-900">Carrier — book loads</h2>
             <p className="mt-1 text-xs text-zinc-600">
-              Trucking company (asset-based fleet or broker). DOT and MC are required.
+              One carrier account for every service provider. Tell us if you run trucks, broker freight, or operate as
+              an owner-operator — suppliers see that tag after they book.
             </p>
             {!isAdminTester && intent === "carrier" && (
               <p className="mt-2 text-xs text-zinc-500">
@@ -422,10 +426,25 @@ export function OnboardingForms() {
                     carrierType: e.target.value as "ASSET_BASED" | "BROKER",
                   }))
                 }
+                aria-label="Service provider type"
               >
-                <option value="ASSET_BASED">Asset-based carrier</option>
-                <option value="BROKER">Broker</option>
+                <option value="ASSET_BASED">Asset-based — we run our own trucks</option>
+                <option value="BROKER">Broker — we arrange third-party trucks</option>
               </select>
+              <label className="flex cursor-pointer items-start gap-2 text-sm text-zinc-700">
+                <input
+                  type="checkbox"
+                  className="mt-1"
+                  checked={carrier.isOwnerOperator}
+                  onChange={(e) => setCarrier((s) => ({ ...s, isOwnerOperator: e.target.checked }))}
+                />
+                <span>
+                  <span className="font-medium">Owner-operator / single-truck</span>
+                  <span className="mt-0.5 block text-xs text-zinc-500">
+                    Suppliers see this instead of asset/broker. You still book and dispatch as a carrier.
+                  </span>
+                </span>
+              </label>
               <button
                 className={`${lobWoodPrimaryButtonClass} w-full justify-center sm:w-auto`}
                 type="button"

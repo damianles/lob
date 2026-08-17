@@ -59,6 +59,7 @@ export default async function CarrierCompliancePage() {
       carrierProfileBlurb: true,
       isOwnerOperator: true,
       factoringEligible: true,
+      carrierType: true,
       dotNumber: true,
       mcNumber: true,
       legalName: true,
@@ -115,6 +116,7 @@ export default async function CarrierCompliancePage() {
                 initialEquipmentCodes={equipmentCodes}
                 initialBlurb={company.carrierProfileBlurb}
                 initialOwnerOp={company.isOwnerOperator}
+                initialCarrierType={company.carrierType}
                 factoringEligible={company.factoringEligible}
               />
             </div>

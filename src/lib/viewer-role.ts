@@ -1,10 +1,11 @@
 /**
  * Viewer-role types shared between client + server. We model the role from a UX angle —
- * a viewer kind (supplier, carrier, admin, guest, or setup-incomplete) plus attrs
- * that drive theming and labelling (mill vs wholesaler, asset-based vs broker, owner-op).
+ * a viewer kind (supplier, carrier, admin, guest, or setup-incomplete).
  *
  * The DB still stores `User.role` (SHIPPER / DISPATCHER / DRIVER / ADMIN) and
  * `Company.supplierKind` / `Company.carrierType` / `Company.isOwnerOperator` separately.
+ * Mill vs wholesaler and asset vs broker vs owner-op are company metadata — not extra
+ * product personas. Suppliers see carrier type via `CarrierTypeTag`.
  */
 
 export type ViewerKind = "SHIPPER" | "CARRIER" | "ADMIN" | "GUEST" | "SETUP";
@@ -14,9 +15,9 @@ export type CarrierBusinessType = "ASSET_BASED" | "BROKER";
 
 export type ViewerRole = {
   kind: ViewerKind;
-  /** Verbose label e.g. "Mill", "Wholesaler", "Carrier (Asset-based)", "Broker" */
+  /** Verbose label e.g. "Supplier — post loads", "Carrier" */
   label: string;
-  /** Compact badge: S / AC / B / OO / ADMIN — used in nav pill and View-as circles */
+  /** Compact badge: S / C / ADMIN — used in nav pill and View-as circles */
   shortLabel: string;
   companyId: string | null;
   companyName: string | null;
@@ -72,19 +73,10 @@ function viewerRoleForCarrierOrg(
 ): ViewerRole {
   const ct = company?.carrierType ?? null;
   const oo = company?.isOwnerOperator ?? false;
-  const label = oo
-    ? "Carrier (Owner-operator)"
-    : ct === "BROKER"
-      ? "Broker"
-      : ct === "ASSET_BASED"
-        ? "Carrier (Asset-based)"
-        : "Carrier";
-  /** Compact badges: S / AC / B / OO (see admin View-as picker). */
-  const shortLabel = oo ? "OO" : ct === "BROKER" ? "B" : ct === "ASSET_BASED" ? "AC" : "AC";
   return {
     kind: "CARRIER",
-    label,
-    shortLabel,
+    label: "Carrier",
+    shortLabel: "C",
     companyId: company?.id ?? null,
     companyName: company?.legalName ?? null,
     supplierKind: null,
@@ -206,14 +198,12 @@ export function deriveViewerRole(me: MeApiResponse | null | undefined): ViewerRo
 }
 
 /**
- * Visual persona for chrome tinting — finer than ViewerKind so asset carriers,
- * brokers, and owner-ops each get a distinct wash.
+ * Visual persona for chrome tinting. Carrier is one tone — asset / broker /
+ * owner-op is company metadata shown to suppliers, not a separate shell.
  */
 export type PersonaTone =
   | "supplier"
-  | "assetCarrier"
-  | "broker"
-  | "ownerOp"
+  | "carrier"
   | "admin"
   | "setup"
   | "guest";
@@ -225,11 +215,7 @@ export function personaToneFromViewer(
   if (viewer.kind === "ADMIN") return "admin";
   if (viewer.kind === "SETUP") return "setup";
   if (viewer.kind === "GUEST") return "guest";
-  if (viewer.kind === "CARRIER") {
-    if (viewer.isOwnerOperator) return "ownerOp";
-    if (viewer.carrierType === "BROKER") return "broker";
-    return "assetCarrier";
-  }
+  if (viewer.kind === "CARRIER") return "carrier";
   return "guest";
 }
 
@@ -271,8 +257,8 @@ export function roleAccentClasses(
         cardBorder: "border-l-lob-gold",
         pageBg: "bg-[#faf6f0]",
       };
-    case "assetCarrier":
-      /* Light blue — primary carrier (asset fleet) identity. */
+    case "carrier":
+      /* Light blue — one carrier / service-provider identity. */
       return {
         ribbonBg: "bg-sky-50",
         ribbonBorder: "border-sky-200",
@@ -282,30 +268,6 @@ export function roleAccentClasses(
         pillRing: "ring-sky-500/30",
         cardBorder: "border-l-sky-500",
         pageBg: "bg-sky-50/80",
-      };
-    case "broker":
-      /* Cool slate-indigo — brokerage / desk feel. */
-      return {
-        ribbonBg: "bg-indigo-50",
-        ribbonBorder: "border-indigo-200",
-        ribbonText: "text-indigo-950",
-        pillBg: "bg-indigo-600",
-        pillText: "text-white",
-        pillRing: "ring-indigo-500/30",
-        cardBorder: "border-l-indigo-500",
-        pageBg: "bg-indigo-50/70",
-      };
-    case "ownerOp":
-      /* Warm sage — clearly distinct from cool indigo broker. */
-      return {
-        ribbonBg: "bg-[#eef4ec]",
-        ribbonBorder: "border-[#c5d4bc]",
-        ribbonText: "text-[#1f3320]",
-        pillBg: "bg-[#4d6b45]",
-        pillText: "text-white",
-        pillRing: "ring-[#4d6b45]/30",
-        cardBorder: "border-l-[#4d6b45]",
-        pageBg: "bg-[#f3f6f1]",
       };
     case "admin":
       return {

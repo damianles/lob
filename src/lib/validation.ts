@@ -193,6 +193,7 @@ export const companyOnboardingSchema = z
     dotNumber: z.string().min(2).optional(),
     mcNumber: z.string().min(2).optional(),
     carrierType: z.enum(["ASSET_BASED", "BROKER"]).optional(),
+    isOwnerOperator: z.boolean().optional(),
     role: z.enum(["SHIPPER", "DISPATCHER"]),
     supplierKind: z.enum(["MILL", "WHOLESALER", "OTHER"]).optional(),
   })

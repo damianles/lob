@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { CarrierTypeTag } from "@/components/carrier-type-tag";
 import { LUMBER_EQUIPMENT } from "@/lib/lumber-equipment";
 
 type Props = {
@@ -10,6 +11,7 @@ type Props = {
   initialEquipmentCodes: string[];
   initialBlurb: string | null;
   initialOwnerOp: boolean;
+  initialCarrierType: "ASSET_BASED" | "BROKER" | null;
   factoringEligible: boolean;
 };
 
@@ -19,6 +21,7 @@ export function CarrierProfileForm({
   initialEquipmentCodes,
   initialBlurb,
   initialOwnerOp,
+  initialCarrierType,
   factoringEligible,
 }: Props) {
   const [fleetTruckCount, setFleetTruckCount] = useState(initialTruckCount?.toString() ?? "");
@@ -26,6 +29,9 @@ export function CarrierProfileForm({
   const [selectedEq, setSelectedEq] = useState<string[]>(initialEquipmentCodes);
   const [blurb, setBlurb] = useState(initialBlurb ?? "");
   const [isOwnerOperator, setIsOwnerOperator] = useState(initialOwnerOp);
+  const [carrierType, setCarrierType] = useState<"ASSET_BASED" | "BROKER">(
+    initialCarrierType === "BROKER" ? "BROKER" : "ASSET_BASED",
+  );
   const [message, setMessage] = useState<string | null>(null);
 
   function toggleEq(code: string) {
@@ -54,6 +60,7 @@ export function CarrierProfileForm({
         trailerEquipmentTypes: selectedEq,
         carrierProfileBlurb: blurb.trim() || null,
         isOwnerOperator,
+        carrierType,
       }),
     });
     const data = await res.json();
@@ -69,8 +76,27 @@ export function CarrierProfileForm({
       <h2 className="text-lg font-semibold">Fleet & capabilities</h2>
       <p className="mt-2 text-sm text-zinc-600">
         After a load is booked, mills can review your DOT/MC, insurance filings below, and this fleet snapshot so they
-        know who is coming to the gate.
+        know who is coming to the gate. They also see whether you are asset-based, a broker, or an owner-operator.
       </p>
+
+      <div className="mt-4 rounded-lg border border-stone-200 bg-stone-50/80 p-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">What suppliers see</p>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <CarrierTypeTag carrierType={carrierType} isOwnerOperator={isOwnerOperator} />
+          <span className="text-xs text-zinc-500">Shown next to your company name after booking.</span>
+        </div>
+        <label className="mt-3 block text-xs font-semibold text-zinc-500">
+          Service type
+          <select
+            className="mt-1 w-full rounded border border-stone-300 bg-white px-3 py-2 text-sm font-normal text-zinc-800"
+            value={carrierType}
+            onChange={(e) => setCarrierType(e.target.value as "ASSET_BASED" | "BROKER")}
+          >
+            <option value="ASSET_BASED">Asset-based — we run our own trucks</option>
+            <option value="BROKER">Broker — we arrange third-party trucks</option>
+          </select>
+        </label>
+      </div>
 
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <div>

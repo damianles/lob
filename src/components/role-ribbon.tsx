@@ -51,11 +51,6 @@ export function RoleRibbon() {
               Verified
             </span>
           )}
-          {viewer.isOwnerOperator && (
-            <span className="hidden rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider sm:inline-block">
-              Owner-op
-            </span>
-          )}
         </div>
         <div className="flex shrink-0 items-center gap-3">
           {viewer.kind === "SETUP" && (

@@ -1,7 +1,6 @@
 /**
- * Admin "view-as" — lets LOB admins inspect the app exactly the way a Mill,
- * Wholesaler, Asset Carrier, Broker, or Owner-operator would see it. Useful
- * for UX evaluation and design reviews without juggling multiple test logins.
+ * Admin "view-as" — lets LOB admins inspect the app as a Supplier or Carrier.
+ * Useful for UX evaluation without juggling multiple test logins.
  *
  * Trust model:
  * - The cookie is read on the server by `getActorContext()` and ONLY honored
@@ -76,28 +75,25 @@ export function decodeViewAsCookie(raw: string | null | undefined): ViewAsPayloa
 /**
  * Pretty label for the simulated persona shown in chrome.
  *
- * NOTE: "Supplier" is the single persona on the supplier side of the
- * marketplace — both mills and wholesalers experience the same product. The
- * mill-vs-wholesaler distinction lives on the account file (Company.supplierKind),
- * not as a separate persona in the View-as picker.
+ * Supplier and Carrier are the two marketplace personas. Mill vs wholesaler
+ * and asset vs broker vs owner-op live on the company file, not as extra
+ * View-as roles.
  */
 export function viewAsLabel(p: ViewAsPayload): string {
   if (p.role === "ADMIN") return "Admin";
   if (p.role === "SHIPPER") return "Supplier";
-  if (p.isOwnerOperator) return "Owner-operator";
-  if (p.carrierType === "BROKER") return "Broker";
-  if (p.carrierType === "ASSET_BASED") return "Asset Carrier";
-  return p.role === "DISPATCHER" ? "Dispatcher" : "Driver";
+  if (p.role === "DISPATCHER" || p.role === "DRIVER") return "Carrier";
+  return "User";
 }
 
 /** Preset profiles surfaced in the admin picker — the canonical perspectives we care about. */
 export const VIEW_AS_PRESETS: Array<{
   id: string;
   label: string;
-  /** Circle badge letters: S / AC / B / OO */
+  /** Circle badge letters: S / C */
   initials: string;
   /** Matches PersonaTone for accent colors in the picker. */
-  tone: "supplier" | "assetCarrier" | "broker" | "ownerOp";
+  tone: "supplier" | "carrier";
   hint: string;
   payload: ViewAsPayload;
 }> = [
@@ -106,32 +102,16 @@ export const VIEW_AS_PRESETS: Array<{
     label: "Supplier",
     initials: "S",
     tone: "supplier",
-    hint: "Mill or wholesaler — the supplier-side product is one persona",
+    hint: "Mill or wholesaler — one supplier-side product",
     payload: { role: "SHIPPER", verified: true },
   },
   {
-    id: "asset-carrier",
-    label: "Asset Carrier",
-    initials: "AC",
-    tone: "assetCarrier",
-    hint: "Dispatcher at an asset-based fleet",
+    id: "carrier",
+    label: "Carrier",
+    initials: "C",
+    tone: "carrier",
+    hint: "Service provider — book, dispatch, and deliver. Type (asset / broker / owner-op) is company metadata.",
     payload: { role: "DISPATCHER", carrierType: "ASSET_BASED", verified: true },
-  },
-  {
-    id: "broker",
-    label: "Broker",
-    initials: "B",
-    tone: "broker",
-    hint: "Freight brokerage dispatcher",
-    payload: { role: "DISPATCHER", carrierType: "BROKER", verified: true },
-  },
-  {
-    id: "owner-op",
-    label: "Owner-operator",
-    initials: "OO",
-    tone: "ownerOp",
-    hint: "Single-truck owner-operator driver",
-    payload: { role: "DRIVER", carrierType: "ASSET_BASED", isOwnerOperator: true, verified: true },
   },
 ];
 
@@ -140,12 +120,8 @@ export function viewAsInitialsClasses(tone: (typeof VIEW_AS_PRESETS)[number]["to
   switch (tone) {
     case "supplier":
       return "bg-lob-gold text-white";
-    case "assetCarrier":
+    case "carrier":
       return "bg-sky-600 text-white";
-    case "broker":
-      return "bg-indigo-600 text-white";
-    case "ownerOp":
-      return "bg-[#4d6b45] text-white";
   }
 }
 
@@ -161,16 +137,6 @@ export function isViewAsPresetActive(
   if (!viewer.simulated) return false;
   const p = preset.payload;
   if (p.role === "SHIPPER") return viewer.kind === "SHIPPER";
-  if (p.isOwnerOperator) return viewer.kind === "CARRIER" && viewer.isOwnerOperator;
-  if (p.carrierType === "BROKER") {
-    return viewer.kind === "CARRIER" && viewer.carrierType === "BROKER" && !viewer.isOwnerOperator;
-  }
-  if (p.carrierType === "ASSET_BASED") {
-    return (
-      viewer.kind === "CARRIER" &&
-      viewer.carrierType === "ASSET_BASED" &&
-      !viewer.isOwnerOperator
-    );
-  }
+  if (p.role === "DISPATCHER" || p.role === "DRIVER") return viewer.kind === "CARRIER";
   return false;
 }

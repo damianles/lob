@@ -7,7 +7,7 @@ import { personaToneFromViewer } from "@/lib/viewer-role";
 
 /**
  * Sets `data-persona` on <body> so globals.css can wash page backgrounds by
- * supplier (wood), asset carrier (sky), broker (slate), or owner-op (stone).
+ * supplier (wood) or carrier (sky).
  */
 export function PersonaBodyTint() {
   const { viewer, loading } = useViewerRole();

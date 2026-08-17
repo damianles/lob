@@ -16,7 +16,7 @@ import {
 /**
  * Admin-only role-perspective switcher.
  *
- * Lets LOB admins pick "View as Mill", "View as Asset Carrier", etc. Sets the
+ * Lets LOB admins pick "View as Supplier" or "View as Carrier". Sets the
  * `lob.viewAs` cookie via POST /api/admin/view-as, then forces a full page
  * reload so server components re-render with the simulated role applied. When
  * simulating, the bar shows a clear "Reset to admin" pill with the active

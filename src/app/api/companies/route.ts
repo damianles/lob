@@ -93,6 +93,7 @@ export async function POST(req: Request) {
       dotNumber: payload.dotNumber,
       mcNumber: payload.mcNumber,
       carrierType: payload.carrierType,
+      isOwnerOperator: payload.role === "DISPATCHER" ? Boolean(payload.isOwnerOperator) : false,
       supplierKind: payload.role === "SHIPPER" ? payload.supplierKind : undefined,
       verificationStatus:
         payload.role === "SHIPPER"

@@ -10,6 +10,7 @@ const patchSchema = z.object({
   trailerEquipmentTypes: z.array(z.string().min(1).max(64)).max(40).optional(),
   carrierProfileBlurb: z.string().max(4000).nullable().optional(),
   isOwnerOperator: z.boolean().optional(),
+  carrierType: z.enum(["ASSET_BASED", "BROKER"]).optional(),
 });
 
 export async function PATCH(req: Request) {
@@ -39,6 +40,7 @@ export async function PATCH(req: Request) {
       ...(trailerJson !== undefined ? { trailerEquipmentTypes: trailerJson } : {}),
       ...(data.carrierProfileBlurb !== undefined ? { carrierProfileBlurb: data.carrierProfileBlurb } : {}),
       ...(data.isOwnerOperator !== undefined ? { isOwnerOperator: data.isOwnerOperator } : {}),
+      ...(data.carrierType !== undefined ? { carrierType: data.carrierType } : {}),
     },
     select: {
       id: true,
@@ -47,6 +49,7 @@ export async function PATCH(req: Request) {
       trailerEquipmentTypes: true,
       carrierProfileBlurb: true,
       isOwnerOperator: true,
+      carrierType: true,
       factoringEligible: true,
     },
   });

@@ -52,6 +52,7 @@ body[data-persona="supplier"] {
     linear-gradient(180deg, #faf6f0 0%, #f3ebe0 100%);
 }
 
+body[data-persona="carrier"],
 body[data-persona="assetCarrier"] {
   --lob-paper: #f0f7fb;
   --color-lob-paper: #f0f7fb;
@@ -59,24 +60,6 @@ body[data-persona="assetCarrier"] {
   background-image: radial-gradient(1000px 520px at 8% -8%, rgba(14, 165, 233, 0.1), transparent 58%),
     radial-gradient(800px 420px at 96% 4%, rgba(2, 132, 199, 0.05), transparent 52%),
     linear-gradient(180deg, #f5fafc 0%, #e8f2f8 100%);
-}
-
-body[data-persona="broker"] {
-  --lob-paper: #f2f3f9;
-  --color-lob-paper: #f2f3f9;
-  background-color: #eef0f8;
-  background-image: radial-gradient(1000px 520px at 8% -8%, rgba(79, 70, 229, 0.1), transparent 58%),
-    radial-gradient(800px 420px at 96% 4%, rgba(67, 56, 202, 0.05), transparent 52%),
-    linear-gradient(180deg, #f5f6fc 0%, #e8eaf5 100%);
-}
-
-body[data-persona="ownerOp"] {
-  --lob-paper: #f3f6f1;
-  --color-lob-paper: #f3f6f1;
-  background-color: #eef3eb;
-  background-image: radial-gradient(1000px 520px at 8% -8%, rgba(77, 107, 69, 0.12), transparent 58%),
-    radial-gradient(800px 420px at 96% 4%, rgba(61, 90, 54, 0.05), transparent 52%),
-    linear-gradient(180deg, #f5f8f3 0%, #e6eee2 100%);
 }
 
 body[data-persona="admin"] {
