@@ -6,14 +6,6 @@ import { PlaceAutocomplete } from "@/components/place-autocomplete";
 import { regionCodeForLob } from "@/lib/place-helpers";
 import type { AnalyticsPeriod } from "@/lib/analytics";
 
-const periods: { value: AnalyticsPeriod; label: string }[] = [
-  { value: "week", label: "Week by week (7d)" },
-  { value: "30d", label: "30 days" },
-  { value: "60d", label: "60 days" },
-  { value: "90d", label: "90 days" },
-  { value: "yoy", label: "Year over year (365d)" },
-];
-
 type Props = {
   defaultPeriod: AnalyticsPeriod;
   defaultQuickLane: string;
@@ -45,21 +37,14 @@ export function InsightsLanesFilterForm({
         Search a city pair to see <strong>market rates</strong> and volume. Example:{" "}
         <code className="rounded bg-zinc-100 px-1">Fort McMurray, AB -&gt; Edmonton, AB</code>
       </p>
+      <input type="hidden" name="period" value={defaultPeriod} />
       <div className="grid gap-3 md:grid-cols-3">
-        <select name="period" defaultValue={defaultPeriod} className="rounded border px-3 py-2 text-sm">
-          {periods.map((p) => (
-            <option value={p.value} key={p.value}>
-              {p.label}
-            </option>
-          ))}
-        </select>
-
         <input
           list="lane-options"
           name="quickLane"
           value={quickLane}
           onChange={(e) => setQuickLane(e.target.value)}
-          className="rounded border px-3 py-2 text-sm md:col-span-2"
+          className="rounded border px-3 py-2 text-sm md:col-span-3"
           placeholder="Fort McMurray, AB -> Edmonton, AB"
         />
         <datalist id="lane-options">

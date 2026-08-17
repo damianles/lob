@@ -153,119 +153,15 @@ export default async function LaneAnalyticsPage({
               </svg>
             }
           />
-          <KPICard
-            title="Loads posted"
-            value={overview.volume.loadsPosted}
-            subtitle={`${overview.volume.loadsDelivered} delivered`}
-            icon={
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-            }
-          />
-          <KPICard
-            title="Total volume"
-            value={`${overview.volume.totalWeightLbs.toLocaleString()} lbs`}
-            subtitle="Posted in this period"
-            icon={
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"
-                />
-              </svg>
-            }
-          />
         </KPICardGrid>
 
-        <section className="mt-6 grid gap-4 md:grid-cols-2">
-          <article className="rounded-lg border bg-white p-4">
-            <h2 className="text-lg font-semibold">Lanes by state pair</h2>
-            <p className="mt-1 text-xs text-zinc-500">Origin state → destination state (loads posted).</p>
-            <ul className="mt-3 max-h-64 space-y-2 overflow-auto text-sm">
-              {overview.lanes.byStatePair.map((row) => (
-                <li key={row.statePair} className="flex justify-between gap-2 border-b border-zinc-100 pb-1">
-                  <span className="font-medium">{row.statePair}</span>
-                  <span className="text-zinc-600">{row.loadsPosted} loads</span>
-                </li>
-              ))}
-              {overview.lanes.byStatePair.length === 0 && (
-                <li className="text-zinc-500">No lane data for this period.</li>
-              )}
-            </ul>
-          </article>
-          <article className="rounded-lg border bg-white p-4">
-            <h2 className="text-lg font-semibold">Lanes by city (detail)</h2>
-            <p className="mt-1 text-xs text-zinc-500">Origin city → destination city (loads posted).</p>
-            <ul className="mt-3 max-h-64 space-y-2 overflow-auto text-sm">
-              {overview.lanes.byCityPair.map((row) => (
-                <li key={row.lane} className="flex flex-col gap-1 border-b border-zinc-100 pb-2">
-                  <span>{row.lane}</span>
-                  <span className="text-xs text-zinc-600">{row.loadsPosted} loads</span>
-                </li>
-              ))}
-              {overview.lanes.byCityPair.length === 0 && (
-                <li className="text-zinc-500">No city-lane data for this period.</li>
-              )}
-            </ul>
-          </article>
-        </section>
-
-        <section className="mt-6">
-          <article className="rounded-lg border bg-white p-4">
-            <h2 className="text-lg font-semibold">Equipment — posted loads</h2>
-            <ul className="mt-3 space-y-2 text-sm">
-              {overview.equipmentPostedMix.map((item) => (
-                <li key={item.equipmentType} className="flex justify-between">
-                  <span>{item.equipmentType}</span>
-                  <span>
-                    {item.count} ({item.sharePct.toFixed(1)}%)
-                  </span>
-                </li>
-              ))}
-              {overview.equipmentPostedMix.length === 0 && (
-                <li className="text-zinc-500">No loads in period.</li>
-              )}
-            </ul>
-          </article>
-        </section>
-
-        <section className="mt-6 grid gap-4 md:grid-cols-2">
-          <article className="rounded-lg border bg-white p-4">
-            <h2 className="text-lg font-semibold">Preferred origins (mill / seller)</h2>
-            <ul className="mt-3 space-y-2 text-sm">
-              {overview.shipperPreferences.preferredOrigins.map((item) => (
-                <li key={item.lane} className="flex justify-between">
-                  <span>{item.lane}</span>
-                  <span>{item.count} loads</span>
-                </li>
-              ))}
-              {overview.shipperPreferences.preferredOrigins.length === 0 && (
-                <li className="text-zinc-500">No origin history for selected filters.</li>
-              )}
-            </ul>
-          </article>
-          <article className="rounded-lg border bg-white p-4">
-            <h2 className="text-lg font-semibold">Preferred destinations (mill / seller)</h2>
-            <ul className="mt-3 space-y-2 text-sm">
-              {overview.shipperPreferences.preferredDestinations.map((item) => (
-                <li key={item.lane} className="flex justify-between">
-                  <span>{item.lane}</span>
-                  <span>{item.count} loads</span>
-                </li>
-              ))}
-              {overview.shipperPreferences.preferredDestinations.length === 0 && (
-                <li className="text-zinc-500">No destination history for selected filters.</li>
-              )}
-            </ul>
-          </article>
+        <section className="mt-6 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+          <h2 className="text-lg font-semibold text-zinc-900">Coming as freight moves on LOB</h2>
+          <p className="mt-2 max-w-3xl text-sm text-zinc-600">
+            Live analytics will appear here as loads are posted and booked on this board — posting volume, lane mix,
+            equipment, preferred origins and destinations, and booked-rate trends including 30 / 60 / 90 day averages.
+            Until then, market rates above are the working figures.
+          </p>
         </section>
     </div>
   );

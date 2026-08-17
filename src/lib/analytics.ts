@@ -160,7 +160,11 @@ function avgUsd(values: number[]): number | null {
   return values.reduce((a, b) => a + b, 0) / values.length;
 }
 
-/** Bookings-only lane stats for 30 / 60 / 90 day windows (live LOB data). */
+/**
+ * Bookings-only lane stats for 30 / 60 / 90 day windows (live LOB).
+ * Keep computing this even while Insights hides it from customers. Restore the
+ * table on `/insights/lanes` once live volume is high enough to show.
+ */
 function buildBookedLaneExplorer(
   bookings: {
     agreedRateUsd: Prisma.Decimal;
@@ -667,7 +671,7 @@ export async function getAnalyticsOverview(
     },
     equipmentPostedMix,
     spreadsheetBenchmarks,
-    /** Avg agreed rate on booked loads only; 30/60/90 are separate windows (not nested). */
+    /** Avg agreed rate on booked loads only; 30/60/90 are separate windows (not nested). Hidden from Insights until live volume is high enough to show posting mix, preferred lanes, and booked-rate trends. */
     bookedLaneExplorer,
   };
 }
