@@ -935,7 +935,7 @@ export function SupplierPostLoadForm({
         <section className="rounded border border-emerald-200 bg-white/90 p-3">
           <h4 className="text-xs font-bold uppercase tracking-wide text-emerald-900">Carrier Visibility</h4>
           <p className="mt-1 text-xs text-zinc-600">
-            Manage blocked carriers and tier membership in{" "}
+            Manage excluded carriers and tier membership in{" "}
             <a className="font-medium text-lob-navy underline" href="/shipper/carrier-preferences">
               Carrier preferences
             </a>
@@ -951,7 +951,7 @@ export function SupplierPostLoadForm({
                 {
                   value: "OPEN",
                   label: "Open",
-                  description: "Approved carriers (except your blocked list) may see and book.",
+                  description: "Approved carriers (except your excluded list) may see and book.",
                 },
                 {
                   value: "TIER_ASSIGNED",

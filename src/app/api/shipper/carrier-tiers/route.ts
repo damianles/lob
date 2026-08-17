@@ -99,7 +99,7 @@ export async function PUT(req: Request) {
       return NextResponse.json(
         {
           error:
-            "Cannot place blocked carriers in a tier. Unblock them first, or leave them out of tiers.",
+            "Cannot place excluded carriers in a tier. Clear the exclusion first, or leave them out of tiers.",
         },
         { status: 400 },
       );

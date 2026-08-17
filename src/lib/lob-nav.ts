@@ -63,7 +63,7 @@ export const LOB_NAV_ITEMS: LobNavItem[] = [
     id: "carrierPrefs",
     href: "/shipper/carrier-preferences",
     label: "Carrier preferences",
-    hint: "Block carriers from capacity & your loads; use with per-load tiers when posting",
+    hint: "Exclude carriers from capacity & your loads; use with per-load tiers when posting",
   },
   { id: "onboarding", href: "/onboarding", label: "Account setup", hint: "Link supplier or carrier company" },
 ];

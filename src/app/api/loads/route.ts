@@ -295,7 +295,7 @@ export async function POST(req: Request) {
       return NextResponse.json(
         {
           error:
-            "Cannot assign carriers you have blocked globally (Carrier preferences). Remove them from tiers or unblock first.",
+            "Cannot assign carriers you have excluded in Carrier preferences. Remove them from tiers or clear the exclusion first.",
         },
         { status: 400 },
       );

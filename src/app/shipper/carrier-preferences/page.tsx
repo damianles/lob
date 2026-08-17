@@ -129,14 +129,14 @@ export default function ShipperCarrierPreferencesPage() {
     const jTiers = await rTiers.json().catch(() => ({}));
     setSaving(false);
     if (!rBlock.ok) {
-      setErr(typeof jBlock.error === "string" ? jBlock.error : "Could not save blocked list.");
+      setErr(typeof jBlock.error === "string" ? jBlock.error : "Could not save exclusions.");
       return;
     }
     if (!rTiers.ok) {
       setErr(typeof jTiers.error === "string" ? jTiers.error : "Could not save tiers.");
       return;
     }
-    setMsg("Saved. Blocked carriers stay off your loads; tier groups are used when you post with Tiers only.");
+    setMsg("Saved. Excluded carriers stay off your loads; tier groups are used when you post with Tiers only.");
   }
 
   if (me && me.role !== "SHIPPER") {
@@ -161,7 +161,7 @@ export default function ShipperCarrierPreferencesPage() {
           <div className="p-6 lg:p-8">
             <h1 className="text-2xl font-bold text-zinc-900">Carrier preferences</h1>
             <p className="mt-2 max-w-2xl text-sm text-zinc-600">
-              Block carriers you never want, and assign the rest to T1 / T2 / T3 groups. When posting a load, pick Open
+              Exclude carriers you never want, and assign the rest to T1 / T2 / T3 groups. When posting a load, pick Open
               or which groups can see it — you do not re-assign carriers on every load.
             </p>
 
@@ -185,7 +185,7 @@ export default function ShipperCarrierPreferencesPage() {
                       <thead className="bg-zinc-100 text-[10px] font-semibold uppercase text-zinc-600">
                         <tr>
                           <th className="px-3 py-2">Carrier</th>
-                          <th className="px-2 py-2 text-center">Block</th>
+                          <th className="px-2 py-2 text-center">Exclude</th>
                           <th className="px-2 py-2 text-center">T1</th>
                           <th className="px-2 py-2 text-center">T2</th>
                           <th className="px-2 py-2 text-center">T3</th>
@@ -209,7 +209,7 @@ export default function ShipperCarrierPreferencesPage() {
                                   type="checkbox"
                                   checked={blocked}
                                   onChange={() => toggleBlock(c.id)}
-                                  title="Block company-wide"
+                                  title="Exclude company-wide"
                                 />
                               </td>
                               {([1, 2, 3] as const).map((t) => (
@@ -241,7 +241,7 @@ export default function ShipperCarrierPreferencesPage() {
                   )}
                 </div>
                 <p className="text-xs text-zinc-500">
-                  T1 = preferred · T2 = backup · T3 = overflow. Blocked carriers cannot be placed in a tier.
+                  T1 = preferred · T2 = backup · T3 = overflow. Excluded carriers cannot be placed in a tier.
                 </p>
                 <button
                   type="submit"
