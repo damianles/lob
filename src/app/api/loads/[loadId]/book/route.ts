@@ -65,7 +65,7 @@ export async function POST(
   }
 
   const agreedCurrency: OfferCurrency =
-    parsed.data.agreedCurrency ?? load.offerCurrency ?? OfferCurrency.USD;
+    parsed.data.agreedCurrency ?? load.offerCurrency ?? OfferCurrency.CAD;
 
   const booking = await prisma.$transaction(async (tx) => {
     const newBooking = await tx.booking.create({

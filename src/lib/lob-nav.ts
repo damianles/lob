@@ -39,7 +39,7 @@ export const LOB_NAV_ITEMS: LobNavItem[] = [
     label: "Capacity",
     hint: "Carrier truck availability by lane & dates",
   },
-  { id: "insights", href: "/insights", label: "Insights", hint: "Lane rate analytics & fuel pricing" },
+  { id: "insights", href: "/insights", label: "Insights", hint: "Lane rate analytics" },
   { id: "driver", href: "/driver", label: "Driver", hint: "Dispatch links & QR for drivers" },
   {
     id: "facilityPickup",

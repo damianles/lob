@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { LUMBER_EQUIPMENT_CODES } from "@/lib/lumber-equipment";
+import { inferOfferCurrency } from "@/lib/lane-currency";
 import { lumberSpecSchema } from "@/lib/lumber-spec";
 
 /**
@@ -49,8 +50,8 @@ export const BULK_COLUMNS: BulkColumn[] = [
   { header: "weightLbs",          required: true,  help: "Total weight in pounds (integer)",                        example: "44000" },
   { header: "equipmentType",      required: true,  help: "Equipment code: SB, Tri, MX, Tan, CW or a legacy label",  example: "SB" },
   { header: "requestedPickupAt",  required: true,  help: "Pickup date in ISO format YYYY-MM-DD (Excel-friendly). Slash dates (1/2/26) are rejected to avoid mm/dd vs dd/mm ambiguity.", example: "2026-05-12" },
-  { header: "offeredRateUsd",     required: true,  help: "Offer rate (decimal); use offerCurrency to denote CAD",   example: "2400" },
-  { header: "offerCurrency",      required: false, help: "USD or CAD (defaults to USD)",                            example: "USD" },
+  { header: "offeredRateUsd",     required: true,  help: "Offer rate (decimal) in offerCurrency",                   example: "2400" },
+  { header: "offerCurrency",      required: false, help: "USD or CAD. Omit to infer: Canada–Canada = CAD, US–US = USD.", example: "CAD" },
   { header: "isRush",             required: false, help: "true / false — rush load?",                              example: "false" },
   { header: "isPrivate",          required: false, help: "true / false — keep off public board?",                  example: "false" },
   { header: "carrierVisibilityMode", required: false, help: "OPEN or TIER_ASSIGNED (default OPEN)",                  example: "OPEN" },
@@ -448,7 +449,7 @@ const bulkRowSchema = z.object({
   ),
   requestedPickupAt: requiredString("requestedPickupAt").pipe(z.string().min(8)),
   offeredRateUsd: z.coerce.number().positive("offeredRateUsd must be > 0"),
-  offerCurrency: z.enum(["USD", "CAD"]).default("USD"),
+  offerCurrency: z.enum(["USD", "CAD"]).default("CAD"),
   isRush: z.boolean().default(false),
   isPrivate: z.boolean().default(false),
   carrierVisibilityMode: z.enum(["OPEN", "TIER_ASSIGNED"]).default("OPEN"),
@@ -480,7 +481,8 @@ export function parseBulkLoadRow(
     equipmentType: rec.equipmentType ?? "",
     requestedPickupAt: rec.requestedPickupAt ?? "",
     offeredRateUsd: rec.offeredRateUsd ?? "",
-    offerCurrency: (rec.offerCurrency || "USD") as "USD" | "CAD",
+    offerCurrency: (rec.offerCurrency ||
+      inferOfferCurrency(rec.originState ?? "", rec.destinationState ?? "")) as "USD" | "CAD",
     isRush: parseBooly(rec.isRush, false),
     isPrivate: parseBooly(rec.isPrivate, false),
     carrierVisibilityMode: (rec.carrierVisibilityMode || "OPEN") as "OPEN" | "TIER_ASSIGNED",

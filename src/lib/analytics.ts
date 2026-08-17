@@ -2,6 +2,12 @@ import { Prisma } from "@prisma/client";
 
 import marketBenchmarks from "../../data/market-benchmarks.json";
 import { canonicalCityKey } from "@/lib/city-canonical";
+import { inferOfferCurrency } from "@/lib/lane-currency";
+import {
+  convertMoney,
+  spreadsheetUsdEquivalentToNative,
+  type OfferCurrencyCode,
+} from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 
 type BenchmarkRow = {
@@ -124,6 +130,25 @@ function startDateForPeriod(period: AnalyticsPeriod): Date {
   return new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
 }
 
+function bookingAmountInDisplay(
+  amount: number,
+  agreedCurrency: OfferCurrencyCode,
+  display: OfferCurrencyCode,
+): number {
+  return convertMoney(amount, agreedCurrency, display);
+}
+
+function spreadsheetAmountInDisplay(
+  usdStored: number,
+  originState: string,
+  destState: string,
+  display: OfferCurrencyCode,
+): number {
+  const native = inferOfferCurrency(originState, destState);
+  const nativeAmount = spreadsheetUsdEquivalentToNative(usdStored, native);
+  return convertMoney(nativeAmount, native, display);
+}
+
 function avgUsd(values: number[]): number | null {
   if (values.length === 0) return null;
   return values.reduce((a, b) => a + b, 0) / values.length;
@@ -133,6 +158,7 @@ function avgUsd(values: number[]): number | null {
 function buildBookedLaneExplorer(
   bookings: {
     agreedRateUsd: Prisma.Decimal;
+    agreedCurrency: OfferCurrencyCode;
     bookedAt: Date;
     load: {
       originCity: string;
@@ -144,6 +170,7 @@ function buildBookedLaneExplorer(
   }[],
   limits: { d30: Date; d60: Date; d90: Date },
   maxRows: number,
+  display: OfferCurrencyCode,
 ) {
   type Bucket = { rates30: number[]; rates60: number[]; rates90: number[] };
   const map = new Map<string, Bucket & { lane: string; equipmentType: string }>();
@@ -151,7 +178,7 @@ function buildBookedLaneExplorer(
   for (const b of bookings) {
     const lane = `${b.load.originCity}, ${b.load.originState} → ${b.load.destinationCity}, ${b.load.destinationState}`;
     const key = `${lane}||${b.load.equipmentType}`;
-    const rate = Number(b.agreedRateUsd);
+    const rate = bookingAmountInDisplay(Number(b.agreedRateUsd), b.agreedCurrency, display);
     if (!Number.isFinite(rate)) continue;
 
     let row = map.get(key);
@@ -232,7 +259,11 @@ export async function getLaneQuickOptions(limit = 50): Promise<string[]> {
   );
 }
 
-export async function getAnalyticsOverview(scope: ActorScope, filters: AnalyticsFilters) {
+export async function getAnalyticsOverview(
+  scope: ActorScope,
+  filters: AnalyticsFilters,
+  displayCurrency: OfferCurrencyCode = "CAD",
+) {
   const quick = parseQuickLane(filters.quickLane);
   const originCity = normalize(filters.originCity ?? quick.originCity);
   const originState = normalize(filters.originState ?? quick.originState)?.toUpperCase();
@@ -311,6 +342,7 @@ export async function getAnalyticsOverview(scope: ActorScope, filters: Analytics
       where: bookingWhere,
       select: {
         agreedRateUsd: true,
+        agreedCurrency: true,
         bookedAt: true,
         load: {
           select: {
@@ -329,12 +361,13 @@ export async function getAnalyticsOverview(scope: ActorScope, filters: Analytics
     }),
     prisma.booking.findMany({
       where: prevBookingWhere,
-      select: { agreedRateUsd: true },
+      select: { agreedRateUsd: true, agreedCurrency: true },
     }),
     prisma.booking.findMany({
       where: explorerBookingWhere,
       select: {
         agreedRateUsd: true,
+        agreedCurrency: true,
         bookedAt: true,
         load: {
           select: {
@@ -349,20 +382,31 @@ export async function getAnalyticsOverview(scope: ActorScope, filters: Analytics
     }),
   ]);
 
-  const bookedLaneExplorer = buildBookedLaneExplorer(explorerBookings, {
-    d30: startDateForPeriod("30d"),
-    d60: startDateForPeriod("60d"),
-    d90: startDateForPeriod("90d"),
-  }, 50);
+  const bookedLaneExplorer = buildBookedLaneExplorer(
+    explorerBookings,
+    {
+      d30: startDateForPeriod("30d"),
+      d60: startDateForPeriod("60d"),
+      d90: startDateForPeriod("90d"),
+    },
+    50,
+    displayCurrency,
+  );
 
   const avgRate =
     bookings.length === 0
       ? 0
-      : bookings.reduce((acc, b) => acc + Number(b.agreedRateUsd), 0) / bookings.length;
+      : bookings.reduce(
+          (acc, b) => acc + bookingAmountInDisplay(Number(b.agreedRateUsd), b.agreedCurrency, displayCurrency),
+          0,
+        ) / bookings.length;
   const prevAvgRate =
     prevBookings.length === 0
       ? 0
-      : prevBookings.reduce((acc, b) => acc + Number(b.agreedRateUsd), 0) / prevBookings.length;
+      : prevBookings.reduce(
+          (acc, b) => acc + bookingAmountInDisplay(Number(b.agreedRateUsd), b.agreedCurrency, displayCurrency),
+          0,
+        ) / prevBookings.length;
 
   const deliveredCount = loads.filter((l) => l.status === "DELIVERED").length;
   const totalWeight = loads.reduce((acc, l) => acc + l.weightLbs, 0);
@@ -374,7 +418,11 @@ export async function getAnalyticsOverview(scope: ActorScope, filters: Analytics
     const key = bucketLabel(b.bookedAt, filters.period);
     const current = trendMap.get(key) ?? { bookings: 0, avgRateAccumulator: 0 };
     current.bookings += 1;
-    current.avgRateAccumulator += Number(b.agreedRateUsd);
+    current.avgRateAccumulator += bookingAmountInDisplay(
+      Number(b.agreedRateUsd),
+      b.agreedCurrency,
+      displayCurrency,
+    );
     trendMap.set(key, current);
   }
   const trends = Array.from(trendMap.entries())
@@ -477,14 +525,22 @@ export async function getAnalyticsOverview(scope: ActorScope, filters: Analytics
       const yourAvg =
         matching.length === 0
           ? null
-          : matching.reduce((s, x) => s + Number(x.agreedRateUsd), 0) / matching.length;
+          : matching.reduce(
+              (s, x) => s + bookingAmountInDisplay(Number(x.agreedRateUsd), x.agreedCurrency, displayCurrency),
+              0,
+            ) / matching.length;
+      const bench = spreadsheetAmountInDisplay(
+        b.benchmarkAvgUsd,
+        b.originState,
+        b.destinationState,
+        displayCurrency,
+      );
       return toSpreadsheetView(
-        b,
+        { ...b, benchmarkAvgUsd: bench },
         {
           yourBookedAvgUsd: yourAvg,
           bookingCount: matching.length,
-          deltaVsBenchmarkPct:
-            yourAvg == null ? null : ((yourAvg - b.benchmarkAvgUsd) / b.benchmarkAvgUsd) * 100,
+          deltaVsBenchmarkPct: yourAvg == null ? null : ((yourAvg - bench) / bench) * 100,
         },
         scope,
       );

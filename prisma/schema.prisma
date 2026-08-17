@@ -230,7 +230,7 @@ model Load {
   isRush                Boolean                   @default(false)
   isPrivate             Boolean                   @default(false)
   status                LoadStatus                @default(POSTED)
-  offerCurrency         OfferCurrency             @default(USD)
+  offerCurrency         OfferCurrency             @default(CAD)
   offeredRateUsd        Decimal?                  @db.Decimal(10, 2)
   marketRateUsd         Decimal?                  @db.Decimal(10, 2)
   finalCostUsd          Decimal?                  @db.Decimal(10, 2)
@@ -351,7 +351,7 @@ model LoadTemplate {
   isRush           Boolean       @default(false)
   isPrivate        Boolean       @default(false)
   defaultRateUsd   Decimal?      @db.Decimal(10, 2)
-  defaultCurrency  OfferCurrency @default(USD)
+  defaultCurrency  OfferCurrency @default(CAD)
   notes            String?
 
   /**
@@ -518,7 +518,7 @@ model LaneRateObservation {
   destZip5        String                @default("")
   equipmentNorm   String
   rateUsd         Decimal               @db.Decimal(12, 2)
-  offerCurrency   OfferCurrency         @default(USD)
+  offerCurrency   OfferCurrency         @default(CAD)
   source          RateObservationSource @default(APP)
   loadId          String?               @unique
   load            Load?                 @relation(fields: [loadId], references: [id], onDelete: Cascade)
@@ -532,7 +532,7 @@ model Booking {
   id               String        @id @default(cuid())
   loadId           String        @unique
   carrierCompanyId String
-  agreedCurrency   OfferCurrency @default(USD)
+  agreedCurrency   OfferCurrency @default(CAD)
   agreedRateUsd    Decimal       @db.Decimal(10, 2)
   bookedAt         DateTime      @default(now())
   createdAt        DateTime      @default(now())

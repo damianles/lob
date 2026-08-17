@@ -4,6 +4,12 @@ import { useAuth } from "@clerk/nextjs";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 import {
+  DISPLAY_CURRENCY_STORAGE_KEY,
+  parseDisplayCurrency,
+  writeDisplayCurrencyCookie,
+  type DisplayCurrency,
+} from "@/lib/display-currency";
+import {
   DISTANCE_UNIT_STORAGE_KEY_LEGACY,
   distanceUnitStorageKeyForViewerKind,
   type DistanceUnit,
@@ -16,6 +22,13 @@ type UnitCtx = {
 };
 
 const DistanceUnitContext = createContext<UnitCtx | null>(null);
+
+type CurrencyCtx = {
+  displayCurrency: DisplayCurrency;
+  setDisplayCurrency: (c: DisplayCurrency) => void;
+};
+
+const DisplayCurrencyContext = createContext<CurrencyCtx | null>(null);
 
 type ViewerRoleCtx = {
   viewer: ViewerRole;
@@ -69,6 +82,34 @@ function DistanceUnitProvider({ children }: { children: React.ReactNode }) {
   return <DistanceUnitContext.Provider value={unitsValue}>{children}</DistanceUnitContext.Provider>;
 }
 
+function DisplayCurrencyProvider({ children }: { children: React.ReactNode }) {
+  const [displayCurrency, setDisplayCurrencyState] = useState<DisplayCurrency>("CAD");
+
+  useEffect(() => {
+    try {
+      const stored = parseDisplayCurrency(localStorage.getItem(DISPLAY_CURRENCY_STORAGE_KEY));
+      setDisplayCurrencyState(stored);
+      writeDisplayCurrencyCookie(stored);
+    } catch {
+      setDisplayCurrencyState("CAD");
+    }
+  }, []);
+
+  const setDisplayCurrency = useCallback((c: DisplayCurrency) => {
+    setDisplayCurrencyState(c);
+    try {
+      localStorage.setItem(DISPLAY_CURRENCY_STORAGE_KEY, c);
+      writeDisplayCurrencyCookie(c);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const value = useMemo(() => ({ displayCurrency, setDisplayCurrency }), [displayCurrency, setDisplayCurrency]);
+
+  return <DisplayCurrencyContext.Provider value={value}>{children}</DisplayCurrencyContext.Provider>;
+}
+
 export function AppProviders({ children }: { children: React.ReactNode }) {
   const { isSignedIn, isLoaded } = useAuth();
   const [viewer, setViewer] = useState<ViewerRole>(guestViewer);
@@ -106,7 +147,9 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
 
   return (
     <ViewerRoleContext.Provider value={viewerValue}>
-      <DistanceUnitProvider>{children}</DistanceUnitProvider>
+      <DistanceUnitProvider>
+        <DisplayCurrencyProvider>{children}</DisplayCurrencyProvider>
+      </DistanceUnitProvider>
     </ViewerRoleContext.Provider>
   );
 }
@@ -115,6 +158,14 @@ export function useDistanceUnitPreference(): UnitCtx {
   const ctx = useContext(DistanceUnitContext);
   if (!ctx) {
     throw new Error("useDistanceUnitPreference must be used within AppProviders");
+  }
+  return ctx;
+}
+
+export function useDisplayCurrencyPreference(): CurrencyCtx {
+  const ctx = useContext(DisplayCurrencyContext);
+  if (!ctx) {
+    throw new Error("useDisplayCurrencyPreference must be used within AppProviders");
   }
   return ctx;
 }

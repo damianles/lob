@@ -1,16 +1,16 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 
+import { DisplayCurrencyPreference } from "@/components/display-currency-preference";
 import { InsightsLanesFilterForm } from "@/components/insights-lanes-filter-form";
 import { KPICard, KPICardGrid } from "@/components/ui/kpi-card";
 import { getAnalyticsOverview, getLaneQuickOptions, type AnalyticsPeriod } from "@/lib/analytics";
+import { DISPLAY_CURRENCY_COOKIE, parseDisplayCurrency } from "@/lib/display-currency";
+import { formatMoney } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import { getActorContext } from "@/lib/request-context";
 
 export const dynamic = "force-dynamic";
-
-function formatMoney(value: number) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value);
-}
 
 function formatPct(value: number | null) {
   if (value === null) return "N/A";
@@ -78,20 +78,32 @@ export default async function LaneAnalyticsPage({
   const destinationState = (Array.isArray(params.destinationState) ? params.destinationState[0] : params.destinationState) ?? "";
   const quickLane = (Array.isArray(params.quickLane) ? params.quickLane[0] : params.quickLane) ?? "";
 
+  const jar = await cookies();
+  const displayCurrency = parseDisplayCurrency(jar.get(DISPLAY_CURRENCY_COOKIE)?.value);
+
   const [overview, laneOptions] = await Promise.all([
     getAnalyticsOverview(
       { role: actor.role, companyId: actor.companyId },
       { period, originCity, originState, destinationCity, destinationState, quickLane },
+      displayCurrency,
     ),
     getLaneQuickOptions(80),
   ]);
 
   return (
     <div className="mx-auto max-w-6xl text-zinc-900">
-        <h1 className="text-2xl font-bold sm:text-3xl">Lane rates &amp; trends</h1>
-        <p className="mt-2 text-sm text-zinc-600">
-          Pricing, volume, how often loads book, equipment mix, and lane snapshots—using your data and benchmark file.
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold sm:text-3xl">Lane rates &amp; trends</h1>
+            <p className="mt-2 text-sm text-zinc-600">
+              Pricing, volume, how often loads book, equipment mix, and lane snapshots—using your data and benchmark
+              file. Amounts below are shown in <strong>{displayCurrency}</strong>
+              {displayCurrency === "CAD" ? " (Canada-first). Switch to USD if you prefer." : " (converted from native CAD/USD)."}.
+              Canada–Canada freight is CAD; US–US is USD.
+            </p>
+          </div>
+          <DisplayCurrencyPreference compact />
+        </div>
 
         <InsightsLanesFilterForm
           defaultPeriod={period}
@@ -105,8 +117,8 @@ export default async function LaneAnalyticsPage({
 
         <KPICardGrid className="mt-6">
           <KPICard
-            title="Average rate"
-            value={formatMoney(overview.pricing.averageRateUsd)}
+            title={`Average rate (${displayCurrency})`}
+            value={formatMoney(overview.pricing.averageRateUsd, displayCurrency)}
             change={formatPct(overview.pricing.yoyRateChangePct)}
             trend={
               overview.pricing.yoyRateChangePct === null
@@ -213,19 +225,19 @@ export default async function LaneAnalyticsPage({
                     <td className="px-3 py-2 text-right tabular-nums">{row.last30Days.bookingCount}</td>
                     <td className="px-3 py-2 text-right tabular-nums font-medium">
                       {row.last30Days.averageAgreedRateUsd != null
-                        ? formatMoney(row.last30Days.averageAgreedRateUsd)
+                        ? formatMoney(row.last30Days.averageAgreedRateUsd, displayCurrency)
                         : "—"}
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums">{row.last60Days.bookingCount}</td>
                     <td className="px-3 py-2 text-right tabular-nums font-medium">
                       {row.last60Days.averageAgreedRateUsd != null
-                        ? formatMoney(row.last60Days.averageAgreedRateUsd)
+                        ? formatMoney(row.last60Days.averageAgreedRateUsd, displayCurrency)
                         : "—"}
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums">{row.last90Days.bookingCount}</td>
                     <td className="px-3 py-2 text-right tabular-nums font-medium">
                       {row.last90Days.averageAgreedRateUsd != null
-                        ? formatMoney(row.last90Days.averageAgreedRateUsd)
+                        ? formatMoney(row.last90Days.averageAgreedRateUsd, displayCurrency)
                         : "—"}
                     </td>
                   </tr>
@@ -264,7 +276,7 @@ export default async function LaneAnalyticsPage({
                 <li key={t.bucket} className="flex justify-between">
                   <span>{t.bucket}</span>
                   <span>
-                    {t.bookings} bookings | {formatMoney(t.averageRate)}
+                    {t.bookings} bookings | {formatMoney(t.averageRate, displayCurrency)}
                   </span>
                 </li>
               ))}
@@ -343,12 +355,12 @@ export default async function LaneAnalyticsPage({
                   <div className="font-medium leading-snug">{row.laneLabel}</div>
                   <div className="mt-0.5 text-[11px] text-zinc-500">Equipment: {row.equipmentType}</div>
                   <div className="mt-1 text-xs text-zinc-600">
-                    Benchmark {formatMoney(row.benchmarkAvgUsd)}
+                    Benchmark {formatMoney(row.benchmarkAvgUsd, displayCurrency)}
                     {row.sourceSampleCount != null && ` · ${row.sourceSampleCount.toLocaleString()} rows in source sheet`}
                     {row.yourBookedAvgUsd != null && (
                       <>
                         {" "}
-                        · Your avg {formatMoney(row.yourBookedAvgUsd)} ({row.bookingCount} on this city lane in period)
+                        · Your avg {formatMoney(row.yourBookedAvgUsd, displayCurrency)} ({row.bookingCount} on this city lane in period)
                         {row.deltaVsBenchmarkPct != null && (
                           <span> · {formatPct(row.deltaVsBenchmarkPct)} vs benchmark</span>
                         )}

@@ -23,15 +23,24 @@ export const CA_PROVINCES = new Set([
 ]);
 
 /**
- * Infers posted rate currency for lane matching:
- * - Both ends in Canada → CAD (wholesale lumber moves, domestic Canada).
- * - All other cases → USD (US–US, US–Canada, Mexico, etc. — use USD unless both CA).
+ * Infers posted rate currency for a lane:
+ * - Canada–Canada → CAD
+ * - US–US → USD
+ * - Cross-border (CA↔US) → USD
+ * - Incomplete / unknown regions → CAD (Canada-forward default)
  */
 export function inferOfferCurrency(originState: string, destinationState: string): "USD" | "CAD" {
   const o = normalize2(originState);
   const d = normalize2(destinationState);
   if (CA_PROVINCES.has(o) && CA_PROVINCES.has(d)) return "CAD";
-  return "USD";
+  if (US_JURISDICTION_CODES.has(o) && US_JURISDICTION_CODES.has(d)) return "USD";
+  if (
+    (CA_PROVINCES.has(o) && US_JURISDICTION_CODES.has(d)) ||
+    (US_JURISDICTION_CODES.has(o) && CA_PROVINCES.has(d))
+  ) {
+    return "USD";
+  }
+  return "CAD";
 }
 
 function normalize2(s: string): string {

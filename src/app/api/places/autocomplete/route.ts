@@ -40,7 +40,8 @@ export async function GET(req: NextRequest) {
   u.searchParams.set("input", q);
   u.searchParams.set("types", types);
   u.searchParams.set("key", key);
-  u.searchParams.set("components", "country:us|country:ca");
+  u.searchParams.set("components", "country:ca|country:us");
+  u.searchParams.set("region", "ca");
   u.searchParams.set("language", "en");
 
   try {

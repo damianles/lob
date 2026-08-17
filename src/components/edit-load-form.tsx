@@ -1,9 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { lobWoodPrimaryButtonClass } from "@/lib/lob-button-styles";
+import { inferOfferCurrency } from "@/lib/lane-currency";
 import { LUMBER_EQUIPMENT } from "@/lib/lumber-equipment";
 
 function toDateInput(iso: string | Date | null | undefined): string {
@@ -56,6 +57,12 @@ export function EditLoadForm({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (originState.trim().length >= 2 && destinationState.trim().length >= 2) {
+      setCurrency(inferOfferCurrency(originState, destinationState));
+    }
+  }, [originState, destinationState]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();

@@ -5,6 +5,7 @@ import { OfferCurrency } from "@prisma/client";
 import { canonicalCityKey } from "@/lib/city-canonical";
 import { equipmentShortTag } from "@/lib/lumber-equipment";
 import { inferOfferCurrency } from "@/lib/lane-currency";
+import { convertMoney, spreadsheetUsdEquivalentToNative } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 
 export type BenchmarkRow = {
@@ -19,7 +20,7 @@ export type BenchmarkRow = {
    * Average rate in the lane, in `rateCurrency` (USD or CAD). Legacy name kept for callers.
    */
   benchmarkAvgUsd: number;
-  /** When set, `benchmarkAvgUsd` is in this currency (static file rows are always USD). */
+  /** When set, `benchmarkAvgUsd` is in this currency (static file rows are USD-equivalent; converted at lookup). */
   rateCurrency?: "USD" | "CAD";
   sampleCount?: number;
   windowDays?: number;
@@ -192,6 +193,16 @@ async function dbAggregateState(
   return { avg: r.avg, n: r.n };
 }
 
+function fileRowInOfferCurrency(row: BenchmarkRow, offerCurrency: "USD" | "CAD"): BenchmarkRow {
+  const native = inferOfferCurrency(row.originState, row.destinationState);
+  const nativeAmount = spreadsheetUsdEquivalentToNative(row.benchmarkAvgUsd, native);
+  return {
+    ...row,
+    benchmarkAvgUsd: convertMoney(nativeAmount, native, offerCurrency),
+    rateCurrency: offerCurrency,
+  };
+}
+
 function findLaneBenchmarkFile(
   originState: string,
   destinationState: string,
@@ -200,12 +211,8 @@ function findLaneBenchmarkFile(
   equipmentType: string,
   originCity?: string,
   destinationCity?: string,
-  /** `market-benchmarks.json` rates are in USD. Skip for CAD posts. */
-  _offerCurrency: "USD" | "CAD" = "USD",
+  offerCurrency: "USD" | "CAD" = "CAD",
 ): LaneMatch | null {
-  if (_offerCurrency === "CAD") {
-    return null;
-  }
   const oSt = normalizeState(originState);
   const dSt = normalizeState(destinationState);
   const oZip = originZip.replace(/\D/g, "").slice(0, 5);
@@ -220,7 +227,7 @@ function findLaneBenchmarkFile(
       r.destinationZip.replace(/\D/g, "").slice(0, 5) === dZip &&
       rowMatchesEquipment(r, equipmentType),
   );
-  if (zipHit) return { row: { ...zipHit, rateCurrency: "USD" }, matchLevel: "zip" };
+  if (zipHit) return { row: fileRowInOfferCurrency(zipHit, offerCurrency), matchLevel: "zip" };
 
   const oc = originCity ? normalizeCityForFileMatch(originCity) : "";
   const dc = destinationCity ? normalizeCityForFileMatch(destinationCity) : "";
@@ -235,7 +242,7 @@ function findLaneBenchmarkFile(
         normalizeState(r.destinationState) === dSt &&
         rowMatchesEquipment(r, equipmentType),
     );
-    if (cityHit) return { row: { ...cityHit, rateCurrency: "USD" }, matchLevel: "city" };
+    if (cityHit) return { row: fileRowInOfferCurrency(cityHit, offerCurrency), matchLevel: "city" };
   }
 
   // Intentionally no state/province row in the static file — range is too wide; use DB state aggregate above.
@@ -328,10 +335,7 @@ export type RateBandCheck =
   | { ok: false; message: string; thinLane?: boolean };
 
 export function offeredAmountUsdEquivalent(amount: number, currency: "USD" | "CAD"): number {
-  if (currency === "USD") return amount;
-  const cadToUsd = Number(process.env.LOB_CAD_TO_USD_RATE ?? "0.73");
-  const mult = Number.isFinite(cadToUsd) ? cadToUsd : 0.73;
-  return amount * mult;
+  return convertMoney(amount, currency, "USD");
 }
 
 /**
@@ -351,7 +355,7 @@ export async function validateOfferedRateFloor(args: {
   offeredRate: number;
   offerCurrency: "USD" | "CAD";
 }): Promise<RateBandCheck> {
-  const ccy = args.offerCurrency ?? "USD";
+  const ccy = args.offerCurrency ?? "CAD";
   const cutoff = benchmarkCutoff();
   const oSt = normalizeState(args.originState);
   const dSt = normalizeState(args.destinationState);
@@ -415,7 +419,7 @@ export async function validateOfferedRateAgainstBenchmark(args: {
 }): Promise<RateBandCheck> {
   return validateOfferedRateFloor({
     ...args,
-    offerCurrency: args.offerCurrency ?? "USD",
+    offerCurrency: args.offerCurrency ?? "CAD",
     offeredRate: args.offeredRateUsd,
   });
 }

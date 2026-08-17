@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { LobBrandStrip } from "@/components/lob-brand-strip";
 import { LobSidebar } from "@/components/lob-sidebar";
 import { DistanceUnitProfilePreference } from "@/components/distance-unit-profile-preference";
+import { DisplayCurrencyPreference } from "@/components/display-currency-preference";
 
 type Carrier = { id: string; legalName: string; dotNumber: string | null };
 
@@ -164,8 +165,9 @@ export default function ShipperCarrierPreferencesPage() {
               or which groups can see it — you do not re-assign carriers on every load.
             </p>
 
-            <div className="mt-5 max-w-2xl">
+            <div className="mt-5 max-w-2xl space-y-4">
               <DistanceUnitProfilePreference persona="supplier" />
+              <DisplayCurrencyPreference />
             </div>
 
             {loading ? (

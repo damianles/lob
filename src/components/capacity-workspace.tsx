@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 
 import { CarrierTypeTag } from "@/components/carrier-type-tag";
 import { formatDisplayDate } from "@/lib/format-display-date";
+import { inferOfferCurrency } from "@/lib/lane-currency";
+import { formatMoney } from "@/lib/money";
 import { PlaceAutocomplete } from "@/components/place-autocomplete";
 import { LUMBER_EQUIPMENT } from "@/lib/lumber-equipment";
 
@@ -34,6 +36,11 @@ type OpenRow = LaneRow & {
 
 /** Carrier's own posts — they already know who they are. */
 type MineRow = LaneRow & { isExpired: boolean };
+
+function capacityRateLabel(r: LaneRow): string {
+  const ccy = inferOfferCurrency(r.originState ?? "", r.destinationState ?? "");
+  return formatMoney(r.askingRateUsd, ccy);
+}
 
 function ymd(d: Date) {
   return d.toISOString().slice(0, 10);
@@ -278,7 +285,7 @@ export function CapacityWorkspace() {
                     </td>
                     <td className="px-3 py-2">{r.equipmentType}</td>
                     <td className="px-3 py-2 text-right font-medium tabular-nums">
-                      ${r.askingRateUsd.toLocaleString()}
+                      {capacityRateLabel(r)}
                     </td>
                     <td className="px-3 py-2 text-xs text-zinc-600">{fmtRange(r.availableFrom, r.availableUntil)}</td>
                     <td className="max-w-[200px] truncate px-3 py-2 text-xs text-zinc-500">{r.notes ?? "—"}</td>
@@ -352,11 +359,12 @@ export function CapacityWorkspace() {
             <input
               required
               className="rounded border px-3 py-2 text-sm"
-              placeholder="Asking rate (USD) *"
+              placeholder="Asking rate *"
               inputMode="decimal"
               value={post.askingRateUsd}
               onChange={(e) => setPost((p) => ({ ...p, askingRateUsd: e.target.value }))}
             />
+            <p className="text-[11px] text-zinc-500">Canada–Canada in CAD. US–US in USD.</p>
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
                 <label className="text-xs font-semibold text-zinc-500">First day</label>
@@ -405,7 +413,7 @@ export function CapacityWorkspace() {
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="font-medium text-zinc-900">
-                      {r.originZip} → {r.destinationZip} · {r.equipmentType} · ${r.askingRateUsd.toLocaleString()}
+                      {r.originZip} → {r.destinationZip} · {r.equipmentType} · {capacityRateLabel(r)}
                     </p>
                     <p className="mt-1 text-xs text-zinc-500">{fmtRange(r.availableFrom, r.availableUntil)}</p>
                     {r.isExpired && (

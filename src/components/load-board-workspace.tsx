@@ -4,9 +4,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
+import { DisplayCurrencyPreference } from "@/components/display-currency-preference";
 import { LobBrandStrip } from "@/components/lob-brand-strip";
 import { LobSidebar, type LobSidebarStats } from "@/components/lob-sidebar";
-import { useDistanceUnitPreference } from "@/components/providers/app-providers";
+import { useDistanceUnitPreference, useDisplayCurrencyPreference } from "@/components/providers/app-providers";
 import { SavedSearchesBar } from "@/components/saved-searches-bar";
 import { EmptyState, SearchIcon, TruckIcon } from "@/components/ui/empty-state";
 import { FilterChip, FilterChipGroup } from "@/components/ui/filter-chip";
@@ -20,12 +21,17 @@ import {
   LUMBER_TREATMENT_OPTIONS,
 } from "@/lib/lumber-spec";
 import { formatDisplayDate } from "@/lib/format-display-date";
-import { formatMoney } from "@/lib/money";
+import { convertMoney, formatMoney } from "@/lib/money";
 import { parseRadiusToMiles } from "@/lib/units";
 import { milesBetweenZips } from "@/lib/zip-distance";
 
-/** Client-side summary only; server uses LOB_CAD_TO_USD_RATE for validation. */
-const CAD_TO_USD_SUMMARY = 0.73;
+function toDisplayEquivalent(l: SerializableLoad, display: "USD" | "CAD"): number {
+  if (l.booking) {
+    return convertMoney(l.booking.agreedRateUsd, l.booking.agreedCurrency, display);
+  }
+  const o = l.offeredRateUsd ?? 0;
+  return convertMoney(o, l.offerCurrency, display);
+}
 
 type BoardSortKey = "pickupAt" | "deliveryAt" | "postedAt" | "rate" | "lane" | "status" | "reference";
 
@@ -120,12 +126,7 @@ export type BoardActor = {
 };
 
 function toUsdEquivalentForSummary(l: SerializableLoad): number {
-  if (l.booking) {
-    const r = l.booking.agreedRateUsd;
-    return l.booking.agreedCurrency === "CAD" ? r * CAD_TO_USD_SUMMARY : r;
-  }
-  const o = l.offeredRateUsd ?? 0;
-  return l.offerCurrency === "CAD" ? o * CAD_TO_USD_SUMMARY : o;
+  return toDisplayEquivalent(l, "USD");
 }
 
 type BoardStats = LobSidebarStats;
@@ -204,6 +205,7 @@ export function LoadBoardWorkspace({
   const [lumberFragileOnly, setLumberFragileOnly] = useState(false);
   const [lumberWeatherSensitiveOnly, setLumberWeatherSensitiveOnly] = useState(false);
   const { distanceUnit, setDistanceUnit } = useDistanceUnitPreference();
+  const { displayCurrency } = useDisplayCurrencyPreference();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -375,10 +377,10 @@ export function LoadBoardWorkspace({
 
   const summary = useMemo(() => {
     const withRate = filteredLoads.filter((l) => l.offeredRateUsd != null || l.booking);
-    const sum = withRate.reduce((acc, l) => acc + toUsdEquivalentForSummary(l), 0);
+    const sum = withRate.reduce((acc, l) => acc + toDisplayEquivalent(l, displayCurrency), 0);
     const avg = withRate.length ? sum / withRate.length : null;
     return { count: filteredLoads.length, avgPostedOrBooked: avg };
-  }, [filteredLoads]);
+  }, [filteredLoads, displayCurrency]);
 
   function toggleSort(key: BoardSortKey) {
     if (sortKey === key) {
@@ -453,7 +455,7 @@ export function LoadBoardWorkspace({
       return;
     }
     const load = loads.find((x) => x.id === loadId);
-    const agreedCurrency = load?.offerCurrency ?? "USD";
+    const agreedCurrency = load?.offerCurrency ?? "CAD";
     setBusyId(loadId);
     const res = await fetch(`/api/loads/${loadId}/book`, {
       method: "POST",
@@ -939,11 +941,12 @@ export function LoadBoardWorkspace({
         {/* Carrier summary strip */}
         <div className="flex flex-wrap items-center gap-4 border-b border-stone-100 bg-white px-6 py-3.5 text-sm sm:px-8">
               <span className="text-zinc-600">
-                Avg rate (filtered, ≈ USD):{" "}
+                Avg rate (filtered, ≈ {displayCurrency}):{" "}
                 <span className="font-semibold text-zinc-900">
-                  {summary.avgPostedOrBooked != null ? formatMoney(summary.avgPostedOrBooked, "USD") : "—"}
+                  {summary.avgPostedOrBooked != null ? formatMoney(summary.avgPostedOrBooked, displayCurrency) : "—"}
                 </span>
               </span>
+              <DisplayCurrencyPreference compact />
               <span className="text-zinc-400">·</span>
               <span className="text-zinc-600">
                 Delivered all-time: <span className="font-semibold text-zinc-900">{stats.delivered}</span>

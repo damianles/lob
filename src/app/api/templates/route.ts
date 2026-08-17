@@ -78,7 +78,7 @@ export async function POST(req: Request) {
       isRush: Boolean(t.isRush),
       isPrivate: Boolean(t.isPrivate),
       defaultRateUsd: t.defaultRateUsd ?? null,
-      defaultCurrency: t.defaultCurrency ?? "USD",
+      defaultCurrency: t.defaultCurrency ?? "CAD",
       notes: t.notes?.trim() || null,
       lumberSpec: t.lumberSpec ? (t.lumberSpec as object) : undefined,
     },

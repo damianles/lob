@@ -8,6 +8,7 @@ import { getActorContext } from "@/lib/request-context";
 import { CarrierProfileForm } from "./carrier-profile-form";
 import { InsuranceUploadForm } from "./upload-form";
 import { DistanceUnitProfilePreference } from "@/components/distance-unit-profile-preference";
+import { DisplayCurrencyPreference } from "@/components/display-currency-preference";
 
 export const dynamic = "force-dynamic";
 
@@ -86,8 +87,9 @@ export default async function CarrierCompliancePage() {
                 you—before the truck arrives.
               </p>
 
-              <div className="mt-5">
+              <div className="mt-5 space-y-4">
                 <DistanceUnitProfilePreference persona="carrier" />
+                <DisplayCurrencyPreference />
               </div>
 
               <section className="mt-6 rounded-lg border bg-white p-4">

@@ -26,7 +26,7 @@ type Props = {
   destinationState: string;
   destinationZip: string;
   equipmentType: string;
-  /** Currency the supplier is using to type their offer; we display USD avg + a converted note when CAD. */
+  /** Currency the supplier is using to type their offer. */
   currency?: "USD" | "CAD";
   className?: string;
 };
@@ -34,7 +34,7 @@ type Props = {
 function formatLaneAvg(q: Quote): string {
   const n = q.avgRate ?? q.avgUsd;
   if (n == null || !Number.isFinite(n)) return "—";
-  const c = (q.offerCurrency ?? "USD") as "USD" | "CAD";
+  const c = (q.offerCurrency ?? "CAD") as "USD" | "CAD";
   return formatMoney(n, c);
 }
 
@@ -59,7 +59,7 @@ export function LanePriceChip({
   destinationState,
   destinationZip,
   equipmentType,
-  currency = "USD",
+  currency = "CAD",
   className,
 }: Props) {
   const [quote, setQuote] = useState<Quote | null>(null);

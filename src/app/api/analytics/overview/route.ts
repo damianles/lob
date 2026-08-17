@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
 import { getAnalyticsOverview, type AnalyticsPeriod } from "@/lib/analytics";
+import { DISPLAY_CURRENCY_COOKIE, parseDisplayCurrency } from "@/lib/display-currency";
 import { prisma } from "@/lib/prisma";
 import { getActorContext } from "@/lib/request-context";
 
@@ -34,6 +36,11 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Invalid period." }, { status: 400 });
   }
 
+  const jar = await cookies();
+  const displayCurrency = parseDisplayCurrency(
+    searchParams.get("ccy") ?? jar.get(DISPLAY_CURRENCY_COOKIE)?.value,
+  );
+
   const result = await getAnalyticsOverview(
     {
       role: actor.role,
@@ -47,6 +54,7 @@ export async function GET(req: Request) {
       destinationState: searchParams.get("destinationState") ?? undefined,
       quickLane: searchParams.get("quickLane") ?? undefined,
     },
+    displayCurrency,
   );
 
   return NextResponse.json({ data: result });

@@ -12,7 +12,7 @@ import { SavedLanesPanel, type SavedLane } from "@/components/saved-lanes-panel"
 import { useViewerRole } from "@/components/providers/app-providers";
 import { RadioChoice } from "@/components/ui/radio-choice";
 import { LUMBER_EQUIPMENT } from "@/lib/lumber-equipment";
-import { regionCodeForLob } from "@/lib/place-helpers";
+import { inferOfferCurrency } from "@/lib/lane-currency";
 import type { LumberSpec } from "@/lib/lumber-spec";
 
 type CarrierPick = { id: string; legalName: string };
@@ -297,6 +297,12 @@ export function SupplierPostLoadForm({
     // One-shot seed when opening the form from the Post workspace chooser.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (originState.trim().length >= 2 && destinationState.trim().length >= 2) {
+      setCurrency(inferOfferCurrency(originState, destinationState));
+    }
+  }, [originState, destinationState]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -1105,6 +1111,9 @@ export function SupplierPostLoadForm({
                 <option value="CAD">CAD</option>
                 <option value="USD">USD</option>
               </select>
+              <span className="mt-1 block text-[11px] font-normal text-zinc-500">
+                Canada–Canada defaults to CAD. US–US defaults to USD.
+              </span>
             </label>
             <LanePriceChip
               originCity={originCity}

@@ -1,6 +1,7 @@
 import { CarrierType, LoadStatus, SupplierKind, UserRole, VerificationStatus } from "@prisma/client";
 
 import { lumberSpecToLoadColumns, type LumberSpec } from "../src/lib/lumber-spec";
+import { inferOfferCurrency } from "../src/lib/lane-currency";
 import { prisma } from "../src/lib/prisma";
 
 type SeedLoadRow = {
@@ -40,7 +41,7 @@ async function upsertPostedLoad(shipperCompanyId: string, shipperUserId: string,
     equipmentType: row.equipmentType,
     isRush: row.isRush,
     offeredRateUsd: row.offeredRateUsd,
-    offerCurrency: row.offerCurrency ?? "USD",
+    offerCurrency: row.offerCurrency ?? inferOfferCurrency(row.originState, row.destinationState),
     shipperCompanyId,
     createdByUserId: shipperUserId,
     status: LoadStatus.POSTED,

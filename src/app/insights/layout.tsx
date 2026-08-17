@@ -1,5 +1,4 @@
 import { LobBrandStrip } from "@/components/lob-brand-strip";
-import { InsightsSubnav } from "@/components/insights-subnav";
 import { LobSidebar } from "@/components/lob-sidebar";
 
 export default function InsightsLayout({ children }: { children: React.ReactNode }) {
@@ -9,10 +8,7 @@ export default function InsightsLayout({ children }: { children: React.ReactNode
         <LobSidebar active="insights" />
         <div className="min-w-0 flex-1">
           <LobBrandStrip />
-          <div className="p-6 lg:p-8">
-            <InsightsSubnav />
-            {children}
-          </div>
+          <div className="p-6 lg:p-8">{children}</div>
         </div>
       </div>
     </main>
