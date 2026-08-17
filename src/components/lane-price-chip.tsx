@@ -149,7 +149,7 @@ export function LanePriceChip({
   return (
     <div
       className={`inline-flex flex-wrap items-center gap-x-2 gap-y-1 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[11px] font-medium text-emerald-900 ${className ?? ""}`}
-      title={`Rolling ${quote.windowDays ?? 60}-day average from ${quote.sampleCount ?? "?"} sample(s) ${matchSuffix}`}
+      title="Market rate for this lane"
     >
       <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
       <span>Market rate:</span>
