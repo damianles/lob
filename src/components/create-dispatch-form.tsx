@@ -39,7 +39,9 @@ export function CreateDispatchForm({ loadId }: { loadId: string }) {
   return (
     <div className="mt-6 max-w-md space-y-2 rounded-lg border border-violet-200 bg-violet-50/70 p-4">
       <h2 className="text-sm font-semibold text-zinc-900">Create driver link</h2>
-      <p className="text-xs text-zinc-600">Assign a driver so they can confirm pickup and upload POD.</p>
+      <p className="text-xs text-zinc-600">
+        Assign a driver for haul details. Pickup and delivery confirmation stay with yards and receivers.
+      </p>
       {error ? <p className="text-sm text-red-700">{error}</p> : null}
       <input
         className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm"

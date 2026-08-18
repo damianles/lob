@@ -43,8 +43,8 @@ export function FacilityPickupForm({ token, referenceNumber }: { token: string; 
       <p className="text-sm text-zinc-700 leading-relaxed break-words">
         Load <span className="font-semibold text-zinc-900">{referenceNumber}</span>
         {scannedHint
-          ? ". Code was filled in from the QR. Confirm once freight is on the truck."
-          : ". Enter the verification code on your BOL, then confirm pickup."}
+          ? ". A verification code was included in your link. Confirm once freight is on the truck."
+          : ". Enter the pickup verification code from the shipper, then confirm load-out."}
       </p>
       <div>
         <label className="block text-xs font-semibold text-zinc-500">Pickup code</label>

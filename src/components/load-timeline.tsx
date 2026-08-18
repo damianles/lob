@@ -69,14 +69,14 @@ export function LoadTimeline({ load, booking, dispatch }: Props) {
       detail: dispatch?.pickupConfirmedAt
         ? fmt(dispatch.pickupConfirmedAt)
         : load.uniquePickupCode
-          ? `Driver enters code ${load.uniquePickupCode} on driver page`
-          : "Driver confirms pickup with mill code",
+          ? `Yard code ${load.uniquePickupCode} — confirm in LOB or share with pickup site`
+          : "Mill or yard confirms pickup",
       stepDone: s4,
     },
     {
       key: "delivered",
       label: "Delivered (POD)",
-      detail: dispatch?.deliveredAt ? fmt(dispatch.deliveredAt) : "Driver uploads POD",
+      detail: dispatch?.deliveredAt ? fmt(dispatch.deliveredAt) : "Receiver confirms on delivery link",
       stepDone: s5,
     },
   ];

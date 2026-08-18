@@ -1,6 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
 import { LoadStatus, VerificationStatus } from "@prisma/client";
-import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
@@ -92,9 +91,10 @@ export default async function BolStripPage({ params }: { params: Promise<{ loadI
     return (
       <main className="min-h-screen bg-stone-50 px-4 py-10 text-zinc-900">
         <div className="mx-auto max-w-md rounded-2xl border border-stone-200 bg-white p-6 text-center shadow-sm">
-          <h1 className="text-lg font-semibold">Pickup sheet not available yet</h1>
+          <h1 className="text-lg font-semibold">Driver haul sheet not available yet</h1>
           <p className="mt-2 text-sm text-stone-600">
-            Create a driver dispatch link from the load first. The printable QR is generated from that link.
+            Create a driver dispatch link from the load first. Yard pickup links and office QRs are on the load for the
+            posting mill.
           </p>
           <Link href={`/loads/${loadId}`} className="mt-4 inline-block text-sm font-medium text-lob-navy underline">
             Back to load
@@ -103,17 +103,6 @@ export default async function BolStripPage({ params }: { params: Promise<{ loadI
       </main>
     );
   }
-
-  const h = await headers();
-  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
-  const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
-  const baseUrl = `${proto}://${host}`;
-
-  const token = load.dispatchLink.token;
-  const basePickup = `${baseUrl}/facility/pickup/${token}`;
-  const pickupScanUrl = load.uniquePickupCode
-    ? `${basePickup}${basePickup.includes("?") ? "&" : "?"}code=${encodeURIComponent(load.uniquePickupCode)}`
-    : basePickup;
 
   const visibilityActor = { companyId: effectiveCompanyId, role: actor.role };
   const millName = shipperCompanyNameForViewer(load.shipperCompany.legalName, load, visibilityActor);
@@ -134,7 +123,7 @@ export default async function BolStripPage({ params }: { params: Promise<{ loadI
         weightLbs={load.weightLbs}
         equipmentType={load.equipmentType}
         millLabel={millName}
-        pickupScanUrl={pickupScanUrl}
+        driverName={load.dispatchLink.driverName}
         lumberSpec={lumberSpec}
       />
     </main>

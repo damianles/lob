@@ -45,13 +45,13 @@ export const LOB_NAV_ITEMS: LobNavItem[] = [
     id: "facilityPickup",
     href: "/scan/pickup",
     label: "Facility pickup",
-    hint: "Scan driver QR at pickup — no account required",
+    hint: "Pickup yard link or office QR — no account required",
   },
   {
     id: "facilityDelivery",
     href: "/scan/delivery",
     label: "Facility delivery",
-    hint: "Scan driver QR at delivery — no account required",
+    hint: "Receiver link or office QR — no account required",
   },
   {
     id: "carrierProfile",

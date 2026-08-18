@@ -8,7 +8,9 @@ import { CancelLoadButton } from "@/components/cancel-load-button";
 import { CarrierScorecard } from "@/components/carrier-scorecard";
 import { CarrierTypeTag } from "@/components/carrier-type-tag";
 import { CreateDispatchForm } from "@/components/create-dispatch-form";
-import { DispatchQrPanel } from "@/components/dispatch-qr-panel";
+import { DriverLinkPanel } from "@/components/driver-link-panel";
+import { FacilitySiteLinksPanel } from "@/components/facility-site-links-panel";
+import { ShipperConfirmPickup } from "@/components/shipper-confirm-pickup";
 import { ExtendedPostingPanel } from "@/components/extended-posting-panel";
 import { LoadDateChangePanel } from "@/components/load-date-change-panel";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
@@ -412,22 +414,28 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
               <CreateDispatchForm loadId={load.id} />
             )}
 
-            {load.dispatchLink && (isShipperOwner || isBookedCarrier || isRealAdmin) && (
-              <div className="mt-6 space-y-3">
-                <p className="text-sm text-zinc-600">
-                  Driver page:{" "}
-                  <Link className="font-medium text-lob-navy underline" href={`/driver/${load.dispatchLink.token}`}>
-                    Open driver link
-                  </Link>
-                </p>
-                <DispatchQrPanel
+            {load.dispatchLink && (isShipperOwner || isRealAdmin) && (
+              <>
+                <FacilitySiteLinksPanel
                   pickupUrl={`${baseUrl}/facility/pickup/${load.dispatchLink.token}`}
                   deliveryUrl={`${baseUrl}/facility/delivery/${load.dispatchLink.token}`}
-                  driverUrl={`${baseUrl}/driver/${load.dispatchLink.token}`}
-                  pickupCode={load.uniquePickupCode}
-                  bolStripHref={`/loads/${load.id}/bol-strip`}
+                  referenceNumber={load.referenceNumber}
                 />
-              </div>
+                <ShipperConfirmPickup
+                  loadId={load.id}
+                  referenceNumber={load.referenceNumber}
+                  canConfirm={!load.dispatchLink.pickupConfirmedAt}
+                  pickupConfirmedAt={load.dispatchLink.pickupConfirmedAt}
+                />
+              </>
+            )}
+
+            {load.dispatchLink && (isBookedCarrier || isRealAdmin) && (
+              <DriverLinkPanel
+                driverUrl={`${baseUrl}/driver/${load.dispatchLink.token}`}
+                bolStripHref={`/loads/${load.id}/bol-strip`}
+                driverName={load.dispatchLink.driverName}
+              />
             )}
           </div>
           </div>
