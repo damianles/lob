@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 import { carrierMayViewPostedLoad } from "@/lib/carrier-load-access";
 import { expireStaleBids, LoadBidError } from "@/lib/load-bids";
+import { validateRateBand } from "@/lib/market-rate-lane";
 import { prisma } from "@/lib/prisma";
 import { TAKE_IT_LABEL } from "@/lib/rate-mode";
 import { getActorContext } from "@/lib/request-context";
@@ -93,10 +94,18 @@ export async function POST(req: Request, ctx: { params: Promise<{ loadId: string
       shipperCompanyId: true,
       carrierVisibilityMode: true,
       offerCurrency: true,
+      offeredRateUsd: true,
       rateMode: true,
       allowCounterOffers: true,
       bidWindowExpiresAt: true,
       requestedPickupAt: true,
+      originState: true,
+      originCity: true,
+      originZip: true,
+      destinationState: true,
+      destinationCity: true,
+      destinationZip: true,
+      equipmentType: true,
     },
   });
   if (!load) return NextResponse.json({ error: "Load not found." }, { status: 404 });
@@ -128,6 +137,21 @@ export async function POST(req: Request, ctx: { params: Promise<{ loadId: string
   const windowEnd = isOpenBid
     ? load.bidWindowExpiresAt ?? load.requestedPickupAt
     : new Date(now.getTime() + 48 * 60 * 60 * 1000);
+
+  const band = await validateRateBand({
+    originState: load.originState,
+    destinationState: load.destinationState,
+    originZip: load.originZip,
+    destinationZip: load.destinationZip,
+    originCity: load.originCity,
+    destinationCity: load.destinationCity,
+    equipmentType: load.equipmentType,
+    offerCurrency: load.offerCurrency,
+    amount: parsed.data.amountUsd,
+  });
+  if (!band.ok) {
+    return NextResponse.json({ error: band.message }, { status: 400 });
+  }
 
   const requestedHours = parsed.data.expiresInHours;
   const maxHours = hoursUntil(windowEnd);

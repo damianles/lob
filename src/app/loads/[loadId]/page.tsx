@@ -6,6 +6,8 @@ import { notFound, redirect } from "next/navigation";
 
 import { CarrierRateActions } from "@/components/carrier-rate-actions";
 import { CancelLoadButton } from "@/components/cancel-load-button";
+import { ConvertToFirmRate } from "@/components/convert-to-firm-rate";
+import { LaneDecisionStats } from "@/components/lane-decision-stats";
 import { RateModeBadge } from "@/components/rate-mode-badge";
 import { ShipperBidReviewList } from "@/components/shipper-bid-review-list";
 import { CarrierScorecard } from "@/components/carrier-scorecard";
@@ -23,8 +25,10 @@ import { LoadTimeline } from "@/components/load-timeline";
 import { LumberSpecPanel } from "@/components/lumber-spec-panel";
 import { prisma } from "@/lib/prisma";
 import { carrierCompanyNameForViewer } from "@/lib/carrier-visibility";
+import { getLaneDecisionContext, getRepeatCarrierCounts } from "@/lib/lane-decision-context";
 import { extractLumberSpec } from "@/lib/lumber-spec";
 import { formatMoney } from "@/lib/money";
+import { formatTimeRemaining } from "@/lib/rate-mode";
 import {
   shipperCompanyNameForViewer,
   supplierKindForViewer,
@@ -83,7 +87,7 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
       bids: {
         where: { status: LoadBidStatus.PENDING },
         orderBy: { createdAt: "desc" },
-        include: { carrierCompany: { select: { legalName: true } } },
+        include: { carrierCompany: { select: { id: true, legalName: true } } },
       },
     },
   });
@@ -136,16 +140,6 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
 
   const canView = isRealAdmin || isShipperOwner || isBookedCarrier || canBrowsePosted;
 
-  const carrierDocs =
-    load.booking && (isShipperOwner || isRealAdmin)
-      ? await prisma.document.findMany({
-          where: { companyId: load.booking.carrierCompanyId, dispatchLinkId: null },
-          orderBy: { createdAt: "desc" },
-          take: 20,
-          select: { kind: true, expiresAt: true },
-        })
-      : [];
-
   if (!canView) {
     return (
       <main className="min-h-[calc(100vh-3.5rem)] bg-zinc-100 p-6">
@@ -161,6 +155,44 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
       </main>
     );
   }
+
+  const carrierDocs =
+    load.booking && (isShipperOwner || isRealAdmin)
+      ? await prisma.document.findMany({
+          where: { companyId: load.booking.carrierCompanyId, dispatchLinkId: null },
+          orderBy: { createdAt: "desc" },
+          take: 20,
+          select: { kind: true, expiresAt: true },
+        })
+      : [];
+
+  const decisionCompanyId = isShipperOwner || isRealAdmin ? load.shipperCompanyId : effectiveCompanyId;
+  const [decision, repeats] = await Promise.all([
+    actor.role === "DRIVER" || !decisionCompanyId
+      ? Promise.resolve(null)
+      : getLaneDecisionContext({
+          originState: load.originState,
+          destinationState: load.destinationState,
+          originZip: load.originZip,
+          destinationZip: load.destinationZip,
+          originCity: load.originCity,
+          destinationCity: load.destinationCity,
+          equipmentType: load.equipmentType,
+          offerCurrency: load.offerCurrency,
+          companyId: decisionCompanyId,
+          asShipper: isShipperOwner || isRealAdmin,
+        }),
+    isShipperOwner || isRealAdmin
+      ? getRepeatCarrierCounts({
+          shipperCompanyId: load.shipperCompanyId,
+          originCity: load.originCity,
+          destinationCity: load.destinationCity,
+          originState: load.originState,
+          destinationState: load.destinationState,
+          carrierCompanyIds: load.bids.map((b) => b.carrierCompanyId),
+        })
+      : Promise.resolve({} as Record<string, number>),
+  ]);
 
   const visibilityActor = { companyId: effectiveCompanyId, role: actor.role };
   const millName = shipperCompanyNameForViewer(load.shipperCompany.legalName, load, visibilityActor);
@@ -272,7 +304,7 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
                 </div>
                 {load.rateMode === "OPEN_BID" && load.bidWindowExpiresAt && !load.booking && (
                   <p className="mt-1 text-xs text-zinc-500">
-                    Bidding ends {load.bidWindowExpiresAt.toLocaleString()}
+                    Bidding {formatTimeRemaining(load.bidWindowExpiresAt) ?? `ends ${load.bidWindowExpiresAt.toLocaleString()}`}
                   </p>
                 )}
               </div>
@@ -325,6 +357,7 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
                         ? Number(load.bids.find((b) => b.carrierCompanyId === effectiveCompanyId)!.amountUsd)
                         : null
                     }
+                    decision={isShipperOwner || isRealAdmin ? null : decision}
                   />
                 </div>
               </div>
@@ -336,8 +369,17 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
                 <p className="mt-1 text-xs text-zinc-500">
                   Accepting a bid books the load at that amount and closes the others.
                 </p>
+                {decision ? (
+                  <div className="mt-3">
+                    <LaneDecisionStats ctx={decision} />
+                  </div>
+                ) : null}
                 <div className="mt-3">
                   <ShipperBidReviewList
+                    loadId={load.id}
+                    postedRate={load.offeredRateUsd != null ? Number(load.offeredRateUsd) : null}
+                    marketAvg={decision?.marketAvg ?? null}
+                    miles={decision?.miles ?? null}
                     bids={load.bids.map((b) => ({
                       id: b.id,
                       kind: b.kind,
@@ -347,9 +389,18 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
                       expiresAt: b.expiresAt.toISOString(),
                       createdAt: b.createdAt.toISOString(),
                       carrierName: b.carrierCompany.legalName,
+                      carrierCompanyId: b.carrierCompany.id,
+                      priorMovesWithYou: repeats[b.carrierCompanyId] ?? 0,
                     }))}
                   />
                 </div>
+                {load.rateMode === "OPEN_BID" ? (
+                  <ConvertToFirmRate
+                    loadId={load.id}
+                    currency={load.offerCurrency}
+                    defaultRate={load.offeredRateUsd != null ? Number(load.offeredRateUsd) : decision?.marketAvg ?? null}
+                  />
+                ) : null}
               </div>
             )}
 

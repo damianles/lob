@@ -2,7 +2,7 @@ import { OfferCurrency } from "@prisma/client";
 import { NextResponse } from "next/server";
 
 import { inferOfferCurrency } from "@/lib/lane-currency";
-import { findLaneBenchmark } from "@/lib/market-rate-lane";
+import { findLaneBenchmark, resolveLaneRateBand } from "@/lib/market-rate-lane";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -81,6 +81,17 @@ export async function GET(req: Request) {
       // Degrade; chip still works without YoY
     }
 
+    const band = await resolveLaneRateBand({
+      originState,
+      destinationState,
+      originZip,
+      destinationZip,
+      originCity: originCity || undefined,
+      destinationCity: destinationCity || undefined,
+      equipmentType,
+      offerCurrency,
+    });
+
     return NextResponse.json({
       match: true,
       offerCurrency: curEnum,
@@ -90,6 +101,10 @@ export async function GET(req: Request) {
       windowDays: hit.row.windowDays ?? null,
       yoyChangePct,
       prevYearAvg,
+      floor: band?.floor ?? null,
+      ceiling: band?.ceiling ?? null,
+      bandEnforced: band != null,
+      thinLane: band?.thinLane ?? false,
       // Legacy
       avgUsd: hit.row.benchmarkAvgUsd,
       prevYearAvgUsd: prevYearAvg,

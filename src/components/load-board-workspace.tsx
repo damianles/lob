@@ -1017,7 +1017,7 @@ export function LoadBoardWorkspace({
                           ) : (
                             <span className="tabular-nums">{displayRate != null ? formatMoney(displayRate, rateCurrency) : "—"}</span>
                           )}
-                          {load.rateMode === "OPEN_BID" && load.pendingBidCount > 0 ? (
+                          {load.pendingBidCount > 0 && (load.rateMode === "OPEN_BID" || load.allowCounterOffers) ? (
                             <span className="text-[10px] text-violet-800">{load.pendingBidCount} bid{load.pendingBidCount === 1 ? "" : "s"}</span>
                           ) : null}
                         </div>

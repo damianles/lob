@@ -346,7 +346,7 @@ export function SupplierPostLoadForm({
     }
     const r = rateUsd.trim() === "" ? null : Number(rateUsd);
     if (rateMode === "TAKE_IT" && (r == null || !Number.isFinite(r) || r <= 0)) {
-      setErr(`Take-it rate (${currency}) is required — this is the amount you pay.`);
+      setErr(`${TAKE_IT_LABEL} (${currency}) is required — this is the amount you pay.`);
       return;
     }
     if (rateMode === "OPEN_BID" && r != null && (!Number.isFinite(r) || r <= 0)) {
@@ -1127,8 +1127,8 @@ export function SupplierPostLoadForm({
         <section className="rounded border border-emerald-200 bg-white/90 p-3">
           <h4 className="text-xs font-bold uppercase tracking-wide text-emerald-900">How carriers get this load</h4>
           <p className="mt-1 text-[11px] text-zinc-500">
-            {TAKE_IT_LABEL} is the rate you pay. {OPEN_BID_LABEL} lets carriers name a price until you accept one or the
-            window closes.
+            {TAKE_IT_LABEL} is the rate you pay — carriers book that number. Pair it with Tiers only (above) if you
+            want T1 first. {OPEN_BID_LABEL} lets carriers name a price until you accept one or the window closes.
           </p>
           <div className="mt-3">
             <RadioChoice
@@ -1140,7 +1140,7 @@ export function SupplierPostLoadForm({
                 {
                   value: "TAKE_IT",
                   label: TAKE_IT_LABEL,
-                  description: "Posted pay rate",
+                  description: "Book this number instantly",
                 },
                 {
                   value: "OPEN_BID",
@@ -1150,6 +1150,13 @@ export function SupplierPostLoadForm({
               ]}
             />
           </div>
+
+          {rateMode === "TAKE_IT" && carrierVisibilityMode === "OPEN" && (
+            <p className="mt-2 text-[11px] text-zinc-500">
+              Your regular carriers can get first look — set Carrier visibility to Tiers only above, then stage T1
+              before T2/T3.
+            </p>
+          )}
 
           {rateMode === "TAKE_IT" && (
             <label className="mt-3 flex items-start gap-2 text-sm text-zinc-800">
@@ -1162,7 +1169,7 @@ export function SupplierPostLoadForm({
               <span>
                 <span className="font-medium">Allow counters</span>
                 <span className="mt-0.5 block text-xs text-zinc-500">
-                  Carriers can still book the {TAKE_IT_LABEL} rate instantly, or propose a different number for you to
+                  Carriers can still book the {TAKE_IT_LABEL} instantly, or propose a different number for you to
                   accept or decline.
                 </span>
               </span>
@@ -1249,10 +1256,7 @@ export function SupplierPostLoadForm({
             />
             {showFairMarketAdminCopy && (
             <p className="text-xs text-zinc-500">
-              Fair-market check: live DB averages when enough samples in the rolling window; otherwise your wholesaler base
-              in <code className="rounded bg-zinc-100 px-1">data/market-benchmarks.json</code> (see{" "}
-              <code className="rounded bg-zinc-100 px-1">LOB_MIN_SAMPLES_FOR_DB_BENCHMARK</code>). Band ±30% if ≥5 samples,
-              ±50% if fewer.
+              Band ±30% with enough samples, ±50% on thin lanes.
             </p>
             )}
           </div>

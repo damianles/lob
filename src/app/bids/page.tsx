@@ -4,15 +4,18 @@ import { redirect } from "next/navigation";
 
 import { BidWithdrawButton } from "@/components/bid-withdraw-button";
 import { CarrierRateActions } from "@/components/carrier-rate-actions";
+import { ConvertToFirmRate } from "@/components/convert-to-firm-rate";
+import { LaneDecisionStats } from "@/components/lane-decision-stats";
 import { LobBrandStrip } from "@/components/lob-brand-strip";
 import { LobSidebar } from "@/components/lob-sidebar";
 import { RateModeBadge } from "@/components/rate-mode-badge";
 import { ShipperBidReviewList } from "@/components/shipper-bid-review-list";
 import { fetchPostedLoadVisibilityContext, postedLoadVisibleToCarrier } from "@/lib/carrier-load-access";
+import { getLaneDecisionContext, getRepeatCarrierCounts } from "@/lib/lane-decision-context";
 import { expireStaleBids } from "@/lib/load-bids";
 import { formatMoney } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
-import { OPEN_BID_LABEL } from "@/lib/rate-mode";
+import { bidKindLabel, bidStatusLabel, formatTimeRemaining, OPEN_BID_LABEL, TAKE_IT_LABEL } from "@/lib/rate-mode";
 import { getActorContext } from "@/lib/request-context";
 
 export const dynamic = "force-dynamic";
@@ -45,7 +48,7 @@ export default async function OpenBidsPage() {
             <h1 className="text-2xl font-bold text-zinc-900">Open Bids</h1>
             <p className="mt-1 max-w-2xl text-sm text-zinc-600">
               {isShipper
-                ? `${OPEN_BID_LABEL} loads and Take-it counters waiting on you. Accept a bid to book at that amount.`
+                ? `${OPEN_BID_LABEL} loads and ${TAKE_IT_LABEL} counters waiting on you. Accept a bid to book at that amount.`
                 : `${OPEN_BID_LABEL} freight and any bids or counters you have in play.`}
             </p>
             {isShipper ? <ShipperOpenBids companyId={actor.companyId!} /> : null}
@@ -69,7 +72,7 @@ async function ShipperOpenBids({ companyId }: { companyId: string }) {
       bids: {
         where: { status: LoadBidStatus.PENDING },
         orderBy: { createdAt: "desc" },
-        include: { carrierCompany: { select: { legalName: true } } },
+        include: { carrierCompany: { select: { id: true, legalName: true } } },
       },
     },
     take: 80,
@@ -82,14 +85,42 @@ async function ShipperOpenBids({ companyId }: { companyId: string }) {
         <Link href="/shipments" className="font-medium text-lob-navy underline">
           Post a load
         </Link>{" "}
-        and choose {OPEN_BID_LABEL} or Take-it with counters.
+        and choose {OPEN_BID_LABEL} or {TAKE_IT_LABEL} with counters.
       </p>
     );
   }
 
+  const decorated = await Promise.all(
+    loads.map(async (l) => {
+      const [decision, repeats] = await Promise.all([
+        getLaneDecisionContext({
+          originState: l.originState,
+          destinationState: l.destinationState,
+          originZip: l.originZip,
+          destinationZip: l.destinationZip,
+          originCity: l.originCity,
+          destinationCity: l.destinationCity,
+          equipmentType: l.equipmentType,
+          offerCurrency: l.offerCurrency,
+          companyId,
+          asShipper: true,
+        }),
+        getRepeatCarrierCounts({
+          shipperCompanyId: companyId,
+          originCity: l.originCity,
+          destinationCity: l.destinationCity,
+          originState: l.originState,
+          destinationState: l.destinationState,
+          carrierCompanyIds: l.bids.map((b) => b.carrierCompanyId),
+        }),
+      ]);
+      return { l, decision, repeats };
+    }),
+  );
+
   return (
     <div className="mt-6 space-y-6">
-      {loads.map((l) => (
+      {decorated.map(({ l, decision, repeats }) => (
         <section key={l.id} className="rounded-xl border border-stone-200 bg-stone-50/50 p-4">
           <div className="flex flex-wrap items-center gap-2">
             <Link href={`/loads/${l.id}`} className="font-semibold text-lob-navy underline">
@@ -100,11 +131,20 @@ async function ShipperOpenBids({ companyId }: { companyId: string }) {
           <p className="mt-1 text-sm text-zinc-700">{lane(l)}</p>
           <p className="text-xs text-zinc-500">
             Pickup {l.requestedPickupAt.toLocaleDateString()}
-            {l.bidWindowExpiresAt ? ` · bidding ends ${l.bidWindowExpiresAt.toLocaleString()}` : ""}
+            {l.bidWindowExpiresAt
+              ? ` · ${formatTimeRemaining(l.bidWindowExpiresAt) ?? `ends ${l.bidWindowExpiresAt.toLocaleString()}`}`
+              : ""}
             {l.offeredRateUsd != null ? ` · posted ${formatMoney(Number(l.offeredRateUsd), l.offerCurrency)}` : ""}
           </p>
+          <div className="mt-3">
+            <LaneDecisionStats ctx={decision} compact />
+          </div>
           <div className="mt-4">
             <ShipperBidReviewList
+              loadId={l.id}
+              postedRate={l.offeredRateUsd != null ? Number(l.offeredRateUsd) : null}
+              marketAvg={decision.marketAvg}
+              miles={decision.miles}
               bids={l.bids.map((b) => ({
                 id: b.id,
                 kind: b.kind,
@@ -114,9 +154,18 @@ async function ShipperOpenBids({ companyId }: { companyId: string }) {
                 expiresAt: b.expiresAt.toISOString(),
                 createdAt: b.createdAt.toISOString(),
                 carrierName: b.carrierCompany.legalName,
+                carrierCompanyId: b.carrierCompany.id,
+                priorMovesWithYou: repeats[b.carrierCompanyId] ?? 0,
               }))}
             />
           </div>
+          {l.rateMode === LoadRateMode.OPEN_BID ? (
+            <ConvertToFirmRate
+              loadId={l.id}
+              currency={l.offerCurrency}
+              defaultRate={l.offeredRateUsd != null ? Number(l.offeredRateUsd) : decision.marketAvg}
+            />
+          ) : null}
         </section>
       ))}
     </div>
@@ -174,28 +223,47 @@ async function CarrierOpenBids({ companyId }: { companyId: string }) {
       )
     : [];
 
+  const decisions = await Promise.all(
+    visibleLoads.map((l) =>
+      getLaneDecisionContext({
+        originState: l.originState,
+        destinationState: l.destinationState,
+        originZip: l.originZip,
+        destinationZip: l.destinationZip,
+        originCity: l.originCity,
+        destinationCity: l.destinationCity,
+        equipmentType: l.equipmentType,
+        offerCurrency: l.offerCurrency,
+        companyId,
+        asShipper: false,
+      }),
+    ),
+  );
+
   return (
     <div className="mt-6 space-y-8">
       <section>
         <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">{OPEN_BID_LABEL} on the board</h2>
         {visibleLoads.length === 0 ? (
           <p className="mt-2 text-sm text-zinc-600">
-            No open-bid loads you can see right now. Check Open Loads for Take-it freight.
+            No open-bid loads you can see right now. Check Open Loads for {TAKE_IT_LABEL} freight.
           </p>
         ) : (
           <ul className="mt-3 divide-y divide-stone-100 rounded-xl border border-stone-200 bg-white">
-            {visibleLoads.map((l) => (
+            {visibleLoads.map((l, i) => (
               <li key={l.id} className="flex flex-wrap items-start justify-between gap-4 px-4 py-3">
-                <div>
+                <div className="min-w-0 flex-1 space-y-2">
                   <div className="flex flex-wrap items-center gap-2">
                     <Link href={`/loads/${l.id}`} className="font-semibold text-lob-navy underline">
                       {l.referenceNumber}
                     </Link>
                     <RateModeBadge rateMode={l.rateMode} allowCounterOffers={l.allowCounterOffers} />
                   </div>
-                  <p className="mt-1 text-sm text-zinc-700">{lane(l)}</p>
+                  <p className="text-sm text-zinc-700">{lane(l)}</p>
                   <p className="text-xs text-zinc-500">
-                    {l.bidWindowExpiresAt ? `Ends ${l.bidWindowExpiresAt.toLocaleString()}` : "Open until accepted"}
+                    {l.bidWindowExpiresAt
+                      ? formatTimeRemaining(l.bidWindowExpiresAt) ?? `Ends ${l.bidWindowExpiresAt.toLocaleString()}`
+                      : "Open until accepted"}
                     {l.offeredRateUsd != null
                       ? ` · target ${formatMoney(Number(l.offeredRateUsd), l.offerCurrency)}`
                       : ""}
@@ -209,6 +277,7 @@ async function CarrierOpenBids({ companyId }: { companyId: string }) {
                   allowCounterOffers={false}
                   bidWindowExpiresAt={l.bidWindowExpiresAt?.toISOString() ?? null}
                   myPendingAmount={l.bids[0] ? Number(l.bids[0].amountUsd) : null}
+                  decision={decisions[i]}
                 />
               </li>
             ))}
@@ -230,10 +299,26 @@ async function CarrierOpenBids({ companyId }: { companyId: string }) {
                   </Link>
                   <p className="text-sm text-zinc-700">{lane(b.load)}</p>
                   <p className="text-xs text-zinc-500">
-                    {formatMoney(Number(b.amountUsd), b.currency)} · {b.status.toLowerCase()} · {b.kind.toLowerCase()}
+                    {formatMoney(Number(b.amountUsd), b.currency)} · {bidStatusLabel(b.status)} · {bidKindLabel(b.kind)}
                   </p>
                 </div>
                 {b.status === LoadBidStatus.PENDING ? <BidWithdrawButton bidId={b.id} /> : null}
+                {b.status === LoadBidStatus.ACCEPTED ? (
+                  <Link
+                    href={`/loads/${b.load.id}/rate-con`}
+                    className="text-sm font-medium text-lob-navy underline"
+                  >
+                    Rate confirmation
+                  </Link>
+                ) : null}
+                {(b.status === LoadBidStatus.DECLINED ||
+                  b.status === LoadBidStatus.EXPIRED ||
+                  b.status === LoadBidStatus.WITHDRAWN) &&
+                b.load.status === LoadStatus.POSTED ? (
+                  <Link href={`/loads/${b.load.id}`} className="text-sm font-medium text-lob-navy underline">
+                    Bid again
+                  </Link>
+                ) : null}
               </li>
             ))}
           </ul>

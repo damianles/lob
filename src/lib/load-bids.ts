@@ -1,4 +1,4 @@
-import { LoadBidStatus, LoadStatus, type Prisma } from "@prisma/client";
+import { LoadBidStatus, LoadRateMode, LoadStatus, type Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 
@@ -141,5 +141,24 @@ export async function withdrawLoadBid(args: { bidId: string; carrierCompanyId: s
   return prisma.loadBid.update({
     where: { id: bid.id },
     data: { status: LoadBidStatus.WITHDRAWN },
+  });
+}
+
+/** Bids waiting on this company: mill inbox, or this carrier's pending submissions. */
+export async function countPendingBidInbox(args: { companyId: string; asShipper: boolean }) {
+  if (args.asShipper) {
+    return prisma.loadBid.count({
+      where: {
+        status: LoadBidStatus.PENDING,
+        load: {
+          shipperCompanyId: args.companyId,
+          status: LoadStatus.POSTED,
+          OR: [{ rateMode: LoadRateMode.OPEN_BID }, { rateMode: LoadRateMode.TAKE_IT, allowCounterOffers: true }],
+        },
+      },
+    });
+  }
+  return prisma.loadBid.count({
+    where: { carrierCompanyId: args.companyId, status: LoadBidStatus.PENDING },
   });
 }

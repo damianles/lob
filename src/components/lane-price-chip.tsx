@@ -16,6 +16,10 @@ type Quote = {
   yoyChangePct?: number | null;
   prevYearAvg?: number | null;
   prevYearAvgUsd?: number | null;
+  floor?: number | null;
+  ceiling?: number | null;
+  bandEnforced?: boolean;
+  thinLane?: boolean;
 };
 
 type Props = {
@@ -154,6 +158,13 @@ export function LanePriceChip({
       <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
       <span>Market rate:</span>
       <span className="font-semibold tabular-nums">{formatLaneAvg(quote)}</span>
+      {quote.bandEnforced && quote.floor != null && quote.ceiling != null ? (
+        <span className="text-emerald-800/80">
+          allowed {formatMoney(quote.floor, (quote.offerCurrency ?? "CAD") as "USD" | "CAD")}–
+          {formatMoney(quote.ceiling, (quote.offerCurrency ?? "CAD") as "USD" | "CAD")}
+          {quote.thinLane ? " (thin lane)" : ""}
+        </span>
+      ) : null}
       {yoyLabel && <span className={`tabular-nums ${yoyColor}`}>{yoyLabel}</span>}
       <span className="text-emerald-800/70">{matchSuffix}</span>
     </div>

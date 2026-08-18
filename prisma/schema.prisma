@@ -95,7 +95,7 @@ enum DateChangeRequestStatus {
 
 /**
  * How a posted load is priced on the board.
- * TAKE_IT = posted "Take-it" rate (book as-is; optional counters).
+ * TAKE_IT = posted Firm Rate (book as-is; optional counters).
  * OPEN_BID = carriers name a price until the window closes or the mill accepts.
  */
 enum LoadRateMode {
@@ -367,7 +367,7 @@ model Load {
 }
 
 /**
- * Carrier bid (open-bid loads) or counter on a Take-it load.
+ * Carrier bid (open-bid loads) or counter on a Firm Rate load.
  * Accepting a pending bid books the load at this amount.
  */
 model LoadBid {

@@ -59,7 +59,10 @@ export default async function LaneAnalyticsPage({
       <div className="max-w-3xl">
         <h1 className="text-2xl font-bold">Lane rate analytics (subscriber)</h1>
         <p className="mt-2 text-sm text-zinc-600">
-          This module is available for paid subscribers. Ask an admin to enable analytics for your company.
+          Full lane Insights (history, YoY, spreadsheets) will be a monthly add-on — lumber-only, the way DAT
+          charges for RateView. We are still gathering enough booked forest-product moves to make that trustworthy.
+          Until then, average rate, your last book on the lane, and the allowed bid band show on each load when you
+          post, book, or bid.
         </p>
       </div>
     );

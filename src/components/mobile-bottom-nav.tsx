@@ -7,6 +7,7 @@ import { useMemo, type ReactElement } from "react";
 import { useAuth } from "@clerk/nextjs";
 
 import { useViewerRole } from "@/components/providers/app-providers";
+import { useOpenBidsInboxCount } from "@/components/open-bids-inbox-count";
 import { cn } from "@/lib/cn";
 import { signUpUrlForAppPath } from "@/lib/guest-auth-routes";
 import { lobNavItemsForViewer, type LobNavId } from "@/lib/lob-nav";
@@ -95,6 +96,7 @@ export function MobileBottomNav() {
   const pathname = usePathname();
   const { isSignedIn, isLoaded } = useAuth();
   const { viewer, loading } = useViewerRole();
+  const inboxCount = useOpenBidsInboxCount();
 
   const items = useMemo(() => {
     const kind = loading ? "GUEST" : viewer.kind;
@@ -137,8 +139,13 @@ export function MobileBottomNav() {
                 isActive ? "text-lob-navy" : "text-stone-500 hover:text-stone-700",
               )}
             >
-              <div className={cn("transition-transform duration-200", isActive && "scale-110")}>
+              <div className={cn("relative transition-transform duration-200", isActive && "scale-110")}>
                 <Icon className="w-6 h-6" active={isActive} />
+                {item.id === "openBids" && inboxCount != null && inboxCount > 0 ? (
+                  <span className="absolute -right-2 -top-1 min-w-[1rem] rounded-full bg-lob-navy px-1 text-[9px] font-semibold leading-4 text-white">
+                    {inboxCount > 99 ? "99+" : inboxCount}
+                  </span>
+                ) : null}
               </div>
               <span className={cn("text-[10px] font-medium leading-none", isActive && "font-semibold")}>
                 {item.label}

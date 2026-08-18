@@ -1,3 +1,4 @@
+import { TAKE_IT_LABEL } from "@/lib/rate-mode";
 import type { ViewerKind } from "@/lib/viewer-role";
 
 export type LobNavId =
@@ -32,7 +33,7 @@ export const LOB_NAV_ITEMS: LobNavItem[] = [
     id: "openBids",
     href: "/bids",
     label: "Open Bids",
-    hint: "Take-it counters and open-bid loads waiting on a decision",
+    hint: `${TAKE_IT_LABEL} counters and open-bid loads waiting on a decision`,
   },
   {
     id: "loads",
@@ -138,7 +139,7 @@ export function lobNavItemsForViewer(
       return { ...item, hint: "Your booked shipments — dispatch, pickup, and delivery history" };
     }
     if (item.id === "openBids" && kind === "SHIPPER") {
-      return { ...item, hint: "Review carrier bids and Take-it counters on your posted loads" };
+      return { ...item, hint: `Review carrier bids and ${TAKE_IT_LABEL} counters on your posted loads` };
     }
     if (item.id === "openBids" && kind === "CARRIER") {
       return { ...item, hint: "Open-bid freight and your pending bids or counters" };

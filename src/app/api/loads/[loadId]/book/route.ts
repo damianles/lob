@@ -83,7 +83,7 @@ export async function POST(
   ) {
     if (load.allowCounterOffers) {
       return NextResponse.json(
-        { error: `To change the ${TAKE_IT_LABEL} rate, submit a counter from Open Bids — or book the posted rate.` },
+        { error: `To change the ${TAKE_IT_LABEL}, submit a counter from Open Bids — or book the posted rate.` },
         { status: 409 },
       );
     }

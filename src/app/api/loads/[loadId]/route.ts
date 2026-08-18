@@ -1,10 +1,12 @@
-import { LoadStatus, Prisma } from "@prisma/client";
+import { LoadBidKind, LoadBidStatus, LoadRateMode, LoadStatus, Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 
 import { queueBookedCarrierChangeNotices } from "@/lib/load-change-notices";
 import { extractLumberSpec, lumberSpecToLoadColumns } from "@/lib/lumber-spec";
+import { validateRateBand } from "@/lib/market-rate-lane";
 import { parseRequestedPickupAt } from "@/lib/parse-pickup-date";
 import { prisma } from "@/lib/prisma";
+import { TAKE_IT_LABEL, OPEN_BID_LABEL } from "@/lib/rate-mode";
 import { getActorContext } from "@/lib/request-context";
 import { isSupplierActor } from "@/lib/simulated-actor-company";
 import { updateLoadSchema } from "@/lib/validation";
@@ -152,6 +154,58 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ loadId: strin
     Object.assign(data, lumberSpecToLoadColumns(lumberSpec));
   }
 
+  let convertOpenBidToFirm = false;
+  if (payload.rateMode != null) {
+    if (load.status !== LoadStatus.POSTED) {
+      return NextResponse.json({ error: "Rate type can only change while the load is still posted." }, { status: 409 });
+    }
+    if (payload.rateMode === "OPEN_BID" && load.rateMode !== LoadRateMode.OPEN_BID) {
+      return NextResponse.json({ error: `Use the post form to create an ${OPEN_BID_LABEL} load.` }, { status: 400 });
+    }
+    if (payload.rateMode === "TAKE_IT" && load.rateMode === LoadRateMode.OPEN_BID) {
+      convertOpenBidToFirm = true;
+      track("rateMode", load.rateMode, LoadRateMode.TAKE_IT);
+      data.rateMode = LoadRateMode.TAKE_IT;
+      data.bidWindowExpiresAt = null;
+      const counters = payload.allowCounterOffers ?? true;
+      track("allowCounterOffers", load.allowCounterOffers, counters);
+      data.allowCounterOffers = counters;
+    }
+  } else if (payload.allowCounterOffers != null && load.rateMode === LoadRateMode.TAKE_IT) {
+    track("allowCounterOffers", load.allowCounterOffers, payload.allowCounterOffers);
+    data.allowCounterOffers = payload.allowCounterOffers;
+  }
+
+  const nextRate =
+    payload.offeredRateUsd ??
+    (convertOpenBidToFirm && load.offeredRateUsd != null ? Number(load.offeredRateUsd) : undefined);
+  if (convertOpenBidToFirm && (nextRate == null || !(nextRate > 0))) {
+    return NextResponse.json(
+      { error: `${TAKE_IT_LABEL} needs a posted amount — this is the rate you pay.` },
+      { status: 400 },
+    );
+  }
+  if (nextRate != null && (payload.offeredRateUsd != null || convertOpenBidToFirm)) {
+    const rateCheck = await validateRateBand({
+      originState: payload.originState ?? load.originState,
+      destinationState: payload.destinationState ?? load.destinationState,
+      originZip: payload.originZip ?? load.originZip,
+      destinationZip: payload.destinationZip ?? load.destinationZip,
+      originCity: payload.originCity ?? load.originCity,
+      destinationCity: payload.destinationCity ?? load.destinationCity,
+      equipmentType: payload.equipmentType ?? load.equipmentType,
+      offerCurrency: payload.offerCurrency ?? load.offerCurrency,
+      amount: nextRate,
+    });
+    if (!rateCheck.ok) {
+      return NextResponse.json({ error: rateCheck.message }, { status: 400 });
+    }
+    if (convertOpenBidToFirm && payload.offeredRateUsd == null) {
+      track("offeredRateUsd", load.offeredRateUsd != null ? Number(load.offeredRateUsd) : null, nextRate);
+      data.offeredRateUsd = nextRate;
+    }
+  }
+
   if (Object.keys(changes).length === 0) {
     return NextResponse.json({ error: "No changes submitted." }, { status: 400 });
   }
@@ -171,8 +225,17 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ loadId: strin
         weightLbs: true,
         equipmentType: true,
         isRush: true,
+        rateMode: true,
+        allowCounterOffers: true,
       },
     });
+
+    if (convertOpenBidToFirm) {
+      await tx.loadBid.updateMany({
+        where: { loadId: load.id, status: LoadBidStatus.PENDING },
+        data: { kind: LoadBidKind.COUNTER },
+      });
+    }
 
     let noticesQueued = 0;
     if (load.booking?.carrierCompanyId && load.status !== LoadStatus.POSTED) {

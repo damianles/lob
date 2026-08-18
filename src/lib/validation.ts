@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { LUMBER_EQUIPMENT_CODES } from "@/lib/lumber-equipment";
+import { TAKE_IT_LABEL } from "@/lib/rate-mode";
 
 export const createLoadSchema = z.object({
   /** Shipper-supplied idempotency key (TMS load id, PO, mill ticket). */
@@ -26,13 +27,13 @@ export const createLoadSchema = z.object({
   offerCurrency: z.enum(["USD", "CAD"]).default("CAD"),
   offeredRateUsd: z.number().positive().optional(),
   /**
-   * TAKE_IT = posted Take-it rate. OPEN_BID = carriers bid.
+   * TAKE_IT = posted Firm Rate. OPEN_BID = carriers bid.
    */
   rateMode: z.enum(["TAKE_IT", "OPEN_BID"]).default("TAKE_IT"),
   /** TAKE_IT only: allow carriers to counter the posted rate. */
   allowCounterOffers: z.boolean().default(false),
   /**
-   * OPEN_BID window length in hours (1–336). Ignored for Take-it.
+   * OPEN_BID window length in hours (1–336). Ignored for Firm Rate.
    * Use 0 with bidUntilPickup to close at pickup instead.
    */
   bidWindowHours: z.number().int().min(0).max(336).optional(),
@@ -115,7 +116,7 @@ export const createLoadSchema = z.object({
       if (d.offeredRateUsd == null || d.offeredRateUsd <= 0) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "Take-it posts need a posted rate — this is the amount you pay.",
+          message: `${TAKE_IT_LABEL} posts need a posted rate — this is the amount you pay.`,
           path: ["offeredRateUsd"],
         });
       }
@@ -124,7 +125,7 @@ export const createLoadSchema = z.object({
       if (d.allowCounterOffers) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "Allow counters only applies to Take-it posts.",
+          message: `Allow counters only applies to ${TAKE_IT_LABEL} posts.`,
           path: ["allowCounterOffers"],
         });
       }
@@ -153,6 +154,8 @@ export const updateLoadSchema = z
     requestedDeliveryAt: z.string().min(8).nullable().optional(),
     offerCurrency: z.enum(["USD", "CAD"]).optional(),
     offeredRateUsd: z.number().positive().optional(),
+    rateMode: z.enum(["TAKE_IT", "OPEN_BID"]).optional(),
+    allowCounterOffers: z.boolean().optional(),
     extendedPosting: z.record(z.string(), z.unknown()).optional(),
     changeSummary: z.string().trim().max(500).optional(),
   })

@@ -52,10 +52,22 @@ export function minSamplesForDbBenchmark(): number {
   return Number.isFinite(n) && n >= 0 ? Math.min(Math.floor(n), 10000) : 5;
 }
 
-/** Max discount from rolling average: default 0.3 → floor at 70% of average. No ceiling. */
-function maxDiscountFraction(): number {
+/** Max discount from rolling average when the lane has enough samples: default 0.3 → floor at 70%. */
+export function maxDiscountFraction(): number {
   const n = Number(process.env.LOB_MAX_RATE_DISCOUNT_FROM_AVG ?? "0.3");
   return Number.isFinite(n) && n >= 0 && n < 1 ? n : 0.3;
+}
+
+/** Max premium above rolling average when the lane has enough samples: default 0.3 → ceiling at 130%. */
+export function maxPremiumFraction(): number {
+  const n = Number(process.env.LOB_MAX_RATE_PREMIUM_FROM_AVG ?? "0.3");
+  return Number.isFinite(n) && n >= 0 && n < 2 ? n : 0.3;
+}
+
+/** Wider stop-gap on thin lanes (1+ samples but below the DB trust threshold). Default 0.5 → ±50%. */
+export function thinLaneBandFraction(): number {
+  const n = Number(process.env.LOB_THIN_LANE_BAND_FROM_AVG ?? "0.5");
+  return Number.isFinite(n) && n >= 0 && n < 2 ? n : 0.5;
 }
 
 function benchmarkCutoff(): Date {
@@ -334,16 +346,7 @@ export type RateBandCheck =
   | { ok: true }
   | { ok: false; message: string; thinLane?: boolean };
 
-export function offeredAmountUsdEquivalent(amount: number, currency: "USD" | "CAD"): number {
-  return convertMoney(amount, currency, "USD");
-}
-
-/**
- * For posts: do not go more than 30% below the rolling average for this lane
- * and currency, when the DB has at least 5 samples at zip → city → state
- * (same order as the benchmark chip). No upper limit. If fewer than 5, allow any rate.
- */
-export async function validateOfferedRateFloor(args: {
+export type LaneKeys = {
   originState: string;
   destinationState: string;
   originZip: string;
@@ -351,11 +354,32 @@ export async function validateOfferedRateFloor(args: {
   originCity?: string;
   destinationCity?: string;
   equipmentType: string;
-  /** Native offer amount; same currency as offerCurrency (column name is legacy "Usd"). */
-  offeredRate: number;
   offerCurrency: "USD" | "CAD";
-}): Promise<RateBandCheck> {
-  const ccy = args.offerCurrency ?? "CAD";
+};
+
+export type ResolvedRateBand = {
+  avg: number;
+  n: number;
+  matchLevel: LaneMatch["matchLevel"];
+  floor: number;
+  ceiling: number;
+  discountFraction: number;
+  premiumFraction: number;
+  windowDays: number;
+  currency: "USD" | "CAD";
+  thinLane: boolean;
+};
+
+export function offeredAmountUsdEquivalent(amount: number, currency: "USD" | "CAD"): number {
+  return convertMoney(amount, currency, "USD");
+}
+
+async function laneAverageAnySamples(args: LaneKeys): Promise<{
+  avg: number;
+  n: number;
+  matchLevel: LaneMatch["matchLevel"];
+} | null> {
+  const ccy = args.offerCurrency;
   const cutoff = benchmarkCutoff();
   const oSt = normalizeState(args.originState);
   const dSt = normalizeState(args.destinationState);
@@ -364,45 +388,68 @@ export async function validateOfferedRateFloor(args: {
   const eqNorm = normalizeEquipmentForBenchmark(args.equipmentType);
   const oc = args.originCity ? canonicalCityKey(args.originCity) : "";
   const dc = args.destinationCity ? canonicalCityKey(args.destinationCity) : "";
-  const need = minSamplesForDbBenchmark();
-  const floorMult = 1 - maxDiscountFraction();
 
   const zip = await dbAggregateZip(cutoff, oSt, dSt, oz, dz, eqNorm, ccy);
-  if (zip && zip.n >= need) {
-    const min = floorMult * zip.avg;
-    if (args.offeredRate < min) {
-      return {
-        ok: false,
-        message: `Offered rate is too low for this lane: must be at least ${Math.floor(floorMult * 100)}% of the ${benchmarkWindowDays()}-day average (≈ ${ccy} ${min.toFixed(0)}) based on ${zip.n} comparable load(s) in the same currency.`,
-      };
-    }
-    return { ok: true };
-  }
+  if (zip && zip.n >= 1) return { avg: zip.avg, n: zip.n, matchLevel: "zip" };
   if (oc && dc) {
     const city = await dbAggregateCity(cutoff, oSt, dSt, oc, dc, eqNorm, ccy);
-    if (city && city.n >= need) {
-      const min = floorMult * city.avg;
-      if (args.offeredRate < min) {
-        return {
-          ok: false,
-          message: `Offered rate is too low for this lane: must be at least ${Math.floor(floorMult * 100)}% of the ${benchmarkWindowDays()}-day average (≈ ${ccy} ${min.toFixed(0)}) based on ${city.n} comparable load(s) in the same currency.`,
-        };
-      }
-      return { ok: true };
-    }
+    if (city && city.n >= 1) return { avg: city.avg, n: city.n, matchLevel: "city" };
   }
   const st = await dbAggregateState(cutoff, oSt, dSt, eqNorm, ccy);
-  if (st && st.n >= need) {
-    const min = floorMult * st.avg;
-    if (args.offeredRate < min) {
-      return {
-        ok: false,
-        message: `Offered rate is too low: must be at least ${Math.floor(floorMult * 100)}% of the ${benchmarkWindowDays()}-day ${oSt}→${dSt} average (≈ ${ccy} ${min.toFixed(0)}) based on ${st.n} comparable load(s) in the same currency.`,
-      };
-    }
-    return { ok: true };
-  }
+  if (st && st.n >= 1) return { avg: st.avg, n: st.n, matchLevel: "state" };
+  return null;
+}
+
+/**
+ * Stop-gaps around the rolling lane average (zip → city → state).
+ * Enough samples: ±30% (env). Thin lanes with at least one move: ±50%.
+ * No DB observations: no band (Insights add-on later).
+ */
+export async function resolveLaneRateBand(args: LaneKeys): Promise<ResolvedRateBand | null> {
+  const hit = await laneAverageAnySamples(args);
+  if (!hit) return null;
+  const thin = hit.n < minSamplesForDbBenchmark();
+  const discount = thin ? thinLaneBandFraction() : maxDiscountFraction();
+  const premium = thin ? thinLaneBandFraction() : maxPremiumFraction();
+  return {
+    avg: hit.avg,
+    n: hit.n,
+    matchLevel: hit.matchLevel,
+    floor: (1 - discount) * hit.avg,
+    ceiling: (1 + premium) * hit.avg,
+    discountFraction: discount,
+    premiumFraction: premium,
+    windowDays: benchmarkWindowDays(),
+    currency: args.offerCurrency,
+    thinLane: thin,
+  };
+}
+
+function bandRejectMessage(band: ResolvedRateBand, tooLow: boolean): string {
+  const pct = Math.round((tooLow ? band.discountFraction : band.premiumFraction) * 100);
+  const bound = tooLow ? band.floor : band.ceiling;
+  const side = tooLow ? "low" : "high";
+  const cmp = tooLow ? "at least" : "at most";
+  return `Rate is too ${side} for this lane: must be ${cmp} ${tooLow ? 100 - pct : 100 + pct}% of the ${band.windowDays}-day average (≈ ${band.currency} ${bound.toFixed(0)}) based on ${band.n} comparable lumber load(s).`;
+}
+
+/** Posts and bids: cannot sit outside the lane stop-gaps when we have observations. */
+export async function validateRateBand(args: LaneKeys & { amount: number }): Promise<RateBandCheck> {
+  const band = await resolveLaneRateBand(args);
+  if (!band) return { ok: true };
+  if (args.amount < band.floor) return { ok: false, message: bandRejectMessage(band, true), thinLane: band.thinLane };
+  if (args.amount > band.ceiling) return { ok: false, message: bandRejectMessage(band, false), thinLane: band.thinLane };
   return { ok: true };
+}
+
+/**
+ * Posted Firm Rate / target: same stop-gaps as bids (floor and ceiling).
+ */
+export async function validateOfferedRateFloor(args: LaneKeys & {
+  /** Native offer amount; same currency as offerCurrency (column name is legacy "Usd"). */
+  offeredRate: number;
+}): Promise<RateBandCheck> {
+  return validateRateBand({ ...args, amount: args.offeredRate });
 }
 
 /** @deprecated use validateOfferedRateFloor; kept to avoid surprise during refactors. */

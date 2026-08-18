@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 
 import { LobWoodOIcon } from "@/components/lob-wood-o-icon";
+import { OpenBidsCountBadge, useOpenBidsInboxCount } from "@/components/open-bids-inbox-count";
 import { useViewerRole } from "@/components/providers/app-providers";
 import { BRAND_POSITIONING, BRAND_PRODUCT_NAME } from "@/lib/brand-marketing";
 import { lobNavItemsForViewer, type LobNavId } from "@/lib/lob-nav";
@@ -19,6 +20,7 @@ export function LobSidebar({
   stats?: LobSidebarStats;
 }) {
   const { viewer, loading } = useViewerRole();
+  const inboxCount = useOpenBidsInboxCount();
   const navItems = useMemo(() => {
     if (loading) return lobNavItemsForViewer("GUEST");
     const showOnboarding = viewer.kind === "SETUP" || !viewer.companyId;
@@ -63,6 +65,7 @@ export function LobSidebar({
               title={item.hint}
             >
               {item.label}
+              {item.id === "openBids" ? <OpenBidsCountBadge count={inboxCount} /> : null}
             </Link>
           );
         })}

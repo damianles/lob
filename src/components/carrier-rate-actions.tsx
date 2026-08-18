@@ -1,9 +1,12 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 
+import { LaneDecisionStats } from "@/components/lane-decision-stats";
 import { Button } from "@/components/ui/button";
+import { fetchLaneDecisionContext } from "@/lib/fetch-lane-decision";
+import type { LaneDecisionContext } from "@/lib/lane-decision-types";
 import { formatMoney } from "@/lib/money";
 import { OPEN_BID_LABEL, TAKE_IT_LABEL } from "@/lib/rate-mode";
 
@@ -15,6 +18,7 @@ export function CarrierRateActions({
   allowCounterOffers,
   bidWindowExpiresAt,
   myPendingAmount,
+  decision,
 }: {
   loadId: string;
   offerCurrency: "USD" | "CAD";
@@ -23,13 +27,43 @@ export function CarrierRateActions({
   allowCounterOffers: boolean;
   bidWindowExpiresAt: string | null;
   myPendingAmount?: number | null;
+  decision?: LaneDecisionContext | null;
 }) {
   const router = useRouter();
   const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
   const [busy, setBusy] = useState<"book" | "bid" | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [fetched, setFetched] = useState<LaneDecisionContext | null>(null);
+
+  const ctx = decision === undefined ? fetched : decision;
+
+  useEffect(() => {
+    if (decision !== undefined) return;
+    let cancelled = false;
+    void fetchLaneDecisionContext(loadId).then((row) => {
+      if (!cancelled) setFetched(row);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [loadId, decision]);
+
+  useEffect(() => {
+    if (amount !== "") return;
+    if (myPendingAmount != null) {
+      setAmount(String(Math.round(myPendingAmount)));
+      return;
+    }
+    const hint = ctx?.lastBookedRate ?? ctx?.marketAvg;
+    if (hint != null && Number.isFinite(hint)) setAmount(String(Math.round(hint)));
+  }, [amount, myPendingAmount, ctx?.lastBookedRate, ctx?.marketAvg]);
 
   const windowClosed = bidWindowExpiresAt ? new Date(bidWindowExpiresAt) <= new Date() : false;
+  const bandHint =
+    ctx?.bandEnforced && ctx.floor != null && ctx.ceiling != null
+      ? `${formatMoney(ctx.floor, offerCurrency)}–${formatMoney(ctx.ceiling, offerCurrency)}`
+      : null;
 
   async function bookTakeIt() {
     setBusy("book");
@@ -45,8 +79,7 @@ export function CarrierRateActions({
       setMessage(typeof data.error === "string" ? data.error : "Could not book.");
       return;
     }
-    router.refresh();
-    setMessage("Booked at the Take-it rate. Open Shipments to dispatch.");
+    router.push(`/loads/${loadId}/rate-con`);
   }
 
   async function submitBid() {
@@ -60,7 +93,7 @@ export function CarrierRateActions({
     const res = await fetch(`/api/loads/${loadId}/bids`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amountUsd: n }),
+      body: JSON.stringify({ amountUsd: n, note: note.trim() || undefined }),
     });
     const data = await res.json().catch(() => ({}));
     setBusy(null);
@@ -72,9 +105,22 @@ export function CarrierRateActions({
     setMessage(rateMode === "OPEN_BID" ? "Bid submitted." : "Counter sent to the mill.");
   }
 
+  const stats = ctx ? <LaneDecisionStats ctx={ctx} compact /> : null;
+  const showBidForm = rateMode === "OPEN_BID" ? !windowClosed : allowCounterOffers;
+  const noteField = showBidForm ? (
+    <input
+      className="w-full max-w-xs rounded border border-stone-300 px-2 py-1 text-xs"
+      placeholder="Note for the mill (optional)"
+      value={note}
+      onChange={(e) => setNote(e.target.value)}
+      maxLength={500}
+    />
+  ) : null;
+
   if (rateMode === "OPEN_BID") {
     return (
       <div className="space-y-2">
+        {stats}
         <p className="text-[11px] text-zinc-600">
           {OPEN_BID_LABEL}
           {windowClosed ? " — window closed" : ""}
@@ -94,6 +140,8 @@ export function CarrierRateActions({
             </Button>
           </div>
         )}
+        {noteField}
+        {bandHint ? <p className="text-[11px] text-zinc-500">Must be between {bandHint} on this lane.</p> : null}
         {message ? <p className="text-[11px] text-zinc-700">{message}</p> : null}
       </div>
     );
@@ -101,6 +149,7 @@ export function CarrierRateActions({
 
   return (
     <div className="space-y-2">
+      {stats}
       <p className="text-[11px] text-zinc-600">
         {TAKE_IT_LABEL}
         {offeredRateUsd != null ? ` ${formatMoney(offeredRateUsd, offerCurrency)}` : ""}
@@ -132,6 +181,10 @@ export function CarrierRateActions({
           </Button>
         </div>
       )}
+      {noteField}
+      {allowCounterOffers && bandHint ? (
+        <p className="text-[11px] text-zinc-500">Counters must be between {bandHint}.</p>
+      ) : null}
       {message ? <p className="text-[11px] text-zinc-700">{message}</p> : null}
     </div>
   );
