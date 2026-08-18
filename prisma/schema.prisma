@@ -93,6 +93,29 @@ enum DateChangeRequestStatus {
   WITHDRAWN
 }
 
+/**
+ * How a posted load is priced on the board.
+ * TAKE_IT = posted "Take-it" rate (book as-is; optional counters).
+ * OPEN_BID = carriers name a price until the window closes or the mill accepts.
+ */
+enum LoadRateMode {
+  TAKE_IT
+  OPEN_BID
+}
+
+enum LoadBidKind {
+  BID
+  COUNTER
+}
+
+enum LoadBidStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  WITHDRAWN
+  EXPIRED
+}
+
 model Company {
   id                    String             @id @default(cuid())
   legalName             String             @unique
@@ -147,6 +170,7 @@ model Company {
   dateChangesProposed   LoadDateChangeRequest[]   @relation("DateChangeFromCarrier")
   loadTemplates         LoadTemplate[]            @relation("CompanyLoadTemplates")
   savedLanes            SavedLane[]               @relation("CompanySavedLanes")
+  loadBids              LoadBid[]                 @relation("CarrierLoadBids")
 }
 
 /**
@@ -207,6 +231,8 @@ model User {
   loadChangeNotices  LoadChangeNotice[] @relation("LoadNoticeRecipient")
   dateChangesProposed LoadDateChangeRequest[] @relation("DateChangeProposer")
   dateChangesReviewed LoadDateChangeRequest[] @relation("DateChangeReviewer")
+  loadBidsSubmitted   LoadBid[]               @relation("LoadBidSubmitter")
+  loadBidsReviewed    LoadBid[]               @relation("LoadBidReviewer")
 }
 
 model Load {
@@ -232,6 +258,18 @@ model Load {
   status                LoadStatus                @default(POSTED)
   offerCurrency         OfferCurrency             @default(CAD)
   offeredRateUsd        Decimal?                  @db.Decimal(10, 2)
+  /**
+   * TAKE_IT (default): posted rate is the pay rate. OPEN_BID: carriers submit bids.
+   */
+  rateMode              LoadRateMode              @default(TAKE_IT)
+  /**
+   * When TAKE_IT, mill may allow carriers to counter instead of booking the posted rate.
+   */
+  allowCounterOffers    Boolean                   @default(false)
+  /**
+   * When OPEN_BID, bidding closes at this time (unless a bid is accepted sooner).
+   */
+  bidWindowExpiresAt    DateTime?
   marketRateUsd         Decimal?                  @db.Decimal(10, 2)
   finalCostUsd          Decimal?                  @db.Decimal(10, 2)
   uniquePickupCode      String?
@@ -316,6 +354,7 @@ model Load {
   excludedCarriers    LoadCarrierExclusion[] @relation("LoadExcludesCarrier")
   changeNotices       LoadChangeNotice[]
   dateChangeRequests  LoadDateChangeRequest[]
+  bids                LoadBid[]
 
   @@unique([shipperCompanyId, externalRef], name: "Load_shipper_externalRef_unique")
   @@index([lumberSpecies])
@@ -323,6 +362,38 @@ model Load {
   @@index([lumberCategory])
   @@index([originState, destinationState, requestedPickupAt])
   @@index([shipperCompanyId, createdAt])
+  @@index([rateMode, status])
+  @@index([bidWindowExpiresAt])
+}
+
+/**
+ * Carrier bid (open-bid loads) or counter on a Take-it load.
+ * Accepting a pending bid books the load at this amount.
+ */
+model LoadBid {
+  id                String        @id @default(cuid())
+  loadId            String
+  carrierCompanyId  String
+  submittedByUserId String
+  kind              LoadBidKind
+  status            LoadBidStatus @default(PENDING)
+  amountUsd         Decimal       @db.Decimal(10, 2)
+  currency          OfferCurrency
+  note              String?
+  expiresAt         DateTime
+  reviewedAt        DateTime?
+  reviewedByUserId  String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  load             Load    @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  carrierCompany   Company @relation("CarrierLoadBids", fields: [carrierCompanyId], references: [id], onDelete: Cascade)
+  submittedBy      User    @relation("LoadBidSubmitter", fields: [submittedByUserId], references: [id], onDelete: Restrict)
+  reviewedBy       User?   @relation("LoadBidReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([loadId, status])
+  @@index([carrierCompanyId, status])
+  @@index([expiresAt])
 }
 
 /**

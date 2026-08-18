@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { CarrierTypeTag } from "@/components/carrier-type-tag";
+import { RateModeBadge } from "@/components/rate-mode-badge";
 import { PlaceAutocomplete } from "@/components/place-autocomplete";
 import { formatDisplayDate } from "@/lib/format-display-date";
 import { formatMoney } from "@/lib/money";
@@ -30,6 +31,8 @@ export type ShipmentRow = {
   deliveredAt: string | null;
   rateUsd: number | null;
   rateCurrency: "USD" | "CAD";
+  rateMode: "TAKE_IT" | "OPEN_BID";
+  allowCounterOffers: boolean;
   shipperName: string;
   carrierName: string | null;
   carrierType: "ASSET_BASED" | "BROKER" | null;
@@ -505,8 +508,15 @@ export function ShipmentsWorkspace({
                     </span>
                   </div>
                 </td>
-                <td className="px-3 py-2 text-right tabular-nums">
-                  {r.rateUsd != null ? formatMoney(r.rateUsd, r.rateCurrency) : "—"}
+                <td className="px-3 py-2 text-right">
+                  <div className="flex flex-col items-end gap-1">
+                    {r.status === "POSTED" ? (
+                      <RateModeBadge rateMode={r.rateMode} allowCounterOffers={r.allowCounterOffers} compact />
+                    ) : null}
+                    <span className="tabular-nums">
+                      {r.rateUsd != null ? formatMoney(r.rateUsd, r.rateCurrency) : r.rateMode === "OPEN_BID" ? "Open bid" : "—"}
+                    </span>
+                  </div>
                 </td>
                 {showShipperColumn && (
                   <td className="max-w-[180px] truncate px-3 py-2 text-zinc-700">{r.shipperName}</td>

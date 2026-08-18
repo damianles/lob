@@ -12,6 +12,8 @@ import { SavedSearchesBar } from "@/components/saved-searches-bar";
 import { EmptyState, SearchIcon, TruckIcon } from "@/components/ui/empty-state";
 import { FilterChip, FilterChipGroup } from "@/components/ui/filter-chip";
 import { Button } from "@/components/ui/button";
+import { CarrierRateActions } from "@/components/carrier-rate-actions";
+import { RateModeBadge } from "@/components/rate-mode-badge";
 import { PlaceAutocomplete } from "@/components/place-autocomplete";
 import { LUMBER_EQUIPMENT } from "@/lib/lumber-equipment";
 import { laneQueryTokenString } from "@/lib/place-helpers";
@@ -98,6 +100,11 @@ export type SerializableLoad = {
   shipperCompanyName: string | null;
   offerCurrency: "USD" | "CAD";
   offeredRateUsd: number | null;
+  rateMode: "TAKE_IT" | "OPEN_BID";
+  allowCounterOffers: boolean;
+  bidWindowExpiresAt: string | null;
+  pendingBidCount: number;
+  myPendingBidAmount: number | null;
   requestedPickupAt: string;
   /** Null on older loads that predate delivery dates. */
   requestedDeliveryAt: string | null;
@@ -180,8 +187,6 @@ export function LoadBoardWorkspace({
 }) {
   const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
-  const [busyId, setBusyId] = useState<string | null>(null);
-  const [bookRate, setBookRate] = useState<Record<string, string>>({});
 
   const [originQ, setOriginQ] = useState("");
   const [destQ, setDestQ] = useState("");
@@ -441,37 +446,6 @@ export function LoadBoardWorkspace({
     const t = originQ;
     setOriginQ(destQ);
     setDestQ(t);
-  }
-
-  async function refresh(msg: string) {
-    setMessage(msg);
-    router.refresh();
-  }
-
-  async function bookLoad(loadId: string, agreedRateOverride?: number) {
-    const rate =
-      agreedRateOverride != null && Number.isFinite(agreedRateOverride)
-        ? agreedRateOverride
-        : Number(bookRate[loadId] ?? "");
-    if (!Number.isFinite(rate) || rate <= 0) {
-      setMessage("Enter a valid agreed rate.");
-      return;
-    }
-    const load = loads.find((x) => x.id === loadId);
-    const agreedCurrency = load?.offerCurrency ?? "CAD";
-    setBusyId(loadId);
-    const res = await fetch(`/api/loads/${loadId}/book`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ agreedRateUsd: rate, agreedCurrency }),
-    });
-    const data = await res.json().catch(() => ({}));
-    setBusyId(null);
-    if (!res.ok) {
-      setMessage(data.error ?? "Book failed.");
-      return;
-    }
-    await refresh("Booked. Open Shipments to create a driver link.");
   }
 
   return (
@@ -1029,30 +1003,39 @@ export function LoadBoardWorkspace({
                           </span>
                         </div>
                       </td>
-                      <td className="px-3 py-2 text-right tabular-nums">
-                        {displayRate != null ? formatMoney(displayRate, rateCurrency) : "—"}
+                      <td className="px-3 py-2 text-right">
+                        <div className="flex flex-col items-end gap-1">
+                          <RateModeBadge
+                            rateMode={load.rateMode}
+                            allowCounterOffers={load.allowCounterOffers}
+                            compact
+                          />
+                          {load.rateMode === "OPEN_BID" ? (
+                            <span className="tabular-nums text-zinc-700">
+                              {displayRate != null ? `Target ${formatMoney(displayRate, rateCurrency)}` : "Open bid"}
+                            </span>
+                          ) : (
+                            <span className="tabular-nums">{displayRate != null ? formatMoney(displayRate, rateCurrency) : "—"}</span>
+                          )}
+                          {load.rateMode === "OPEN_BID" && load.pendingBidCount > 0 ? (
+                            <span className="text-[10px] text-violet-800">{load.pendingBidCount} bid{load.pendingBidCount === 1 ? "" : "s"}</span>
+                          ) : null}
+                        </div>
                       </td>
                       {isDispatcher ? (
                         <td className="px-3 py-2">
-                          {canBook ? (
-                            <div className="flex min-w-[12rem] flex-wrap items-center gap-1.5">
-                              <span className="text-[11px] text-zinc-500">{load.offerCurrency}</span>
-                              <input
-                                className="w-20 rounded border border-stone-300 px-2 py-1 text-xs"
-                                placeholder="Rate"
-                                value={bookRate[load.id] ?? ""}
-                                onChange={(e) => setBookRate((m) => ({ ...m, [load.id]: e.target.value }))}
-                              />
-                              <Button
-                                type="button"
-                                size="sm"
-                                disabled={busyId === load.id}
-                                isLoading={busyId === load.id}
-                                onClick={() => void bookLoad(load.id)}
-                              >
-                                Book
-                              </Button>
-                            </div>
+                          {canBook && actor.carrierApproved ? (
+                            <CarrierRateActions
+                              loadId={load.id}
+                              offerCurrency={load.offerCurrency}
+                              offeredRateUsd={load.offeredRateUsd}
+                              rateMode={load.rateMode}
+                              allowCounterOffers={load.allowCounterOffers}
+                              bidWindowExpiresAt={load.bidWindowExpiresAt}
+                              myPendingAmount={load.myPendingBidAmount}
+                            />
+                          ) : canBook && !actor.carrierApproved ? (
+                            <span className="text-xs text-zinc-400">Pending approval</span>
                           ) : (
                             <span className="text-xs text-zinc-400">—</span>
                           )}

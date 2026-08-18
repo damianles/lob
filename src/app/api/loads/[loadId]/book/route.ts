@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
-import { LoadStatus, OfferCurrency, VerificationStatus } from "@prisma/client";
+import { LoadBidStatus, LoadRateMode, LoadStatus, OfferCurrency, VerificationStatus } from "@prisma/client";
 
 import { carrierMayViewPostedLoad } from "@/lib/carrier-load-access";
 import { prisma } from "@/lib/prisma";
+import { TAKE_IT_LABEL } from "@/lib/rate-mode";
 import { getActorContext } from "@/lib/request-context";
 import { createBookingSchema } from "@/lib/validation";
 
@@ -47,6 +48,9 @@ export async function POST(
       shipperCompanyId: true,
       carrierVisibilityMode: true,
       offerCurrency: true,
+      offeredRateUsd: true,
+      rateMode: true,
+      allowCounterOffers: true,
     },
   });
   if (!load) {
@@ -54,6 +58,15 @@ export async function POST(
   }
   if (load.status !== LoadStatus.POSTED) {
     return NextResponse.json({ error: "Only posted loads can be booked." }, { status: 409 });
+  }
+  if (load.rateMode === LoadRateMode.OPEN_BID) {
+    return NextResponse.json(
+      { error: "This load is Open bid — submit a bid instead of booking instantly." },
+      { status: 409 },
+    );
+  }
+  if (load.offeredRateUsd == null) {
+    return NextResponse.json({ error: `This ${TAKE_IT_LABEL} load has no posted rate.` }, { status: 409 });
   }
 
   const mayBook = await carrierMayViewPostedLoad(prisma, load, carrierCompanyId);
@@ -64,29 +77,61 @@ export async function POST(
     );
   }
 
-  const agreedCurrency: OfferCurrency =
-    parsed.data.agreedCurrency ?? load.offerCurrency ?? OfferCurrency.CAD;
+  if (
+    parsed.data.agreedRateUsd != null &&
+    Number(load.offeredRateUsd) !== parsed.data.agreedRateUsd
+  ) {
+    if (load.allowCounterOffers) {
+      return NextResponse.json(
+        { error: `To change the ${TAKE_IT_LABEL} rate, submit a counter from Open Bids — or book the posted rate.` },
+        { status: 409 },
+      );
+    }
+    return NextResponse.json(
+      { error: `${TAKE_IT_LABEL} loads book at the posted rate only.` },
+      { status: 409 },
+    );
+  }
+
+  const agreedCurrency: OfferCurrency = load.offerCurrency ?? OfferCurrency.CAD;
 
   const booking = await prisma.$transaction(async (tx) => {
+    const stillOpen = await tx.load.findFirst({
+      where: { id: loadId, status: LoadStatus.POSTED },
+      select: { id: true },
+    });
+    if (!stillOpen) {
+      throw new Error("LOAD_NOT_POSTED");
+    }
+
     const newBooking = await tx.booking.create({
       data: {
         loadId,
         carrierCompanyId,
         agreedCurrency,
-        agreedRateUsd: parsed.data.agreedRateUsd,
+        agreedRateUsd: load.offeredRateUsd!,
       },
     });
 
     await tx.load.update({
       where: { id: loadId },
-      data: {
-        status: LoadStatus.BOOKED,
-      },
+      data: { status: LoadStatus.BOOKED },
+    });
+
+    await tx.loadBid.updateMany({
+      where: { loadId, status: LoadBidStatus.PENDING },
+      data: { status: LoadBidStatus.DECLINED },
     });
 
     return newBooking;
+  }).catch((e: unknown) => {
+    if (e instanceof Error && e.message === "LOAD_NOT_POSTED") return null;
+    throw e;
   });
+
+  if (!booking) {
+    return NextResponse.json({ error: "This load is no longer posted." }, { status: 409 });
+  }
 
   return NextResponse.json({ data: booking }, { status: 201 });
 }
-

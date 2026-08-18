@@ -13,6 +13,7 @@ import {
 } from "@/lib/market-rate-lane";
 import { parseRequestedPickupAt } from "@/lib/parse-pickup-date";
 import { prisma } from "@/lib/prisma";
+import { computeBidWindowExpiresAt } from "@/lib/rate-mode";
 import { getActorContext } from "@/lib/request-context";
 import { carrierCompanyNameForViewer } from "@/lib/carrier-visibility";
 import { shipperCompanyNameForViewer } from "@/lib/shipper-visibility";
@@ -193,20 +194,24 @@ export async function POST(req: Request) {
     }
   }
 
-  const rateCheck = await validateOfferedRateFloor({
-    originState: payload.originState,
-    destinationState: payload.destinationState,
-    originZip: payload.originZip,
-    destinationZip: payload.destinationZip,
-    originCity: payload.originCity,
-    destinationCity: payload.destinationCity,
-    equipmentType: payload.equipmentType,
-    offeredRate: payload.offeredRateUsd,
-    offerCurrency: payload.offerCurrency,
-  });
+  const rateNative = payload.offeredRateUsd;
 
-  if (!rateCheck.ok) {
-    return NextResponse.json({ error: rateCheck.message }, { status: 400 });
+  if (rateNative != null) {
+    const rateCheck = await validateOfferedRateFloor({
+      originState: payload.originState,
+      destinationState: payload.destinationState,
+      originZip: payload.originZip,
+      destinationZip: payload.destinationZip,
+      originCity: payload.originCity,
+      destinationCity: payload.destinationCity,
+      equipmentType: payload.equipmentType,
+      offeredRate: rateNative,
+      offerCurrency: payload.offerCurrency,
+    });
+
+    if (!rateCheck.ok) {
+      return NextResponse.json({ error: rateCheck.message }, { status: 400 });
+    }
   }
 
   const hit = await findLaneBenchmark(
@@ -222,8 +227,6 @@ export async function POST(req: Request) {
 
   const marketRateUsd =
     hit?.row.benchmarkAvgUsd != null ? new Prisma.Decimal(hit.row.benchmarkAvgUsd) : undefined;
-
-  const rateNative = payload.offeredRateUsd;
 
   const visibilityMode =
     payload.carrierVisibilityMode === "TIER_ASSIGNED"
@@ -327,7 +330,17 @@ export async function POST(req: Request) {
         isRush: payload.isRush,
         isPrivate: payload.isPrivate,
         offerCurrency: payload.offerCurrency,
-        offeredRateUsd: payload.offeredRateUsd,
+        offeredRateUsd: payload.offeredRateUsd ?? null,
+        rateMode: payload.rateMode,
+        allowCounterOffers: payload.rateMode === "TAKE_IT" ? payload.allowCounterOffers : false,
+        bidWindowExpiresAt:
+          payload.rateMode === "OPEN_BID"
+            ? computeBidWindowExpiresAt({
+                pickupAt,
+                bidUntilPickup: payload.bidUntilPickup,
+                bidWindowHours: payload.bidWindowHours,
+              })
+            : null,
         marketRateUsd,
         shipperCompanyId,
         createdByUserId,
@@ -348,21 +361,25 @@ export async function POST(req: Request) {
           ? (payload.extendedPosting as Prisma.InputJsonValue)
           : undefined,
         ...lumberColumns,
-        laneRateObservation: {
-          create: {
-            observedAt: new Date(),
-            originState: payload.originState.toUpperCase().slice(0, 2),
-            destState: payload.destinationState.toUpperCase().slice(0, 2),
-            originCityCanon: canonicalCityKey(payload.originCity),
-            destCityCanon: canonicalCityKey(payload.destinationCity),
-            originZip5: zip5ForBenchmark(payload.originZip),
-            destZip5: zip5ForBenchmark(payload.destinationZip),
-            equipmentNorm: normalizeEquipmentForBenchmark(payload.equipmentType),
-            rateUsd: new Prisma.Decimal(rateNative.toFixed(2)),
-            offerCurrency: payload.offerCurrency,
-            source: RateObservationSource.APP,
-          },
-        },
+        ...(rateNative != null
+          ? {
+              laneRateObservation: {
+                create: {
+                  observedAt: new Date(),
+                  originState: payload.originState.toUpperCase().slice(0, 2),
+                  destState: payload.destinationState.toUpperCase().slice(0, 2),
+                  originCityCanon: canonicalCityKey(payload.originCity),
+                  destCityCanon: canonicalCityKey(payload.destinationCity),
+                  originZip5: zip5ForBenchmark(payload.originZip),
+                  destZip5: zip5ForBenchmark(payload.destinationZip),
+                  equipmentNorm: normalizeEquipmentForBenchmark(payload.equipmentType),
+                  rateUsd: new Prisma.Decimal(rateNative.toFixed(2)),
+                  offerCurrency: payload.offerCurrency,
+                  source: RateObservationSource.APP,
+                },
+              },
+            }
+          : {}),
       },
     });
 

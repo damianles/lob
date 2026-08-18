@@ -1,5 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
-import { LoadStatus, VerificationStatus, type Prisma } from "@prisma/client";
+import { LoadBidStatus, LoadStatus, VerificationStatus, type Prisma } from "@prisma/client";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -22,11 +22,16 @@ const loadBoardInclude = {
   booking: { include: { carrierCompany: true } },
   dispatchLink: { select: { token: true, status: true } },
   shipperCompany: { select: { legalName: true } },
+  _count: { select: { bids: { where: { status: "PENDING" as const } } } },
 } satisfies Prisma.LoadInclude;
 
 type LoadRow = Prisma.LoadGetPayload<{ include: typeof loadBoardInclude }>;
 
-function toSerializableLoads(loads: LoadRow[], actor: BoardActor): SerializableLoad[] {
+function toSerializableLoads(
+  loads: LoadRow[],
+  actor: BoardActor,
+  myBidByLoad: Record<string, number> = {},
+): SerializableLoad[] {
   const visibilityActor = {
     companyId: actor.companyId,
     role: actor.role,
@@ -52,6 +57,11 @@ function toSerializableLoads(loads: LoadRow[], actor: BoardActor): SerializableL
     shipperCompanyName: shipperCompanyNameForViewer(l.shipperCompany.legalName, l, visibilityActor),
     offerCurrency: l.offerCurrency,
     offeredRateUsd: l.offeredRateUsd != null ? Number(l.offeredRateUsd) : null,
+    rateMode: l.rateMode,
+    allowCounterOffers: l.allowCounterOffers,
+    bidWindowExpiresAt: l.bidWindowExpiresAt ? l.bidWindowExpiresAt.toISOString() : null,
+    pendingBidCount: l._count.bids,
+    myPendingBidAmount: myBidByLoad[l.id] ?? null,
     requestedPickupAt: l.requestedPickupAt.toISOString(),
     requestedDeliveryAt: l.requestedDeliveryAt ? l.requestedDeliveryAt.toISOString() : null,
     createdAt: l.createdAt.toISOString(),
@@ -77,6 +87,7 @@ export default async function Home() {
   const { userId } = await auth();
 
   let loads: LoadRow[] = [];
+  let myBidByLoad: Record<string, number> = {};
   let dbError: string | null = null;
   let profileSyncDbError: string | null = null;
   let appUser: { id: string; companyId: string | null; role: string } | null = null;
@@ -159,6 +170,18 @@ export default async function Home() {
           ctx,
         ),
       );
+    }
+
+    if (boardRole === "DISPATCHER" && boardCompanyId && loads.length > 0) {
+      const mine = await prisma.loadBid.findMany({
+        where: {
+          carrierCompanyId: boardCompanyId,
+          status: LoadBidStatus.PENDING,
+          loadId: { in: loads.map((l) => l.id) },
+        },
+        select: { loadId: true, amountUsd: true },
+      });
+      myBidByLoad = Object.fromEntries(mine.map((b) => [b.loadId, Number(b.amountUsd)]));
     }
 
     if (boardRole === "DISPATCHER" && boardCompanyId) {
@@ -335,7 +358,7 @@ export default async function Home() {
         )}
 
         <LoadBoardWorkspace
-          loads={dbError ? [] : toSerializableLoads(loads, actor)}
+          loads={dbError ? [] : toSerializableLoads(loads, actor, myBidByLoad)}
           actor={actor}
           stats={{ active, rush, delivered }}
         />

@@ -123,6 +123,8 @@ export default async function ShipmentsPage({
         ? Number(l.offeredRateUsd)
         : null,
     rateCurrency: l.booking ? l.booking.agreedCurrency : l.offerCurrency,
+    rateMode: l.rateMode,
+    allowCounterOffers: l.allowCounterOffers,
     shipperName: l.shipperCompany.legalName,
     carrierName: l.booking?.carrierCompany.legalName ?? null,
     carrierType: l.booking?.carrierCompany.carrierType ?? null,

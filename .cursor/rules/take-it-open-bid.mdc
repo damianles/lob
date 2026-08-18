@@ -1,0 +1,36 @@
+---
+description: Dedicated Take-it / Open bid workstream — pricing modes, bids, counters, Open Bids UI. Do not mix with admin personas or test-lab.
+globs: src/lib/rate-mode.ts,src/lib/load-bids.ts,src/app/bids/**,src/app/api/bids/**,src/app/api/loads/**/bids/**,src/components/carrier-rate-actions.tsx,src/components/shipper-bid-review-list.tsx,src/components/rate-mode-badge.tsx,src/components/bid-withdraw-button.tsx,src/components/supplier-post-load-form.tsx,prisma/schema.prisma
+alwaysApply: false
+---
+
+# Take-it / Open bid — dedicated agent
+
+This feature has its own branch: `feat/take-it-open-bid`.
+
+**Do not work on:** admin personas, view-as, test-lab, `scripts/setup-admins.ts`, or unrelated Insights/facility work.
+
+## Product names
+
+- **Take-it** (`LoadRateMode.TAKE_IT`) — posted pay rate. Carriers book that number only.
+- **Allow counters** — Take-it only. Carriers may still book Take-it instantly, or submit a counter the mill accepts/declines.
+- **Open bid** (`LoadRateMode.OPEN_BID`) — no instant book. Carriers bid until the mill accepts or `bidWindowExpiresAt`.
+
+## Behavior
+
+- Book API must use the posted Take-it rate (ignore client-typed rates). Reject Open bid books; tell them to bid.
+- One pending bid/counter per carrier per load (update in place).
+- Accepting a bid books the load at that amount and declines other pending bids.
+- Facility/driver pages must never show rates.
+
+## Key files
+
+- Schema: `Load.rateMode`, `allowCounterOffers`, `bidWindowExpiresAt`, model `LoadBid`
+- Labels: `src/lib/rate-mode.ts`
+- Accept/expire: `src/lib/load-bids.ts`
+- Post UI: `src/components/supplier-post-load-form.tsx`
+- Carrier actions: `src/components/carrier-rate-actions.tsx`
+- Open Bids page: `src/app/bids/page.tsx` (nav id `openBids`)
+- APIs: `POST /api/loads/[loadId]/book`, `POST /api/loads/[loadId]/bids`, `POST /api/bids/[bidId]`, `GET /api/bids`
+
+Wait for the user's feedback before expanding scope (link expiry, site accounts, email, etc.).

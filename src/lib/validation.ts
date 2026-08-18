@@ -24,7 +24,19 @@ export const createLoadSchema = z.object({
   /** ISO datetime or YYYY-MM-DD — expected delivery. */
   requestedDeliveryAt: z.string().min(8).optional(),
   offerCurrency: z.enum(["USD", "CAD"]).default("CAD"),
-  offeredRateUsd: z.number().positive(),
+  offeredRateUsd: z.number().positive().optional(),
+  /**
+   * TAKE_IT = posted Take-it rate. OPEN_BID = carriers bid.
+   */
+  rateMode: z.enum(["TAKE_IT", "OPEN_BID"]).default("TAKE_IT"),
+  /** TAKE_IT only: allow carriers to counter the posted rate. */
+  allowCounterOffers: z.boolean().default(false),
+  /**
+   * OPEN_BID window length in hours (1–336). Ignored for Take-it.
+   * Use 0 with bidUntilPickup to close at pickup instead.
+   */
+  bidWindowHours: z.number().int().min(0).max(336).optional(),
+  bidUntilPickup: z.boolean().default(false),
   extendedPosting: z.record(z.string(), z.unknown()).optional(),
   carrierVisibilityMode: z.enum(["OPEN", "TIER_ASSIGNED"]).default("OPEN"),
   /**
@@ -99,6 +111,31 @@ export const createLoadSchema = z.object({
         });
       }
     }
+    if (d.rateMode === "TAKE_IT") {
+      if (d.offeredRateUsd == null || d.offeredRateUsd <= 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Take-it posts need a posted rate — this is the amount you pay.",
+          path: ["offeredRateUsd"],
+        });
+      }
+    }
+    if (d.rateMode === "OPEN_BID") {
+      if (d.allowCounterOffers) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Allow counters only applies to Take-it posts.",
+          path: ["allowCounterOffers"],
+        });
+      }
+      if (!d.bidUntilPickup && (!d.bidWindowHours || d.bidWindowHours < 1)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Set how long bidding stays open, or choose until pickup.",
+          path: ["bidWindowHours"],
+        });
+      }
+    }
   });
 
 export const updateLoadSchema = z
@@ -153,7 +190,18 @@ export const reviewDateChangeRequestSchema = z.object({
 export const createBookingSchema = z.object({
   carrierCompanyId: z.string().min(1).optional(),
   agreedCurrency: z.enum(["USD", "CAD"]).optional(),
-  agreedRateUsd: z.number().positive(),
+  agreedRateUsd: z.number().positive().optional(),
+});
+
+export const createLoadBidSchema = z.object({
+  amountUsd: z.number().positive(),
+  note: z.string().trim().max(500).optional(),
+  /** Hours this bid/counter stays open (1–168). Defaults to remaining bid window or 24h. */
+  expiresInHours: z.number().int().min(1).max(168).optional(),
+});
+
+export const reviewLoadBidSchema = z.object({
+  decision: z.enum(["ACCEPT", "DECLINE"]),
 });
 
 export const createDispatchSchema = z.object({

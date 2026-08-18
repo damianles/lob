@@ -5,6 +5,7 @@ export type LobNavId =
   | "capacity"
   | "insights"
   | "shipments"
+  | "openBids"
   | "driver"
   | "facilityPickup"
   | "facilityDelivery"
@@ -26,6 +27,12 @@ export const LOB_NAV_ITEMS: LobNavItem[] = [
     href: "/shipments",
     label: "Shipments",
     hint: "Track your shipments — sortable, filterable, exportable",
+  },
+  {
+    id: "openBids",
+    href: "/bids",
+    label: "Open Bids",
+    hint: "Take-it counters and open-bid loads waiting on a decision",
   },
   {
     id: "loads",
@@ -71,6 +78,7 @@ export const LOB_NAV_ITEMS: LobNavItem[] = [
 const CARRIER_IDS: LobNavId[] = [
   "shipments",
   "loads",
+  "openBids",
   "capacity",
   "insights",
   "driver",
@@ -80,6 +88,7 @@ const CARRIER_IDS: LobNavId[] = [
 
 const SHIPPER_IDS: LobNavId[] = [
   "shipments",
+  "openBids",
   "capacity",
   "insights",
   "facilityPickup",
@@ -127,6 +136,12 @@ export function lobNavItemsForViewer(
     }
     if (item.id === "shipments" && kind === "CARRIER") {
       return { ...item, hint: "Your booked shipments — dispatch, pickup, and delivery history" };
+    }
+    if (item.id === "openBids" && kind === "SHIPPER") {
+      return { ...item, hint: "Review carrier bids and Take-it counters on your posted loads" };
+    }
+    if (item.id === "openBids" && kind === "CARRIER") {
+      return { ...item, hint: "Open-bid freight and your pending bids or counters" };
     }
     return item;
   });

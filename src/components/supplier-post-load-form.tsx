@@ -14,6 +14,12 @@ import { RadioChoice } from "@/components/ui/radio-choice";
 import { LUMBER_EQUIPMENT } from "@/lib/lumber-equipment";
 import { inferOfferCurrency } from "@/lib/lane-currency";
 import type { LumberSpec } from "@/lib/lumber-spec";
+import {
+  BID_WINDOW_PRESETS_HOURS,
+  formatBidWindowHours,
+  OPEN_BID_LABEL,
+  TAKE_IT_LABEL,
+} from "@/lib/rate-mode";
 
 type CarrierPick = { id: string; legalName: string };
 
@@ -129,6 +135,11 @@ export function SupplierPostLoadForm({
 
   const [rateUsd, setRateUsd] = useState("");
   const [currency, setCurrency] = useState<"USD" | "CAD">("CAD");
+  const [rateMode, setRateMode] = useState<"TAKE_IT" | "OPEN_BID">("TAKE_IT");
+  const [allowCounterOffers, setAllowCounterOffers] = useState(false);
+  const [bidWindowHours, setBidWindowHours] = useState("24");
+  const [bidUntilPickup, setBidUntilPickup] = useState(false);
+  const [customBidHours, setCustomBidHours] = useState("");
   const [isRush, setIsRush] = useState(false);
   const [notes, setNotes] = useState("");
   const [tenderUrl, setTenderUrl] = useState("");
@@ -333,10 +344,21 @@ export function SupplierPostLoadForm({
       setErr("Delivery date cannot be before pickup date.");
       return;
     }
-    const r = Number(rateUsd);
-    if (!Number.isFinite(r) || r <= 0) {
-      setErr(`Posted rate (${currency}) is required.`);
+    const r = rateUsd.trim() === "" ? null : Number(rateUsd);
+    if (rateMode === "TAKE_IT" && (r == null || !Number.isFinite(r) || r <= 0)) {
+      setErr(`Take-it rate (${currency}) is required — this is the amount you pay.`);
       return;
+    }
+    if (rateMode === "OPEN_BID" && r != null && (!Number.isFinite(r) || r <= 0)) {
+      setErr("Target rate must be a positive number, or leave it blank.");
+      return;
+    }
+    if (rateMode === "OPEN_BID" && !bidUntilPickup) {
+      const hours = Number(customBidHours || bidWindowHours);
+      if (!Number.isFinite(hours) || hours < 1 || hours > 336) {
+        setErr("Set a bid window between 1 and 336 hours, or choose until pickup.");
+        return;
+      }
     }
     if (!originCity.trim() || !originState.trim() || !originZip.trim()) {
       setErr("Origin city, state or province, and postal or ZIP code are required (lane search).");
@@ -444,7 +466,14 @@ export function SupplierPostLoadForm({
         requestedPickupAt: requestedPickupDate,
         requestedDeliveryAt: requestedDeliveryDate,
         offerCurrency: currency,
-        offeredRateUsd: r,
+        offeredRateUsd: r != null && Number.isFinite(r) && r > 0 ? r : undefined,
+        rateMode,
+        allowCounterOffers: rateMode === "TAKE_IT" ? allowCounterOffers : false,
+        bidWindowHours:
+          rateMode === "OPEN_BID" && !bidUntilPickup
+            ? Number(customBidHours || bidWindowHours) || 24
+            : undefined,
+        bidUntilPickup: rateMode === "OPEN_BID" ? bidUntilPickup : false,
         extendedPosting,
         carrierVisibilityMode,
         visibleTiers: carrierVisibilityMode === "TIER_ASSIGNED" ? [...visibleTiers] : [],
@@ -1096,14 +1125,106 @@ export function SupplierPostLoadForm({
         </section>
 
         <section className="rounded border border-emerald-200 bg-white/90 p-3">
-          <h4 className="text-xs font-bold uppercase tracking-wide text-emerald-900">Rate</h4>
-          <div className="mt-2 flex flex-wrap gap-3">
+          <h4 className="text-xs font-bold uppercase tracking-wide text-emerald-900">How carriers get this load</h4>
+          <p className="mt-1 text-[11px] text-zinc-500">
+            {TAKE_IT_LABEL} is the rate you pay. {OPEN_BID_LABEL} lets carriers name a price until you accept one or the
+            window closes.
+          </p>
+          <div className="mt-3">
+            <RadioChoice
+              label="Rate type"
+              name="rate-mode"
+              value={rateMode}
+              onChange={(v) => setRateMode(v)}
+              options={[
+                {
+                  value: "TAKE_IT",
+                  label: TAKE_IT_LABEL,
+                  description: "Posted pay rate",
+                },
+                {
+                  value: "OPEN_BID",
+                  label: OPEN_BID_LABEL,
+                  description: "Carriers bid",
+                },
+              ]}
+            />
+          </div>
+
+          {rateMode === "TAKE_IT" && (
+            <label className="mt-3 flex items-start gap-2 text-sm text-zinc-800">
+              <input
+                type="checkbox"
+                className="mt-1 h-4 w-4"
+                checked={allowCounterOffers}
+                onChange={(e) => setAllowCounterOffers(e.target.checked)}
+              />
+              <span>
+                <span className="font-medium">Allow counters</span>
+                <span className="mt-0.5 block text-xs text-zinc-500">
+                  Carriers can still book the {TAKE_IT_LABEL} rate instantly, or propose a different number for you to
+                  accept or decline.
+                </span>
+              </span>
+            </label>
+          )}
+
+          {rateMode === "OPEN_BID" && (
+            <div className="mt-3 space-y-2">
+              <p className="text-xs font-medium text-zinc-700">Bid window</p>
+              <div className="flex flex-wrap gap-2">
+                {BID_WINDOW_PRESETS_HOURS.map((h) => (
+                  <button
+                    key={h}
+                    type="button"
+                    disabled={bidUntilPickup}
+                    onClick={() => {
+                      setBidWindowHours(String(h));
+                      setCustomBidHours("");
+                    }}
+                    className={`rounded-full border px-3 py-1 text-xs font-medium ${
+                      !bidUntilPickup && !customBidHours && bidWindowHours === String(h)
+                        ? "border-lob-navy bg-lob-navy/10 text-lob-navy"
+                        : "border-stone-200 bg-white text-zinc-600"
+                    }`}
+                  >
+                    {formatBidWindowHours(h)}
+                  </button>
+                ))}
+                <label className="flex items-center gap-1 text-xs text-zinc-600">
+                  Custom
+                  <input
+                    className="w-16 rounded border px-2 py-1 text-xs"
+                    placeholder="hrs"
+                    disabled={bidUntilPickup}
+                    value={customBidHours}
+                    onChange={(e) => setCustomBidHours(e.target.value)}
+                  />
+                </label>
+              </div>
+              <label className="flex items-center gap-2 text-sm text-zinc-800">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4"
+                  checked={bidUntilPickup}
+                  onChange={(e) => setBidUntilPickup(e.target.checked)}
+                />
+                Keep bidding open until pickup
+              </label>
+              <p className="text-[11px] text-zinc-500">
+                Bidding closes when the window ends, unless you accept a bid sooner. Carriers cannot book this load
+                instantly.
+              </p>
+            </div>
+          )}
+
+          <div className="mt-3 flex flex-wrap gap-3">
             <input
               className="w-36 rounded border px-2 py-2 text-sm"
-              placeholder={`Rate * (${currency})`}
+              placeholder={rateMode === "OPEN_BID" ? `Target (${currency}, optional)` : `Rate * (${currency})`}
               value={rateUsd}
               onChange={(e) => setRateUsd(e.target.value)}
-              required
+              required={rateMode === "TAKE_IT"}
             />
             <label className="text-xs text-zinc-600">
               Currency

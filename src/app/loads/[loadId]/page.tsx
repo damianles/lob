@@ -1,10 +1,13 @@
 import { auth } from "@clerk/nextjs/server";
-import { LoadStatus, VerificationStatus } from "@prisma/client";
+import { LoadBidStatus, LoadStatus, VerificationStatus } from "@prisma/client";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
+import { CarrierRateActions } from "@/components/carrier-rate-actions";
 import { CancelLoadButton } from "@/components/cancel-load-button";
+import { RateModeBadge } from "@/components/rate-mode-badge";
+import { ShipperBidReviewList } from "@/components/shipper-bid-review-list";
 import { CarrierScorecard } from "@/components/carrier-scorecard";
 import { CarrierTypeTag } from "@/components/carrier-type-tag";
 import { CreateDispatchForm } from "@/components/create-dispatch-form";
@@ -77,6 +80,11 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
       },
       dispatchLink: true,
       shipperCompany: { select: { legalName: true, supplierKind: true } },
+      bids: {
+        where: { status: LoadBidStatus.PENDING },
+        orderBy: { createdAt: "desc" },
+        include: { carrierCompany: { select: { legalName: true } } },
+      },
     },
   });
 
@@ -247,14 +255,26 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
                 <p className="mt-1 font-semibold text-zinc-900">{load.status}</p>
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase text-zinc-500">Offered / booked</p>
+                <p className="text-xs font-semibold uppercase text-zinc-500">Rate</p>
                 <p className="mt-1 font-semibold text-zinc-900">
                   {load.booking
                     ? formatMoney(Number(load.booking.agreedRateUsd), load.booking.agreedCurrency)
-                    : load.offeredRateUsd != null
-                      ? formatMoney(Number(load.offeredRateUsd), load.offerCurrency)
-                      : "—"}
+                    : load.rateMode === "OPEN_BID"
+                      ? load.offeredRateUsd != null
+                        ? `Target ${formatMoney(Number(load.offeredRateUsd), load.offerCurrency)}`
+                        : "Open bid"
+                      : load.offeredRateUsd != null
+                        ? formatMoney(Number(load.offeredRateUsd), load.offerCurrency)
+                        : "—"}
                 </p>
+                <div className="mt-1">
+                  <RateModeBadge rateMode={load.rateMode} allowCounterOffers={load.allowCounterOffers} />
+                </div>
+                {load.rateMode === "OPEN_BID" && load.bidWindowExpiresAt && !load.booking && (
+                  <p className="mt-1 text-xs text-zinc-500">
+                    Bidding ends {load.bidWindowExpiresAt.toLocaleString()}
+                  </p>
+                )}
               </div>
               <div>
                 <p className="text-xs font-semibold uppercase text-zinc-500">Supplier / customer</p>
@@ -286,6 +306,52 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
                 </div>
               )}
             </div>
+
+            {load.status === LoadStatus.POSTED &&
+              !isShipperOwner &&
+              (actor.role === "DISPATCHER" || actor.role === "ADMIN") && (
+              <div className="mt-4 rounded-lg border border-stone-200 bg-white p-4">
+                <h3 className="text-sm font-semibold text-zinc-900">Book or bid</h3>
+                <div className="mt-3">
+                  <CarrierRateActions
+                    loadId={load.id}
+                    offerCurrency={load.offerCurrency}
+                    offeredRateUsd={load.offeredRateUsd != null ? Number(load.offeredRateUsd) : null}
+                    rateMode={load.rateMode}
+                    allowCounterOffers={load.allowCounterOffers}
+                    bidWindowExpiresAt={load.bidWindowExpiresAt?.toISOString() ?? null}
+                    myPendingAmount={
+                      load.bids.find((b) => b.carrierCompanyId === effectiveCompanyId)
+                        ? Number(load.bids.find((b) => b.carrierCompanyId === effectiveCompanyId)!.amountUsd)
+                        : null
+                    }
+                  />
+                </div>
+              </div>
+            )}
+
+            {load.status === LoadStatus.POSTED && (isShipperOwner || isRealAdmin) && (
+              <div className="mt-4 rounded-lg border border-stone-200 bg-white p-4">
+                <h3 className="text-sm font-semibold text-zinc-900">Pending bids &amp; counters</h3>
+                <p className="mt-1 text-xs text-zinc-500">
+                  Accepting a bid books the load at that amount and closes the others.
+                </p>
+                <div className="mt-3">
+                  <ShipperBidReviewList
+                    bids={load.bids.map((b) => ({
+                      id: b.id,
+                      kind: b.kind,
+                      amountUsd: Number(b.amountUsd),
+                      currency: b.currency,
+                      note: b.note,
+                      expiresAt: b.expiresAt.toISOString(),
+                      createdAt: b.createdAt.toISOString(),
+                      carrierName: b.carrierCompany.legalName,
+                    }))}
+                  />
+                </div>
+              </div>
+            )}
 
             {(isShipperOwner || isRealAdmin) && (
               <div className="mt-4 flex flex-wrap items-center gap-3">
