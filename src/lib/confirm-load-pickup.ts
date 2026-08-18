@@ -30,17 +30,13 @@ async function assertDispatchReady(dispatchLink: DispatchWithLoad | null) {
   }
 }
 
-export async function confirmLoadPickupByToken(token: string, pickupCode: string) {
+export async function confirmLoadPickupByToken(token: string) {
   const dispatchLink = await prisma.dispatchLink.findUnique({
     where: { token },
     include: { load: true },
   });
 
   await assertDispatchReady(dispatchLink);
-
-  if (dispatchLink!.load.uniquePickupCode !== pickupCode.toUpperCase()) {
-    throw new PickupConfirmError("Pickup code does not match this load.", 403);
-  }
 
   return confirmLoadPickupTransaction(dispatchLink!.id);
 }

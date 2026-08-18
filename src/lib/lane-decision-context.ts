@@ -2,7 +2,7 @@ import { canonicalCityKey } from "@/lib/city-canonical";
 import type { LaneDecisionContext } from "@/lib/lane-decision-types";
 import { findLaneBenchmark, resolveLaneRateBand, type LaneKeys } from "@/lib/market-rate-lane";
 import { prisma } from "@/lib/prisma";
-import { milesBetweenZips } from "@/lib/zip-distance";
+import { milesBetweenPlaces } from "@/lib/zip-distance";
 
 export type { LaneDecisionContext } from "@/lib/lane-decision-types";
 
@@ -47,7 +47,10 @@ export async function getLaneDecisionContext(args: {
   asShipper: boolean;
 }): Promise<LaneDecisionContext> {
   const keys = laneKeysFrom(args);
-  const miles = milesBetweenZips(args.originZip, args.destinationZip);
+  const miles = milesBetweenPlaces(
+    { city: args.originCity, state: args.originState, zip: args.originZip },
+    { city: args.destinationCity, state: args.destinationState, zip: args.destinationZip },
+  );
   const band = await resolveLaneRateBand(keys);
 
   let marketAvg = band?.avg ?? null;

@@ -1,4 +1,3 @@
-import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 import { FacilityLoadSummary } from "@/components/facility-load-summary";
@@ -23,6 +22,7 @@ const facilityDispatchInclude = {
       equipmentType: true,
       requestedPickupAt: true,
       requestedDeliveryAt: true,
+      extendedPosting: true,
       booking: {
         select: {
           carrierCompany: { select: { legalName: true } },
@@ -38,7 +38,17 @@ export default async function FacilityPickupPage({ params }: { params: Promise<{
     where: { token },
     include: facilityDispatchInclude,
   });
-  if (!dispatch) notFound();
+  if (!dispatch) {
+    return (
+      <main className="mx-auto min-h-[calc(100vh-3.5rem)] max-w-lg px-4 py-10 text-zinc-900">
+        <h1 className="text-xl font-bold">Pickup link not found</h1>
+        <p className="mt-2 text-sm text-zinc-600">
+          This QR or URL is invalid, or a driver dispatch has not been created for this load yet. Open the load in LOB
+          and use Confirm Pickup after dispatch exists.
+        </p>
+      </main>
+    );
+  }
 
   const ops = facilityOpsFromDispatch(dispatch);
 

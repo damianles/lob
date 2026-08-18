@@ -42,16 +42,20 @@ export default function RootLayout({
       >
         <ClerkProvider>
           <AppProviders>
-            <DemoBanner />
-            <DeployFingerprint />
-            <PersonaBodyTint />
-            <LobBrandMasthead />
-            <AdminViewAsBar />
-            <RoleRibbon />
-            <AppNav />
-            <ScrollToTop />
+            <div className="print:hidden">
+              <DemoBanner />
+              <DeployFingerprint />
+              <PersonaBodyTint />
+              <LobBrandMasthead />
+              <AdminViewAsBar />
+              <RoleRibbon />
+              <AppNav />
+              <ScrollToTop />
+            </div>
             {children}
-            <MobileBottomNav />
+            <div className="print:hidden">
+              <MobileBottomNav />
+            </div>
           </AppProviders>
         </ClerkProvider>
       </body>

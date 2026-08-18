@@ -362,11 +362,6 @@ export function LoadCard({
                   >
                     Copy driver URL
                   </Button>
-                  {load.uniquePickupCode && (
-                    <p className="text-xs text-amber-800 mt-2">
-                      Pickup code: <span className="font-mono font-semibold">{load.uniquePickupCode}</span>
-                    </p>
-                  )}
                 </div>
               )}
             </div>

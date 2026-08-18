@@ -1,4 +1,10 @@
 import { equipmentShortTag } from "@/lib/lumber-equipment";
+import { formatPostedDateWithOptionalTime } from "@/lib/format-posted-datetime";
+import {
+  extractLoadExecution,
+  firstStopTime,
+  formatStopBlock,
+} from "@/lib/load-execution";
 
 export type FacilityLoadOps = {
   referenceNumber: string;
@@ -11,21 +17,13 @@ export type FacilityLoadOps = {
   driverPhone: string | null;
   requestedPickupAt: Date | null;
   requestedDeliveryAt: Date | null;
+  extendedPosting?: unknown;
 };
 
-function formatWhen(d: Date | null) {
-  if (!d) return null;
-  return d.toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-
 export function FacilityLoadSummary({ ops }: { ops: FacilityLoadOps }) {
-  const pickupWhen = formatWhen(ops.requestedPickupAt);
-  const deliveryWhen = formatWhen(ops.requestedDeliveryAt);
+  const execution = extractLoadExecution(ops.extendedPosting);
+  const pickupWhen = formatPostedDateWithOptionalTime(ops.requestedPickupAt, firstStopTime(execution.pickups));
+  const deliveryWhen = formatPostedDateWithOptionalTime(ops.requestedDeliveryAt, firstStopTime(execution.deliveries));
 
   return (
     <section className="mt-4 rounded-xl border border-stone-200 bg-white p-4 text-sm shadow-sm">
@@ -36,9 +34,33 @@ export function FacilityLoadSummary({ ops }: { ops: FacilityLoadOps }) {
           <dd className="font-semibold">{ops.referenceNumber}</dd>
         </div>
         <div>
-          <dt className="text-xs text-zinc-500">Route</dt>
+          <dt className="text-xs text-zinc-500">Pickup</dt>
           <dd>
-            {ops.originLine} → {ops.destinationLine}
+            {ops.originLine}
+            {execution.pickups.map((stop) => {
+              const lines = formatStopBlock(stop);
+              if (!lines.length) return null;
+              return (
+                <span key={`pu-${stop.index}`} className="mt-1 block text-zinc-700">
+                  {lines.join(" · ")}
+                </span>
+              );
+            })}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-xs text-zinc-500">Delivery</dt>
+          <dd>
+            {ops.destinationLine}
+            {execution.deliveries.map((stop) => {
+              const lines = formatStopBlock(stop);
+              if (!lines.length) return null;
+              return (
+                <span key={`del-${stop.index}`} className="mt-1 block text-zinc-700">
+                  {lines.join(" · ")}
+                </span>
+              );
+            })}
           </dd>
         </div>
         <div className="grid gap-2 sm:grid-cols-2">
@@ -51,25 +73,25 @@ export function FacilityLoadSummary({ ops }: { ops: FacilityLoadOps }) {
             <dd>{ops.weightLbs.toLocaleString()} lb</dd>
           </div>
         </div>
-        {pickupWhen && (
+        {pickupWhen ? (
           <div>
             <dt className="text-xs text-zinc-500">Requested pickup</dt>
             <dd>{pickupWhen}</dd>
           </div>
-        )}
-        {deliveryWhen && (
+        ) : null}
+        {deliveryWhen ? (
           <div>
             <dt className="text-xs text-zinc-500">Requested delivery</dt>
             <dd>{deliveryWhen}</dd>
           </div>
-        )}
-        {ops.carrierName && (
+        ) : null}
+        {ops.carrierName ? (
           <div>
             <dt className="text-xs text-zinc-500">Carrier</dt>
             <dd>{ops.carrierName}</dd>
           </div>
-        )}
-        {(ops.driverName || ops.driverPhone) && (
+        ) : null}
+        {ops.driverName || ops.driverPhone ? (
           <div>
             <dt className="text-xs text-zinc-500">Driver</dt>
             <dd>
@@ -77,7 +99,7 @@ export function FacilityLoadSummary({ ops }: { ops: FacilityLoadOps }) {
               {ops.driverPhone ? ` · ${ops.driverPhone}` : ""}
             </dd>
           </div>
-        )}
+        ) : null}
       </dl>
     </section>
   );

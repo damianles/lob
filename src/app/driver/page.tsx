@@ -17,8 +17,8 @@ export default async function DriverHubPage() {
           <LobBrandStrip />
           <h1 className="mt-4 text-2xl font-bold text-zinc-900">Driver</h1>
           <p className="mt-2 max-w-2xl text-sm text-zinc-600">
-            Dispatchers assign a driver to each booked load. The driver receives a secure link and QR codes for pickup
-            and delivery sites. Facilities can scan those codes on a phone without creating an account.
+            Dispatchers assign a driver to each booked load. Share the driver haul-sheet link, then use Confirm Pickup
+            and/or Delivery on the load for yard and receiver QRs. Facilities do not need a LOB account.
           </p>
           <ul className="mt-6 list-inside list-decimal space-y-3 text-sm text-zinc-700">
             <li>
@@ -26,13 +26,13 @@ export default async function DriverHubPage() {
               <Link className="font-medium text-lob-navy underline" href="/shipments">
                 Shipments
               </Link>
-              , choose a load, then create a dispatch from the load detail page. Share the driver link and show QR codes
-              at pickup and delivery.
+              , choose a load, then create a dispatch from the load detail page. Share the driver haul sheet. Pickup and
+              delivery QRs are under Confirm Pickup and/or Delivery on that same load.
             </li>
             <li>
               <strong>Drivers:</strong> open the dispatch link texted or emailed by your dispatcher (path{" "}
-              <code className="rounded bg-zinc-100 px-1 text-xs">/driver/…</code>). Keep pickup and delivery QR screens
-              handy for dock staff.
+              <code className="rounded bg-zinc-100 px-1 text-xs">/driver/…</code>). Yard staff should scan the pickup or
+              delivery QR from the load — not this driver page.
             </li>
             <li>
               <strong>Owner-operators:</strong> complete carrier onboarding; admins verify your company. Eligible

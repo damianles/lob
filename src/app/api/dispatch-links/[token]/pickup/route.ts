@@ -1,21 +1,15 @@
 import { NextResponse } from "next/server";
 
 import { PickupConfirmError, confirmLoadPickupByToken } from "@/lib/confirm-load-pickup";
-import { pickupConfirmSchema } from "@/lib/validation";
 
 export async function POST(
-  req: Request,
+  _req: Request,
   ctx: { params: Promise<{ token: string }> },
 ) {
   const { token } = await ctx.params;
-  const body = await req.json();
-  const parsed = pickupConfirmSchema.safeParse(body);
-  if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-  }
 
   try {
-    const updated = await confirmLoadPickupByToken(token, parsed.data.pickupCode);
+    const updated = await confirmLoadPickupByToken(token);
     return NextResponse.json({ data: updated });
   } catch (e) {
     if (e instanceof PickupConfirmError) {
@@ -24,4 +18,3 @@ export async function POST(
     throw e;
   }
 }
-

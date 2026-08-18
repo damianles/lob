@@ -108,6 +108,19 @@ export function ExtendedPostingPanel({
   const ftlLtl = str(ext.ftlLtl);
   const tenderUrl = str(ext.tenderUrl);
 
+  const pickups = Array.isArray(ext.pickups) ? ext.pickups : [];
+  const deliveries = Array.isArray(ext.deliveries) ? ext.deliveries : [];
+
+  function stopLines(raw: unknown, i: number): string | null {
+    const r = asRecord(raw);
+    if (!r) return null;
+    const bits = [str(r.address), str(r.postal), str(r.phone) && `Tel ${str(r.phone)}`].filter(Boolean);
+    return bits.length ? `${i + 1}. ${bits.join(" · ")}` : null;
+  }
+
+  const pickupLines = pickups.map(stopLines).filter(Boolean) as string[];
+  const deliveryLines = deliveries.map(stopLines).filter(Boolean) as string[];
+
   const hasAnything =
     refs.length ||
     reqChips.length ||
@@ -120,7 +133,9 @@ export function ExtendedPostingPanel({
     puNotes ||
     delNotes ||
     ftlLtl ||
-    tenderUrl;
+    tenderUrl ||
+    pickupLines.length ||
+    deliveryLines.length;
 
   if (!hasAnything) return null;
 
@@ -138,6 +153,34 @@ export function ExtendedPostingPanel({
           value={refs.length ? <span className="block space-y-0.5">{refs.map((r) => <span key={r} className="block">{r}</span>)}</span> : null}
         />
         <Row label="Tender / link" value={tenderUrl ? <a className="text-lob-navy underline break-all" href={tenderUrl} target="_blank" rel="noreferrer">{tenderUrl}</a> : null} />
+        <Row
+          label="Pickup stops"
+          value={
+            pickupLines.length ? (
+              <span className="block space-y-0.5">
+                {pickupLines.map((l) => (
+                  <span key={l} className="block">
+                    {l}
+                  </span>
+                ))}
+              </span>
+            ) : null
+          }
+        />
+        <Row
+          label="Delivery stops"
+          value={
+            deliveryLines.length ? (
+              <span className="block space-y-0.5">
+                {deliveryLines.map((l) => (
+                  <span key={l} className="block">
+                    {l}
+                  </span>
+                ))}
+              </span>
+            ) : null
+          }
+        />
       </dl>
 
       {reqChips.length > 0 && (

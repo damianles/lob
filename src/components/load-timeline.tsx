@@ -68,9 +68,7 @@ export function LoadTimeline({ load, booking, dispatch }: Props) {
       label: "Pickup confirmed",
       detail: dispatch?.pickupConfirmedAt
         ? fmt(dispatch.pickupConfirmedAt)
-        : load.uniquePickupCode
-          ? `Yard code ${load.uniquePickupCode} — confirm in LOB or share with pickup site`
-          : "Mill or yard confirms pickup",
+        : "Mill or yard confirms pickup",
       stepDone: s4,
     },
     {

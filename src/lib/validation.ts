@@ -228,10 +228,6 @@ export const createDispatchSchema = z.object({
     .optional(),
 });
 
-export const pickupConfirmSchema = z.object({
-  pickupCode: z.string().min(4),
-});
-
 export const podUploadSchema = z
   .object({
     fileUrl: z.string().url().optional(),

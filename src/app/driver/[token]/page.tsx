@@ -34,7 +34,7 @@ export default async function DriverPage({
   const expired = dispatch.expiresAt < new Date();
   const packet = parseDriverPacket(dispatch.driverPacket);
   const lumberSpec = extractLumberSpec(dispatch.load.extendedPosting);
-  const millName = packet.include.shipperName ? dispatch.load.shipperCompany.legalName : null;
+  const millName = dispatch.load.shipperCompany.legalName;
   const carrierName = dispatch.load.booking?.carrierCompany.legalName ?? null;
 
   return (
@@ -52,13 +52,14 @@ export default async function DriverPage({
         equipmentType={dispatch.load.equipmentType}
         millLabel={millName}
         carrierName={carrierName}
+        bookedAt={dispatch.load.booking?.bookedAt.toISOString() ?? null}
         driverName={dispatch.driverName}
         driverPhone={dispatch.driverPhone}
         pickupAt={dispatch.load.requestedPickupAt.toISOString()}
         deliveryAt={dispatch.load.requestedDeliveryAt?.toISOString() ?? null}
-        pickupCode={dispatch.load.uniquePickupCode}
         lumberSpec={lumberSpec}
         packet={packet}
+        extendedPosting={dispatch.load.extendedPosting}
       />
       <section className="mx-auto max-w-[8.5in] px-6 pb-8 text-sm text-zinc-600 print:hidden">
         <p>

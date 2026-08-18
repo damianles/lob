@@ -68,6 +68,7 @@ export function parseDriverPacket(raw: unknown): DriverPacket {
       include[id] = includeSrc[id];
     }
   }
+  include.pickupCode = false;
 
   const notes = typeof raw.notes === "string" ? raw.notes.trim().slice(0, 800) : "";
   return { include, notes };

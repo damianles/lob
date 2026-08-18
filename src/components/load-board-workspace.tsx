@@ -25,7 +25,7 @@ import {
 import { formatDisplayDate } from "@/lib/format-display-date";
 import { convertMoney, formatMoney } from "@/lib/money";
 import { parseRadiusToMiles } from "@/lib/units";
-import { milesBetweenZips } from "@/lib/zip-distance";
+import { milesBetweenPlaces } from "@/lib/zip-distance";
 
 function toDisplayEquivalent(l: SerializableLoad, display: "USD" | "CAD"): number {
   if (l.booking) {
@@ -303,11 +303,17 @@ export function LoadBoardWorkspace({
 
       if (emrZipTrim) {
         if (originMi != null) {
-          const miles = milesBetweenZips(emrZipTrim, l.originZip);
+          const miles = milesBetweenPlaces(
+            { zip: emrZipTrim },
+            { city: l.originCity, state: l.originState, zip: l.originZip },
+          );
           if (miles == null || miles > originMi) return false;
         }
         if (destMi != null) {
-          const miles = milesBetweenZips(emrZipTrim, l.destinationZip);
+          const miles = milesBetweenPlaces(
+            { zip: emrZipTrim },
+            { city: l.destinationCity, state: l.destinationState, zip: l.destinationZip },
+          );
           if (miles == null || miles > destMi) return false;
         }
       }

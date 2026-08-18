@@ -1,7 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { LoadBidStatus, LoadStatus, VerificationStatus } from "@prisma/client";
 import Link from "next/link";
-import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
 import { CarrierRateActions } from "@/components/carrier-rate-actions";
@@ -26,6 +25,8 @@ import { LumberSpecPanel } from "@/components/lumber-spec-panel";
 import { prisma } from "@/lib/prisma";
 import { carrierCompanyNameForViewer } from "@/lib/carrier-visibility";
 import { getLaneDecisionContext, getRepeatCarrierCounts } from "@/lib/lane-decision-context";
+import { formatPostedDateWithOptionalTime } from "@/lib/format-posted-datetime";
+import { extractLoadExecution, firstStopTime } from "@/lib/load-execution";
 import { extractLumberSpec } from "@/lib/lumber-spec";
 import { formatMoney } from "@/lib/money";
 import { formatTimeRemaining } from "@/lib/rate-mode";
@@ -214,10 +215,12 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
     prisma.load.count({ where: { status: LoadStatus.DELIVERED, ...supplierStatsScope } }),
   ]);
 
-  const h = await headers();
-  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
-  const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
-  const baseUrl = `${proto}://${host}`;
+  const execution = extractLoadExecution(load.extendedPosting);
+  const pickupLabel = formatPostedDateWithOptionalTime(load.requestedPickupAt, firstStopTime(execution.pickups));
+  const deliveryLabel = formatPostedDateWithOptionalTime(
+    load.requestedDeliveryAt,
+    firstStopTime(execution.deliveries),
+  );
 
   return (
     <main className="min-h-[calc(100vh-3.5rem)] bg-zinc-100 p-3 text-zinc-900 sm:p-4">
@@ -256,30 +259,16 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
               {load.equipmentType}
               {load.isRush && <span className="ml-2 font-semibold text-amber-600">RUSH</span>}
             </p>
-            <p className="mt-1 text-sm text-zinc-600">
-              Requested pickup:{" "}
-              <span className="font-medium text-zinc-900">
-                {load.requestedPickupAt.toLocaleDateString("en-US", {
-                  weekday: "short",
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                })}
-              </span>
-            </p>
-            <p className="mt-1 text-sm text-zinc-600">
-              Expected delivery:{" "}
-              <span className="font-medium text-zinc-900">
-                {load.requestedDeliveryAt
-                  ? load.requestedDeliveryAt.toLocaleDateString("en-US", {
-                      weekday: "short",
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })
-                  : "—"}
-              </span>
-            </p>
+            {pickupLabel ? (
+              <p className="mt-1 text-sm text-zinc-600">
+                Requested pickup: <span className="font-medium text-zinc-900">{pickupLabel}</span>
+              </p>
+            ) : null}
+            {deliveryLabel ? (
+              <p className="mt-1 text-sm text-zinc-600">
+                Expected delivery: <span className="font-medium text-zinc-900">{deliveryLabel}</span>
+              </p>
+            ) : null}
 
             <div className="mt-4 flex flex-wrap gap-4 rounded-lg border border-zinc-200 bg-white p-4 text-sm">
               <div>
@@ -531,25 +520,26 @@ export default async function LoadDetailPage({ params }: { params: Promise<{ loa
               <CreateDispatchForm loadId={load.id} />
             )}
 
-            {load.dispatchLink && (isShipperOwner || isRealAdmin) && (
+            {load.dispatchLink && (isShipperOwner || isBookedCarrier || isRealAdmin) && (
               <>
                 <FacilitySiteLinksPanel
-                  pickupUrl={`${baseUrl}/facility/pickup/${load.dispatchLink.token}`}
-                  deliveryUrl={`${baseUrl}/facility/delivery/${load.dispatchLink.token}`}
+                  token={load.dispatchLink.token}
                   referenceNumber={load.referenceNumber}
                 />
-                <ShipperConfirmPickup
-                  loadId={load.id}
-                  referenceNumber={load.referenceNumber}
-                  canConfirm={!load.dispatchLink.pickupConfirmedAt}
-                  pickupConfirmedAt={load.dispatchLink.pickupConfirmedAt}
-                />
+                {(isShipperOwner || isRealAdmin) && (
+                  <ShipperConfirmPickup
+                    loadId={load.id}
+                    referenceNumber={load.referenceNumber}
+                    canConfirm={!load.dispatchLink.pickupConfirmedAt}
+                    pickupConfirmedAt={load.dispatchLink.pickupConfirmedAt}
+                  />
+                )}
               </>
             )}
 
             {load.dispatchLink && (isBookedCarrier || isRealAdmin) && (
               <DriverLinkPanel
-                driverUrl={`${baseUrl}/driver/${load.dispatchLink.token}`}
+                token={load.dispatchLink.token}
                 bolStripHref={`/loads/${load.id}/bol-strip`}
                 driverName={load.dispatchLink.driverName}
               />

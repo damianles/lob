@@ -126,13 +126,14 @@ export default async function BolStripPage({ params }: { params: Promise<{ loadI
         equipmentType={load.equipmentType}
         millLabel={millName}
         carrierName={carrierName}
+        bookedAt={load.booking?.bookedAt.toISOString() ?? null}
         driverName={load.dispatchLink.driverName}
         driverPhone={load.dispatchLink.driverPhone}
         pickupAt={load.requestedPickupAt.toISOString()}
         deliveryAt={load.requestedDeliveryAt?.toISOString() ?? null}
-        pickupCode={load.uniquePickupCode}
         lumberSpec={lumberSpec}
         packet={packet}
+        extendedPosting={load.extendedPosting}
       />
     </main>
   );

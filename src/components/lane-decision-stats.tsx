@@ -66,7 +66,14 @@ export function LaneDecisionStats({
         <div>
           <dt className="text-zinc-500">Distance</dt>
           <dd className="tabular-nums">
-            {ctx.miles != null ? `${Math.round(ctx.miles)} mi` : "—"}
+            {ctx.miles != null ? (
+              <>
+                {Math.round(ctx.miles)} mi
+                <span className="ml-1 font-normal text-zinc-500">approx</span>
+              </>
+            ) : (
+              "—"
+            )}
             {ctx.sampleCount != null ? (
               <span className="ml-1 text-zinc-500">
                 · {ctx.sampleCount} sample{ctx.sampleCount === 1 ? "" : "s"} / {ctx.windowDays}d

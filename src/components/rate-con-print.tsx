@@ -4,6 +4,14 @@ import Link from "next/link";
 
 import { CarrierTypeTag } from "@/components/carrier-type-tag";
 import { LumberSpecPanel } from "@/components/lumber-spec-panel";
+import { LOB_BRAND_LOCKUP_SRC } from "@/lib/brand";
+import { BRAND_PRODUCT_NAME } from "@/lib/brand-marketing";
+import { formatInstant, formatPostedDateWithOptionalTime } from "@/lib/format-posted-datetime";
+import {
+  extractLoadExecution,
+  firstStopTime,
+  formatStopBlock,
+} from "@/lib/load-execution";
 import type { LumberSpec } from "@/lib/lumber-spec";
 
 type LoadInfo = {
@@ -18,6 +26,7 @@ type LoadInfo = {
   deliveryState: string;
   deliveryZip: string;
   requestedPickupAt: string;
+  requestedDeliveryAt?: string | null;
   bookedAt: string;
   formattedRate: string;
   agreedRate: number;
@@ -37,6 +46,7 @@ type Props = {
     fleetTrailerCount: number | null;
   };
   lumber: LumberSpec | null;
+  extendedPosting?: unknown;
 };
 
 /**
@@ -46,22 +56,14 @@ type Props = {
  * convention. We avoid PDF libraries entirely — browser print is the
  * lingua franca of trucking dispatch offices.
  */
-export function RateConPrint({ load, shipper, carrier, lumber }: Props) {
-  const formattedPickup = new Date(load.requestedPickupAt).toLocaleString("en-US", {
-    weekday: "short",
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-  const formattedBooked = new Date(load.bookedAt).toLocaleString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+export function RateConPrint({ load, shipper, carrier, lumber, extendedPosting }: Props) {
+  const execution = extractLoadExecution(extendedPosting);
+  const formattedPickup = formatPostedDateWithOptionalTime(load.requestedPickupAt, firstStopTime(execution.pickups));
+  const formattedDelivery = formatPostedDateWithOptionalTime(
+    load.requestedDeliveryAt ?? null,
+    firstStopTime(execution.deliveries),
+  );
+  const formattedBooked = formatInstant(load.bookedAt);
 
   return (
     <main className="mx-auto min-h-screen max-w-[8.5in] bg-white p-6 text-zinc-900 print:p-0 print:text-[11pt]">
@@ -81,14 +83,14 @@ export function RateConPrint({ load, shipper, carrier, lumber }: Props) {
       <article className="rounded-lg border border-zinc-300 bg-white p-8 shadow-sm print:border-0 print:p-0 print:shadow-none">
         <header className="mb-6 flex items-start justify-between border-b border-zinc-200 pb-4">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-emerald-800">
-              Lumber One Board · Rate Confirmation
-            </p>
-            <h1 className="mt-1 text-2xl font-bold tracking-tight">
-              Load {load.referenceNumber}
-            </h1>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={LOB_BRAND_LOCKUP_SRC} alt={BRAND_PRODUCT_NAME} className="mb-3 h-12 w-auto object-contain" />
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500">Rate confirmation</p>
+            <h1 className="mt-1 text-2xl font-bold tracking-tight">Load {load.referenceNumber}</h1>
             <p className="text-sm text-zinc-600">
-              Booked {formattedBooked} · Pickup {formattedPickup}
+              {formattedBooked ? `Booked ${formattedBooked}` : null}
+              {formattedPickup ? ` · Pickup ${formattedPickup}` : null}
+              {formattedDelivery ? ` · Delivery ${formattedDelivery}` : null}
             </p>
           </div>
           <div className="text-right">
@@ -129,7 +131,16 @@ export function RateConPrint({ load, shipper, carrier, lumber }: Props) {
             <p className="mt-1 text-sm font-semibold">
               {load.pickupCity}, {load.pickupState} {load.pickupZip}
             </p>
-            <p className="mt-1 text-xs text-zinc-600">{formattedPickup}</p>
+            {execution.pickups.map((stop) => {
+              const lines = formatStopBlock(stop);
+              if (!lines.length) return null;
+              return (
+                <p key={`pu-${stop.index}`} className="mt-1 text-xs text-zinc-700">
+                  {lines.join(" · ")}
+                </p>
+              );
+            })}
+            {formattedPickup ? <p className="mt-1 text-xs text-zinc-600">{formattedPickup}</p> : null}
             {load.isRush && (
               <p className="mt-1 inline-block rounded bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-amber-900">
                 RUSH
@@ -141,7 +152,18 @@ export function RateConPrint({ load, shipper, carrier, lumber }: Props) {
             <p className="mt-1 text-sm font-semibold">
               {load.deliveryCity}, {load.deliveryState} {load.deliveryZip}
             </p>
-            <p className="mt-1 text-xs text-zinc-600">As scheduled with shipper.</p>
+            {execution.deliveries.map((stop) => {
+              const lines = formatStopBlock(stop);
+              if (!lines.length) return null;
+              return (
+                <p key={`del-${stop.index}`} className="mt-1 text-xs text-zinc-700">
+                  {lines.join(" · ")}
+                </p>
+              );
+            })}
+            {formattedDelivery ? (
+              <p className="mt-1 text-xs text-zinc-600">{formattedDelivery}</p>
+            ) : null}
           </div>
         </section>
 
@@ -188,9 +210,7 @@ export function RateConPrint({ load, shipper, carrier, lumber }: Props) {
           </div>
         </footer>
 
-        <p className="mt-4 text-center text-[10px] text-zinc-400">
-          Generated by Lumber One Board · {new Date().toLocaleString()}
-        </p>
+        <p className="mt-4 text-center text-[10px] text-zinc-400">{BRAND_PRODUCT_NAME}</p>
       </article>
     </main>
   );

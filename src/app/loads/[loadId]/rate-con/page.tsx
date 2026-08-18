@@ -95,6 +95,7 @@ export default async function RateConPage({ params }: { params: Promise<{ loadId
         deliveryState: load.destinationState,
         deliveryZip: load.destinationZip,
         requestedPickupAt: load.requestedPickupAt.toISOString(),
+        requestedDeliveryAt: load.requestedDeliveryAt?.toISOString() ?? null,
         bookedAt: load.booking.bookedAt.toISOString(),
         formattedRate: formatMoney(agreedRate, agreedCurrency),
         agreedRate,
@@ -111,6 +112,7 @@ export default async function RateConPage({ params }: { params: Promise<{ loadId
         fleetTrailerCount: load.booking.carrierCompany.fleetTrailerCount,
       }}
       lumber={lumber}
+      extendedPosting={load.extendedPosting}
     />
   );
 }

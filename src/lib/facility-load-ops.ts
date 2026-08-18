@@ -15,6 +15,7 @@ type DispatchRow = {
     equipmentType: string;
     requestedPickupAt: Date | null;
     requestedDeliveryAt: Date | null;
+    extendedPosting?: unknown;
     booking: { carrierCompany: { legalName: string } } | null;
   };
 };
@@ -32,5 +33,6 @@ export function facilityOpsFromDispatch(dispatch: DispatchRow): FacilityLoadOps 
     driverPhone: dispatch.driverPhone,
     requestedPickupAt: l.requestedPickupAt,
     requestedDeliveryAt: l.requestedDeliveryAt,
+    extendedPosting: l.extendedPosting,
   };
 }

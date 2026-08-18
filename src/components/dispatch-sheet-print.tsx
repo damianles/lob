@@ -1,11 +1,20 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, type ReactNode } from "react";
 
+import { LOB_BRAND_LOCKUP_SRC } from "@/lib/brand";
+import { BRAND_PRODUCT_NAME } from "@/lib/brand-marketing";
+import type { DriverPacket } from "@/lib/driver-packet";
+import { formatInstant, formatPostedDateWithOptionalTime } from "@/lib/format-posted-datetime";
+import {
+  extractLoadExecution,
+  firstStopTime,
+  formatStopBlock,
+  type LoadExecutionDetails,
+} from "@/lib/load-execution";
 import { equipmentShortTag } from "@/lib/lumber-equipment";
 import { summarizeLumberSpec } from "@/lib/lumber-spec";
 import type { LumberSpec } from "@/lib/lumber-spec";
-import type { DriverPacket } from "@/lib/driver-packet";
 
 type DispatchSheetPrintProps = {
   referenceNumber: string;
@@ -15,38 +24,46 @@ type DispatchSheetPrintProps = {
   equipmentType: string;
   millLabel: string | null;
   carrierName: string | null;
+  bookedAt?: string | null;
   driverName: string;
   driverPhone?: string | null;
   pickupAt: string | null;
   deliveryAt: string | null;
-  pickupCode: string | null;
   lumberSpec?: LumberSpec | null;
   packet: DriverPacket;
+  extendedPosting?: unknown;
+  execution?: LoadExecutionDetails | null;
 };
 
-function fmtDate(iso: string | null): string | null {
-  if (!iso) return null;
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return null;
-  return d.toLocaleString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  if (children == null || children === "") return null;
+  return (
+    <div>
+      <dt className="text-[10px] font-semibold uppercase tracking-wide text-stone-500">{label}</dt>
+      <dd className="mt-0.5 whitespace-pre-wrap font-medium text-stone-900">{children}</dd>
+    </div>
+  );
 }
 
-/** Print / Save-as-PDF dispatch sheet — fields follow the carrier's packet. No rates. */
+/** Print / Save-as-PDF dispatch sheet — full mill details + booking. No rates. */
 export function DispatchSheetPrint(props: DispatchSheetPrintProps) {
-  const { packet } = props;
   const onPrint = useCallback(() => {
     window.print();
   }, []);
 
+  const execution = props.execution ?? extractLoadExecution(props.extendedPosting);
   const specPills = summarizeLumberSpec(props.lumberSpec ?? null);
   const specText = specPills.length ? specPills.join(" · ") : null;
-  const pickupLabel = fmtDate(props.pickupAt);
-  const deliveryLabel = fmtDate(props.deliveryAt);
+  const pickupLabel = formatPostedDateWithOptionalTime(props.pickupAt, firstStopTime(execution.pickups));
+  const deliveryLabel = formatPostedDateWithOptionalTime(props.deliveryAt, firstStopTime(execution.deliveries));
+  const bookedLabel = formatInstant(props.bookedAt ?? null);
+
+  const refs = [
+    execution.shipRef && `Ship ref: ${execution.shipRef}`,
+    execution.customerOrderNo && `Customer order: ${execution.customerOrderNo}`,
+    execution.poNumber && `PO: ${execution.poNumber}`,
+    execution.customerName && `Customer: ${execution.customerName}`,
+  ].filter(Boolean) as string[];
 
   return (
     <div className="mx-auto max-w-[8.5in] bg-white p-6 text-zinc-900 print:max-w-none print:p-0">
@@ -61,80 +78,91 @@ export function DispatchSheetPrint(props: DispatchSheetPrintProps) {
         </button>
       </div>
 
-      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500">Lumber One Board</p>
-      <h1 className="mt-1 text-2xl font-bold tracking-tight text-stone-900">
-        Driver dispatch · {props.referenceNumber}
-      </h1>
-      <p className="mt-1 text-sm text-stone-600">
-        Haul instructions only. Yard and receiver confirm pickup and delivery — not this sheet. No rate.
-      </p>
+      <header className="flex items-start justify-between gap-4 border-b border-stone-200 pb-4">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={LOB_BRAND_LOCKUP_SRC} alt={BRAND_PRODUCT_NAME} className="h-14 w-auto object-contain" />
+        <p className="text-right text-[10px] font-semibold uppercase tracking-[0.18em] text-stone-500">
+          Driver dispatch
+        </p>
+      </header>
 
-      <dl className="mt-6 grid gap-3 text-sm text-stone-800 sm:grid-cols-2 print:text-[12px]">
-        <div>
-          <dt className="text-[10px] font-semibold uppercase tracking-wide text-stone-500">Driver</dt>
-          <dd className="mt-0.5 font-medium">{props.driverName}</dd>
-          {props.driverPhone ? <dd className="text-stone-600">{props.driverPhone}</dd> : null}
+      <h1 className="mt-4 text-2xl font-bold tracking-tight text-stone-900">Load {props.referenceNumber}</h1>
+      {refs.length ? <p className="mt-1 text-sm text-stone-700">{refs.join(" · ")}</p> : null}
+
+      <dl className="mt-5 grid gap-4 text-sm sm:grid-cols-2 print:text-[12px]">
+        <Field label="Shipper / mill">{props.millLabel}</Field>
+        <Field label="Booked carrier">
+          {props.carrierName}
+          {bookedLabel ? `\nBooked ${bookedLabel}` : null}
+        </Field>
+        <Field label="Driver">
+          {props.driverName}
+          {props.driverPhone ? `\n${props.driverPhone}` : null}
+        </Field>
+        {execution.ftlLtl ? <Field label="Mode">{execution.ftlLtl}</Field> : null}
+        <Field label="Equipment">{equipmentShortTag(props.equipmentType)}</Field>
+        <Field label="Weight">{`${props.weightLbs.toLocaleString()} lb`}</Field>
+        {pickupLabel ? <Field label="Pickup date">{pickupLabel}</Field> : null}
+        {deliveryLabel ? <Field label="Delivery date">{deliveryLabel}</Field> : null}
+
+        <div className="sm:col-span-2">
+          <dt className="text-[10px] font-semibold uppercase tracking-wide text-stone-500">Pickup</dt>
+          <dd className="mt-0.5 font-medium">{props.originLine}</dd>
+          {execution.pickups.map((stop) => {
+            const lines = formatStopBlock(stop);
+            if (!lines.length) return null;
+            return (
+              <dd key={`pu-${stop.index}`} className="mt-1 text-stone-700">
+                {execution.pickups.length > 1 ? <span className="font-semibold">Stop {stop.index}. </span> : null}
+                {lines.map((line) => (
+                  <span key={line} className="block">
+                    {line}
+                  </span>
+                ))}
+              </dd>
+            );
+          })}
         </div>
-        {packet.include.carrierName && props.carrierName ? (
-          <div>
-            <dt className="text-[10px] font-semibold uppercase tracking-wide text-stone-500">Carrier</dt>
-            <dd className="mt-0.5 font-medium">{props.carrierName}</dd>
-          </div>
-        ) : null}
-        {packet.include.lane ? (
-          <div className="sm:col-span-2">
-            <dt className="text-[10px] font-semibold uppercase tracking-wide text-stone-500">Lane</dt>
-            <dd className="mt-0.5 font-medium">
-              {props.originLine} <span className="text-stone-400">→</span> {props.destinationLine}
-            </dd>
-          </div>
-        ) : null}
-        {packet.include.dates ? (
-          <>
-            <div>
-              <dt className="text-[10px] font-semibold uppercase tracking-wide text-stone-500">Pickup</dt>
-              <dd className="mt-0.5">{pickupLabel ?? "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-[10px] font-semibold uppercase tracking-wide text-stone-500">Delivery</dt>
-              <dd className="mt-0.5">{deliveryLabel ?? "—"}</dd>
-            </div>
-          </>
-        ) : null}
-        {packet.include.equipment ? (
-          <div>
-            <dt className="text-[10px] font-semibold uppercase tracking-wide text-stone-500">Equipment</dt>
-            <dd className="mt-0.5 font-medium">{equipmentShortTag(props.equipmentType)}</dd>
-          </div>
-        ) : null}
-        {packet.include.weight ? (
-          <div>
-            <dt className="text-[10px] font-semibold uppercase tracking-wide text-stone-500">Weight</dt>
-            <dd className="mt-0.5">{props.weightLbs.toLocaleString()} lb</dd>
-          </div>
-        ) : null}
-        {packet.include.shipperName && props.millLabel ? (
-          <div>
-            <dt className="text-[10px] font-semibold uppercase tracking-wide text-stone-500">Shipper</dt>
-            <dd className="mt-0.5">{props.millLabel}</dd>
-          </div>
-        ) : null}
-        {packet.include.pickupCode && props.pickupCode ? (
-          <div>
-            <dt className="text-[10px] font-semibold uppercase tracking-wide text-stone-500">Pickup code</dt>
-            <dd className="mt-0.5 font-mono font-semibold">{props.pickupCode}</dd>
-          </div>
-        ) : null}
-        {packet.include.lumber && specText ? (
+
+        <div className="sm:col-span-2">
+          <dt className="text-[10px] font-semibold uppercase tracking-wide text-stone-500">Delivery</dt>
+          <dd className="mt-0.5 font-medium">{props.destinationLine}</dd>
+          {execution.deliveries.map((stop) => {
+            const lines = formatStopBlock(stop);
+            if (!lines.length) return null;
+            return (
+              <dd key={`del-${stop.index}`} className="mt-1 text-stone-700">
+                {execution.deliveries.length > 1 ? <span className="font-semibold">Stop {stop.index}. </span> : null}
+                {lines.map((line) => (
+                  <span key={line} className="block">
+                    {line}
+                  </span>
+                ))}
+              </dd>
+            );
+          })}
+        </div>
+
+        {specText ? (
           <div className="sm:col-span-2">
             <dt className="text-[10px] font-semibold uppercase tracking-wide text-stone-500">Product</dt>
             <dd className="mt-0.5">{specText}</dd>
           </div>
         ) : null}
-        {packet.notes ? (
+
+        {execution.pickupNotes ? <Field label="Pickup instructions">{execution.pickupNotes}</Field> : null}
+        {execution.deliveryNotes ? <Field label="Delivery instructions">{execution.deliveryNotes}</Field> : null}
+        {execution.notes ? (
+          <div className="sm:col-span-2">
+            <dt className="text-[10px] font-semibold uppercase tracking-wide text-stone-500">Mill notes</dt>
+            <dd className="mt-0.5 whitespace-pre-wrap">{execution.notes}</dd>
+          </div>
+        ) : null}
+
+        {props.packet.notes ? (
           <div className="sm:col-span-2 rounded-lg border border-stone-200 bg-stone-50 p-3">
             <dt className="text-[10px] font-semibold uppercase tracking-wide text-stone-500">Dispatcher notes</dt>
-            <dd className="mt-1 whitespace-pre-wrap">{packet.notes}</dd>
+            <dd className="mt-1 whitespace-pre-wrap">{props.packet.notes}</dd>
           </div>
         ) : null}
       </dl>

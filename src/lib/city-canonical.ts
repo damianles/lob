@@ -1,5 +1,4 @@
-import { readFileSync, existsSync } from "node:fs";
-import path from "node:path";
+import aliasesJson from "../../data/city-aliases.json";
 
 type AliasMap = Record<string, string>;
 
@@ -7,22 +6,11 @@ let aliasCache: AliasMap | null = null;
 
 function loadAliases(): AliasMap {
   if (aliasCache) return aliasCache;
-  const p = path.join(process.cwd(), "data", "city-aliases.json");
-  if (!existsSync(p)) {
-    aliasCache = {};
-    return aliasCache;
+  aliasCache = {};
+  for (const [k, v] of Object.entries(aliasesJson)) {
+    aliasCache[k.trim().toLowerCase()] = v.trim().toLowerCase().replace(/\s+/g, " ");
   }
-  try {
-    const raw = JSON.parse(readFileSync(p, "utf-8")) as Record<string, string>;
-    aliasCache = {};
-    for (const [k, v] of Object.entries(raw)) {
-      aliasCache[k.trim().toLowerCase()] = v.trim().toLowerCase().replace(/\s+/g, " ");
-    }
-    return aliasCache;
-  } catch {
-    aliasCache = {};
-    return aliasCache;
-  }
+  return aliasCache;
 }
 
 /**
