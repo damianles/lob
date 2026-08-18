@@ -3,8 +3,9 @@ import { LoadStatus, VerificationStatus } from "@prisma/client";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
-import { BolPickupStrip } from "@/components/bol-pickup-strip";
+import { DispatchSheetPrint } from "@/components/dispatch-sheet-print";
 import { extractLumberSpec } from "@/lib/lumber-spec";
+import { parseDriverPacket } from "@/lib/driver-packet";
 import { prisma } from "@/lib/prisma";
 import { carrierMayViewPostedLoad } from "@/lib/carrier-load-access";
 import { shipperCompanyNameForViewer } from "@/lib/shipper-visibility";
@@ -34,7 +35,7 @@ export default async function BolStripPage({ params }: { params: Promise<{ loadI
   const load = await prisma.load.findUnique({
     where: { id: loadId },
     include: {
-      booking: true,
+      booking: { include: { carrierCompany: { select: { legalName: true } } } },
       dispatchLink: true,
       shipperCompany: { select: { legalName: true } },
     },
@@ -107,6 +108,8 @@ export default async function BolStripPage({ params }: { params: Promise<{ loadI
   const visibilityActor = { companyId: effectiveCompanyId, role: actor.role };
   const millName = shipperCompanyNameForViewer(load.shipperCompany.legalName, load, visibilityActor);
   const lumberSpec = extractLumberSpec(load.extendedPosting);
+  const packet = parseDriverPacket(load.dispatchLink.driverPacket);
+  const carrierName = load.booking?.carrierCompany.legalName ?? null;
 
   return (
     <main className="min-h-screen bg-stone-100 print:bg-white print:p-0">
@@ -115,16 +118,21 @@ export default async function BolStripPage({ params }: { params: Promise<{ loadI
           ← Back to {load.referenceNumber}
         </Link>
       </div>
-      <BolPickupStrip
-        inApp
+      <DispatchSheetPrint
         referenceNumber={load.referenceNumber}
         originLine={`${load.originCity}, ${load.originState} ${load.originZip}`}
         destinationLine={`${load.destinationCity}, ${load.destinationState} ${load.destinationZip}`}
         weightLbs={load.weightLbs}
         equipmentType={load.equipmentType}
         millLabel={millName}
+        carrierName={carrierName}
         driverName={load.dispatchLink.driverName}
+        driverPhone={load.dispatchLink.driverPhone}
+        pickupAt={load.requestedPickupAt.toISOString()}
+        deliveryAt={load.requestedDeliveryAt?.toISOString() ?? null}
+        pickupCode={load.uniquePickupCode}
         lumberSpec={lumberSpec}
+        packet={packet}
       />
     </main>
   );

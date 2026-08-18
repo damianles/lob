@@ -28,10 +28,10 @@ export function DriverLinkPanel({
 
   return (
     <section className="mt-6 rounded-lg border border-violet-200 bg-violet-50/70 p-4">
-      <h2 className="text-sm font-semibold text-zinc-900">Driver link</h2>
+      <h2 className="text-sm font-semibold text-zinc-900">Driver dispatch</h2>
       <p className="mt-1 text-xs text-zinc-600">
-        Send to {driverName} for haul details only. Pickup and delivery confirmation stay with yards and receivers — not
-        on the driver page or truck paperwork.
+        Send the link to {driverName} for the haul sheet you configured. Print / Save as PDF and attach in Outlook if
+        you are emailing it. Pickup and delivery confirmation stay with yards and receivers.
       </p>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <code className="max-w-full truncate rounded bg-white px-2 py-1 text-[11px] text-zinc-800 ring-1 ring-stone-200">
@@ -41,7 +41,7 @@ export function DriverLinkPanel({
           {copied ? "Copied" : "Copy link"}
         </Button>
         <a href={bolStripHref} className="text-xs font-medium text-lob-navy underline">
-          Print driver haul sheet
+          Open dispatch sheet (print / PDF)
         </a>
       </div>
       <div className="mt-4 inline-block rounded-lg border border-stone-200 bg-white p-2 text-center">

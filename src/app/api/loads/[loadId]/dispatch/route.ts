@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { LoadStatus } from "@prisma/client";
 
+import { normalizeDriverPacketInput } from "@/lib/driver-packet";
 import { prisma } from "@/lib/prisma";
 import { getActorContext } from "@/lib/request-context";
 import { createDispatchSchema } from "@/lib/validation";
@@ -43,6 +44,10 @@ export async function POST(
 
   const token = randomUUID().replaceAll("-", "");
   const expiresAt = new Date(Date.now() + parsed.data.expiresInHours * 60 * 60 * 1000);
+  const driverPacket = normalizeDriverPacketInput({
+    include: parsed.data.include,
+    notes: parsed.data.notes ?? "",
+  });
 
   const dispatch = await prisma.$transaction(async (tx) => {
     const created = await tx.dispatchLink.create({
@@ -54,6 +59,7 @@ export async function POST(
         driverEmail: parsed.data.driverEmail,
         assignedByUserId,
         expiresAt,
+        driverPacket,
       },
     });
 

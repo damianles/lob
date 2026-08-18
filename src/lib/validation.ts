@@ -162,6 +162,19 @@ export const createDispatchSchema = z.object({
   driverPhone: z.string().optional(),
   driverEmail: z.string().email().optional(),
   expiresInHours: z.number().int().positive().max(72).default(48),
+  notes: z.string().trim().max(800).optional(),
+  include: z
+    .object({
+      lane: z.boolean().optional(),
+      dates: z.boolean().optional(),
+      equipment: z.boolean().optional(),
+      weight: z.boolean().optional(),
+      lumber: z.boolean().optional(),
+      shipperName: z.boolean().optional(),
+      pickupCode: z.boolean().optional(),
+      carrierName: z.boolean().optional(),
+    })
+    .optional(),
 });
 
 export const pickupConfirmSchema = z.object({

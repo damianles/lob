@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 
-import { equipmentShortTag } from "@/lib/lumber-equipment";
+import { DispatchSheetPrint } from "@/components/dispatch-sheet-print";
+import { parseDriverPacket } from "@/lib/driver-packet";
+import { extractLumberSpec } from "@/lib/lumber-spec";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +17,12 @@ export default async function DriverPage({
   const dispatch = await prisma.dispatchLink.findUnique({
     where: { token },
     include: {
-      load: true,
+      load: {
+        include: {
+          shipperCompany: { select: { legalName: true } },
+          booking: { include: { carrierCompany: { select: { legalName: true } } } },
+        },
+      },
       podDocument: true,
     },
   });
@@ -25,37 +32,42 @@ export default async function DriverPage({
   }
 
   const expired = dispatch.expiresAt < new Date();
+  const packet = parseDriverPacket(dispatch.driverPacket);
+  const lumberSpec = extractLumberSpec(dispatch.load.extendedPosting);
+  const millName = packet.include.shipperName ? dispatch.load.shipperCompany.legalName : null;
+  const carrierName = dispatch.load.booking?.carrierCompany.legalName ?? null;
 
   return (
-    <main className="mx-auto max-w-2xl p-6">
-      <h1 className="text-2xl font-bold">Driver haul sheet</h1>
-      <p className="mt-2 text-sm text-zinc-600">
-        Haul details only — no rates. Pickup and delivery are confirmed by the yard or receiver, not on this page.
-      </p>
-
-      <section className="mt-6 rounded-lg border p-4">
-        <h2 className="font-semibold">Driver</h2>
-        <p className="mt-2 text-sm">{dispatch.driverName}</p>
-        {dispatch.driverPhone ? <p className="text-sm text-zinc-600">{dispatch.driverPhone}</p> : null}
-      </section>
-
-      <section className="mt-6 rounded-lg border p-4">
-        <h2 className="font-semibold">Load {dispatch.load.referenceNumber}</h2>
-        <p className="mt-2 text-sm">
-          {dispatch.load.originCity}, {dispatch.load.originState} {dispatch.load.originZip} to{" "}
-          {dispatch.load.destinationCity}, {dispatch.load.destinationState}{" "}
-          {dispatch.load.destinationZip}
+    <main className="min-h-screen bg-stone-100 print:bg-white">
+      {expired ? (
+        <p className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-sm text-amber-950">
+          This driver link has expired. Ask your dispatcher for a new one.
         </p>
-        <p className="mt-1 text-sm">Weight: {dispatch.load.weightLbs.toLocaleString()} lbs</p>
-        <p className="mt-1 text-sm">Equipment: {equipmentShortTag(dispatch.load.equipmentType)}</p>
-      </section>
-
-      <section className="mt-6 rounded-lg border p-4">
-        <h2 className="font-semibold">Status</h2>
-        <p className="mt-2 text-sm">Dispatch status: {dispatch.status}</p>
-        <p className="text-sm">Pickup confirmed: {dispatch.pickupConfirmedAt ? "Yes" : "No"}</p>
-        <p className="text-sm">Delivered: {dispatch.deliveredAt ? "Yes" : "No"}</p>
-        <p className="text-sm">Link expired: {expired ? "Yes" : "No"}</p>
+      ) : null}
+      <DispatchSheetPrint
+        referenceNumber={dispatch.load.referenceNumber}
+        originLine={`${dispatch.load.originCity}, ${dispatch.load.originState} ${dispatch.load.originZip}`}
+        destinationLine={`${dispatch.load.destinationCity}, ${dispatch.load.destinationState} ${dispatch.load.destinationZip}`}
+        weightLbs={dispatch.load.weightLbs}
+        equipmentType={dispatch.load.equipmentType}
+        millLabel={millName}
+        carrierName={carrierName}
+        driverName={dispatch.driverName}
+        driverPhone={dispatch.driverPhone}
+        pickupAt={dispatch.load.requestedPickupAt.toISOString()}
+        deliveryAt={dispatch.load.requestedDeliveryAt?.toISOString() ?? null}
+        pickupCode={dispatch.load.uniquePickupCode}
+        lumberSpec={lumberSpec}
+        packet={packet}
+      />
+      <section className="mx-auto max-w-[8.5in] px-6 pb-8 text-sm text-zinc-600 print:hidden">
+        <p>
+          Status: {dispatch.status}
+          {" · "}
+          Pickup confirmed: {dispatch.pickupConfirmedAt ? "Yes" : "No"}
+          {" · "}
+          Delivered: {dispatch.deliveredAt ? "Yes" : "No"}
+        </p>
       </section>
     </main>
   );

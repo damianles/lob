@@ -551,6 +551,11 @@ model DispatchLink {
   driverEmail       String?
   assignedByUserId  String
   expiresAt         DateTime
+  /**
+   * Carrier-selected driver packet: which haul fields + dispatcher notes.
+   * Rate is never stored here. Shape: { include: Record<string, boolean>, notes: string }.
+   */
+  driverPacket      Json?
   status            DispatchLinkStatus @default(ACTIVE)
   pickupConfirmedAt DateTime?
   deliveredAt       DateTime?

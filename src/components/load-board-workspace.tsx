@@ -219,6 +219,8 @@ export function LoadBoardWorkspace({
   const isShipper = actor.role === "SHIPPER" && Boolean(actor.companyId);
   const isCarrierAccount = actor.role === "DISPATCHER" && Boolean(actor.companyId);
   const isDispatcher = isCarrierAccount && actor.carrierApproved;
+  /** Open-board dump is proprietary — carriers (and guests) cannot export CSV. */
+  const canExportBoardCsv = isShipper || actor.role === "ADMIN";
 
   const hasActiveFilters = Boolean(
     originQ ||
@@ -392,6 +394,7 @@ export function LoadBoardWorkspace({
   }
 
   function exportCsv() {
+    if (!canExportBoardCsv) return;
     const headers = [
       "Reference",
       "Status",
@@ -651,14 +654,16 @@ export function LoadBoardWorkspace({
               Click a column header to sort. Showing {filteredLoads.length} open load
               {filteredLoads.length !== 1 ? "s" : ""}.
             </p>
-            <button
-              type="button"
-              onClick={exportCsv}
-              disabled={filteredLoads.length === 0}
-              className="rounded-md bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Export CSV ({filteredLoads.length})
-            </button>
+            {canExportBoardCsv && (
+              <button
+                type="button"
+                onClick={exportCsv}
+                disabled={filteredLoads.length === 0}
+                className="rounded-md bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Export CSV ({filteredLoads.length})
+              </button>
+            )}
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
