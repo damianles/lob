@@ -9,6 +9,7 @@ import { fetchLaneDecisionContext } from "@/lib/fetch-lane-decision";
 import type { LaneDecisionContext } from "@/lib/lane-decision-types";
 import { formatMoney } from "@/lib/money";
 import { OPEN_BID_LABEL, TAKE_IT_LABEL } from "@/lib/rate-mode";
+import { bandSide } from "@/lib/lane-decision-types";
 
 export function CarrierRateActions({
   loadId,
@@ -87,6 +88,17 @@ export function CarrierRateActions({
     if (!Number.isFinite(n) || n <= 0) {
       setMessage("Enter a bid amount.");
       return;
+    }
+    if (ctx?.bandEnforced && ctx.floor != null && ctx.ceiling != null) {
+      const side = bandSide(n, { bandEnforced: true, floor: ctx.floor, ceiling: ctx.ceiling });
+      if (side === "low") {
+        setMessage(`Too low for this lane — must be at least ${formatMoney(ctx.floor, offerCurrency)}.`);
+        return;
+      }
+      if (side === "high") {
+        setMessage(`Too high for this lane — must be at most ${formatMoney(ctx.ceiling, offerCurrency)}.`);
+        return;
+      }
     }
     setBusy("bid");
     setMessage(null);

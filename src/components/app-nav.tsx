@@ -14,7 +14,7 @@ import type { MeApiResponse } from "@/lib/viewer-role";
 import { roleAccentClasses } from "@/lib/viewer-role";
 
 const adminLinks = [
-  { href: "/admin/test-lab", label: "Test lab" },
+  { href: "/admin/test-lab", label: "Test Lab" },
   { href: "/admin/carriers", label: "Carriers" },
   { href: "/admin/suppliers", label: "Suppliers" },
   { href: "/admin/companies", label: "Companies" },
@@ -49,7 +49,7 @@ export function AppNav() {
     { href: signUpUrlForAppPath("/"), label: "Register" },
     { href: signUpUrlForAppPath("/capacity"), label: "Capacity" },
     { href: signUpUrlForAppPath("/insights"), label: "Insights" },
-    { href: signInUrlForAppPath("/"), label: "Sign in" },
+    { href: signInUrlForAppPath("/"), label: "Sign In" },
   ];
   const signedInLinks = lobTopNavLinksForViewer(viewer.kind);
   const links = [
@@ -95,7 +95,7 @@ export function AppNav() {
               href={signInUrlForAppPath("/")}
               className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition sm:px-5 sm:py-2.5 sm:text-sm ${lobWoodOutlineButtonClass}`}
             >
-              Sign in
+              Sign In
             </Link>
           )}
         </div>

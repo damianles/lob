@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { AddressDataLists } from "@/components/address-datalists";
 import { PlaceAutocomplete } from "@/components/place-autocomplete";
@@ -13,6 +13,8 @@ import { useViewerRole } from "@/components/providers/app-providers";
 import { RadioChoice } from "@/components/ui/radio-choice";
 import { LUMBER_EQUIPMENT } from "@/lib/lumber-equipment";
 import { inferOfferCurrency } from "@/lib/lane-currency";
+import { bandSide } from "@/lib/lane-decision-types";
+import { formatMoney } from "@/lib/money";
 import type { LumberSpec } from "@/lib/lumber-spec";
 import {
   BID_WINDOW_PRESETS_HOURS,
@@ -135,6 +137,10 @@ export function SupplierPostLoadForm({
 
   const [rateUsd, setRateUsd] = useState("");
   const [currency, setCurrency] = useState<"USD" | "CAD">("CAD");
+  const [rateBand, setRateBand] = useState<{ floor: number; ceiling: number; bandEnforced: true } | null>(null);
+  const onRateBand = useCallback((band: { floor: number; ceiling: number; bandEnforced: true } | null) => {
+    setRateBand(band);
+  }, []);
   const [rateMode, setRateMode] = useState<"TAKE_IT" | "OPEN_BID">("TAKE_IT");
   const [allowCounterOffers, setAllowCounterOffers] = useState(false);
   const [bidWindowHours, setBidWindowHours] = useState("24");
@@ -352,6 +358,17 @@ export function SupplierPostLoadForm({
     if (rateMode === "OPEN_BID" && r != null && (!Number.isFinite(r) || r <= 0)) {
       setErr("Target rate must be a positive number, or leave it blank.");
       return;
+    }
+    if (r != null && Number.isFinite(r) && r > 0 && rateBand) {
+      const side = bandSide(r, rateBand);
+      if (side === "low") {
+        setErr(`Rate is too low for this lane — must be at least ${formatMoney(rateBand.floor, currency)}.`);
+        return;
+      }
+      if (side === "high") {
+        setErr(`Rate is too high for this lane — must be at most ${formatMoney(rateBand.ceiling, currency)}.`);
+        return;
+      }
     }
     if (rateMode === "OPEN_BID" && !bidUntilPickup) {
       const hours = Number(customBidHours || bidWindowHours);
@@ -1253,6 +1270,7 @@ export function SupplierPostLoadForm({
               equipmentType={equipmentType}
               currency={currency}
               className="self-center"
+              onBand={onRateBand}
             />
             {showFairMarketAdminCopy && (
             <p className="text-xs text-zinc-500">

@@ -42,7 +42,7 @@ export default async function OnboardingPage() {
             <div className="mb-10 flex flex-col gap-6 sm:flex-row sm:items-center sm:gap-8">
               <LobWoodOIcon className="h-16 w-16 shrink-0 drop-shadow-md sm:h-[4.5rem] sm:w-[4.5rem]" />
               <div className="min-w-0">
-                <h1 className="text-3xl font-semibold tracking-tight text-lob-navy sm:text-4xl">Account setup</h1>
+                <h1 className="text-3xl font-semibold tracking-tight text-lob-navy sm:text-4xl">Account Setup</h1>
                 <p className="mt-3 max-w-xl text-base leading-relaxed text-stone-500">
                   Link your company to LOB. You will only see the registration form for the side you chose at sign-up
                   (supplier or carrier). LOB reviews new companies before posting or booking goes live.

@@ -33,6 +33,7 @@ type Props = {
   /** Currency the supplier is using to type their offer. */
   currency?: "USD" | "CAD";
   className?: string;
+  onBand?: (band: { floor: number; ceiling: number; bandEnforced: true } | null) => void;
 };
 
 function formatLaneAvg(q: Quote): string {
@@ -65,6 +66,7 @@ export function LanePriceChip({
   equipmentType,
   currency = "CAD",
   className,
+  onBand,
 }: Props) {
   const [quote, setQuote] = useState<Quote | null>(null);
   const [loading, setLoading] = useState(false);
@@ -113,6 +115,15 @@ export function LanePriceChip({
     equipmentType,
     currency,
   ]);
+
+  useEffect(() => {
+    if (!onBand) return;
+    if (quote?.bandEnforced && quote.floor != null && quote.ceiling != null) {
+      onBand({ floor: quote.floor, ceiling: quote.ceiling, bandEnforced: true });
+    } else {
+      onBand(null);
+    }
+  }, [quote, onBand]);
 
   if (!quote && !loading) return null;
 

@@ -159,7 +159,7 @@ export default function ShipperCarrierPreferencesPage() {
         <div className="min-w-0 flex-1">
           <LobBrandStrip />
           <div className="p-6 lg:p-8">
-            <h1 className="text-2xl font-bold text-zinc-900">Carrier preferences</h1>
+            <h1 className="text-2xl font-bold text-zinc-900">Carrier Preferences</h1>
             <p className="mt-2 max-w-2xl text-sm text-zinc-600">
               Exclude carriers you never want, and assign the rest to T1 / T2 / T3 groups. When posting a load, pick Open
               or which groups can see it — you do not re-assign carriers on every load.

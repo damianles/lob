@@ -26,7 +26,7 @@ export default async function AdminTestLabPage() {
     <main className="min-h-screen bg-zinc-50 p-6 text-zinc-900">
       <div className="mx-auto max-w-3xl">
         <LobBrandStrip />
-        <h1 className="mt-4 text-3xl font-bold">Admin test lab</h1>
+        <h1 className="mt-4 text-3xl font-bold">Admin Test Lab</h1>
         <p className="mt-2 text-sm text-zinc-600">
           Switch your signed-in Clerk user between <strong>admin</strong>, seeded <strong>supplier</strong>, and seeded{" "}
           <strong>carrier</strong> roles so you can test posting loads, capacity, booking, and profiles without separate

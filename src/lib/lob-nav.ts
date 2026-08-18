@@ -52,28 +52,28 @@ export const LOB_NAV_ITEMS: LobNavItem[] = [
   {
     id: "facilityPickup",
     href: "/scan/pickup",
-    label: "Facility pickup",
+    label: "Facility Pickup",
     hint: "Pickup yard link or office QR — no account required",
   },
   {
     id: "facilityDelivery",
     href: "/scan/delivery",
-    label: "Facility delivery",
+    label: "Facility Delivery",
     hint: "Receiver link or office QR — no account required",
   },
   {
     id: "carrierProfile",
     href: "/carrier/compliance",
-    label: "Carrier profile",
+    label: "Carrier Profile",
     hint: "DOT/MC, insurance, fleet & equipment for shippers",
   },
   {
     id: "carrierPrefs",
     href: "/shipper/carrier-preferences",
-    label: "Carrier preferences",
+    label: "Carrier Preferences",
     hint: "Exclude carriers from capacity & your loads; use with per-load tiers when posting",
   },
-  { id: "onboarding", href: "/onboarding", label: "Account setup", hint: "Link supplier or carrier company" },
+  { id: "onboarding", href: "/onboarding", label: "Account Setup", hint: "Link supplier or carrier company" },
 ];
 
 const CARRIER_IDS: LobNavId[] = [

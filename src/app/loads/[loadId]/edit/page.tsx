@@ -71,7 +71,7 @@ export default async function EditLoadPage({ params }: { params: Promise<{ loadI
                 ]}
                 className="mb-4"
               />
-              <h1 className="text-2xl font-bold text-zinc-900">Edit load</h1>
+              <h1 className="text-2xl font-bold text-zinc-900">Edit Load</h1>
               <p className="mt-1 text-sm text-zinc-600">
                 Update route, dates, rate, or notes.{" "}
                 <Link href={`/loads/${load.id}`} className="font-medium text-lob-navy underline">

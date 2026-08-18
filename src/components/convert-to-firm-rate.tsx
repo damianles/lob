@@ -1,9 +1,13 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 
+import { LaneDecisionStats } from "@/components/lane-decision-stats";
 import { Button } from "@/components/ui/button";
+import { fetchLaneDecisionContext } from "@/lib/fetch-lane-decision";
+import { bandSide, type LaneDecisionContext } from "@/lib/lane-decision-types";
+import { formatMoney } from "@/lib/money";
 import { TAKE_IT_LABEL } from "@/lib/rate-mode";
 
 export function ConvertToFirmRate({
@@ -19,12 +23,34 @@ export function ConvertToFirmRate({
   const [rate, setRate] = useState(defaultRate != null ? String(Math.round(defaultRate)) : "");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [ctx, setCtx] = useState<LaneDecisionContext | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchLaneDecisionContext(loadId).then((row) => {
+      if (!cancelled) setCtx(row);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [loadId]);
 
   async function convert() {
     const n = Number(rate);
     if (!Number.isFinite(n) || n <= 0) {
       setMessage("Enter a Firm Rate — this is the amount you pay.");
       return;
+    }
+    if (ctx?.bandEnforced && ctx.floor != null && ctx.ceiling != null) {
+      const side = bandSide(n, { bandEnforced: true, floor: ctx.floor, ceiling: ctx.ceiling });
+      if (side === "low") {
+        setMessage(`Too low for this lane — must be at least ${formatMoney(ctx.floor, currency)}.`);
+        return;
+      }
+      if (side === "high") {
+        setMessage(`Too high for this lane — must be at most ${formatMoney(ctx.ceiling, currency)}.`);
+        return;
+      }
     }
     setBusy(true);
     setMessage(null);
@@ -52,6 +78,11 @@ export function ConvertToFirmRate({
       <p className="text-[11px] text-zinc-600">
         No cover yet? Post a {TAKE_IT_LABEL} so carriers can book instantly. Pending bids stay as counters.
       </p>
+      {ctx ? (
+        <div className="mt-2">
+          <LaneDecisionStats ctx={ctx} compact />
+        </div>
+      ) : null}
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
         <span className="text-[11px] text-zinc-500">{currency}</span>
         <input

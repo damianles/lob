@@ -37,7 +37,7 @@ export default async function AdminSuppliersPage() {
     <main className="min-h-screen bg-zinc-50 p-6 text-zinc-900">
       <div className="mx-auto max-w-5xl">
         <LobBrandStrip />
-        <h1 className="mt-4 text-3xl font-bold">Supplier verification queue</h1>
+        <h1 className="mt-4 text-3xl font-bold">Supplier Verification Queue</h1>
         <p className="mt-2 text-sm text-zinc-600">
           Mills, wholesalers, and other lumber suppliers must be approved before they can post loads. Account type is
           stored on the company for analytics — the in-app product is a single &quot;Supplier&quot; experience.

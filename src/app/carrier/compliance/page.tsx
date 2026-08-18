@@ -31,7 +31,7 @@ export default async function CarrierCompliancePage() {
     return (
       <main className="min-h-[calc(100vh-3.5rem)] bg-zinc-100 p-6">
         <div className="mx-auto max-w-lg rounded-lg border bg-white p-6">
-          <h1 className="text-lg font-semibold">Carrier profile</h1>
+          <h1 className="text-lg font-semibold">Carrier Profile</h1>
           <p className="mt-2 text-sm text-zinc-600">
             This area is for transport companies. Sign in with a carrier (dispatcher) account to manage DOT/MC,
             insurance, and fleet details shown to shippers after booking.
@@ -44,7 +44,7 @@ export default async function CarrierCompliancePage() {
     return (
       <main className="min-h-[calc(100vh-3.5rem)] bg-zinc-100 p-6">
         <div className="mx-auto max-w-lg rounded-lg border bg-white p-6">
-          <h1 className="text-lg font-semibold">Carrier profile</h1>
+          <h1 className="text-lg font-semibold">Carrier Profile</h1>
           <p className="mt-2 text-sm text-zinc-600">Link a carrier company under Your account first.</p>
         </div>
       </main>
@@ -81,7 +81,7 @@ export default async function CarrierCompliancePage() {
           <LobBrandStrip />
           <div className="p-4 sm:p-6">
             <div className="mx-auto max-w-3xl">
-              <h1 className="text-2xl font-bold sm:text-3xl">Carrier profile</h1>
+              <h1 className="text-2xl font-bold sm:text-3xl">Carrier Profile</h1>
               <p className="mt-2 text-sm text-zinc-600">
                 Store proof of your organization and fleet details. Shippers can review this after they book a load with
                 you—before the truck arrives.

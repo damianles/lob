@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useLayoutEffect, useState } from "react";
+
+import { scrollWindowToTop } from "@/components/scroll-to-top";
 
 import { LobBrandStrip } from "@/components/lob-brand-strip";
 import { LobSidebar } from "@/components/lob-sidebar";
@@ -33,6 +35,10 @@ type Step =
 export function SupplierPostWorkspace({ companyName }: { companyName: string | null }) {
   const router = useRouter();
   const [step, setStep] = useState<Step>({ kind: "choose" });
+
+  useLayoutEffect(() => {
+    scrollWindowToTop();
+  }, [step.kind]);
 
   function goHome(msg?: string) {
     if (msg) {
@@ -97,7 +103,7 @@ export function SupplierPostWorkspace({ companyName }: { companyName: string | n
                 onClick={() => setStep({ kind: "form", banner: "Starting blank — enter lane, product, dates, and rate." })}
                 className="flex w-full flex-col items-start rounded-2xl border border-dashed border-stone-300 bg-stone-50/80 p-5 text-left transition hover:border-stone-400 hover:bg-white"
               >
-                <span className="text-base font-semibold text-stone-800">Start blank</span>
+                <span className="text-base font-semibold text-stone-800">Start Blank</span>
                 <span className="mt-1 text-sm text-stone-600">Enter everything from scratch for this load.</span>
               </button>
               <div className="pt-2 text-center">
@@ -106,7 +112,7 @@ export function SupplierPostWorkspace({ companyName }: { companyName: string | n
                   onClick={() => setStep({ kind: "recent" })}
                   className="text-sm font-medium text-lob-navy underline hover:no-underline"
                 >
-                  Recent posts
+                  Recent Posts
                 </button>
               </div>
             </div>

@@ -83,7 +83,7 @@ async function ShipperOpenBids({ companyId }: { companyId: string }) {
       <p className="mt-6 text-sm text-zinc-600">
         No open-bid or counter-enabled loads right now.{" "}
         <Link href="/shipments" className="font-medium text-lob-navy underline">
-          Post a load
+          Post a Load
         </Link>{" "}
         and choose {OPEN_BID_LABEL} or {TAKE_IT_LABEL} with counters.
       </p>

@@ -28,7 +28,7 @@ export default async function LaneAnalyticsPage({
   if (!actor.userId) {
     return (
       <div className="max-w-3xl">
-        <h1 className="text-2xl font-bold">Lane rate analytics</h1>
+        <h1 className="text-2xl font-bold">Lane Rate Analytics</h1>
         <p className="mt-2 text-sm text-zinc-600">Please sign in to access insights.</p>
       </div>
     );
@@ -36,7 +36,7 @@ export default async function LaneAnalyticsPage({
   if (!actor.companyId && actor.role !== "ADMIN") {
     return (
       <div className="max-w-3xl">
-        <h1 className="text-2xl font-bold">Lane rate analytics</h1>
+        <h1 className="text-2xl font-bold">Lane Rate Analytics</h1>
         <p className="mt-2 text-sm text-zinc-600">Complete onboarding to link your account with a company first.</p>
         <Link className="mt-4 inline-block text-blue-700 underline" href="/onboarding">
           Go to onboarding
@@ -57,7 +57,7 @@ export default async function LaneAnalyticsPage({
   if (!isSubscriber) {
     return (
       <div className="max-w-3xl">
-        <h1 className="text-2xl font-bold">Lane rate analytics (subscriber)</h1>
+        <h1 className="text-2xl font-bold">Lane Rate Analytics (subscriber)</h1>
         <p className="mt-2 text-sm text-zinc-600">
           Full lane Insights (history, YoY, spreadsheets) will be a monthly add-on — lumber-only, the way DAT
           charges for RateView. We are still gathering enough booked forest-product moves to make that trustworthy.
@@ -91,7 +91,7 @@ export default async function LaneAnalyticsPage({
     <div className="mx-auto max-w-6xl text-zinc-900">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold sm:text-3xl">Lane rates &amp; trends</h1>
+            <h1 className="text-2xl font-bold sm:text-3xl">Lane Rates &amp; Trends</h1>
             <p className="mt-2 text-sm text-zinc-600">
               Market rates and historical load volumes by city pair. Amounts are <strong>{displayCurrency}</strong>
               {displayCurrency === "CAD" ? " (Canada-first)." : "."} Canada–Canada is CAD; US–US is USD.

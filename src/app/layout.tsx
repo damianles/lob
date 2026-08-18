@@ -11,6 +11,7 @@ import { PersonaBodyTint } from "@/components/persona-body-tint";
 import { AppProviders } from "@/components/providers/app-providers";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { RoleRibbon } from "@/components/role-ribbon";
+import { ScrollToTop } from "@/components/scroll-to-top";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -48,6 +49,7 @@ export default function RootLayout({
             <AdminViewAsBar />
             <RoleRibbon />
             <AppNav />
+            <ScrollToTop />
             {children}
             <MobileBottomNav />
           </AppProviders>
