@@ -86,16 +86,68 @@ export function firstStopTime(stops: LoadStopDetail[]): string | null {
   return null;
 }
 
-export function formatStopBlock(stop: LoadStopDetail): string[] {
-  const lines: string[] = [];
-  if (stop.address) lines.push(stop.address);
-  if (stop.postal && (!stop.address || !stop.address.toUpperCase().includes(stop.postal.toUpperCase()))) {
-    lines.push(stop.postal);
+function compactAlnum(s: string): string {
+  return s.toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+/** True when `needle` is already present in `haystack` (ignores spaces/punctuation). */
+function alreadyContains(haystack: string, needle: string): boolean {
+  const n = compactAlnum(needle);
+  if (n.length < 3) return false;
+  return compactAlnum(haystack).includes(n);
+}
+
+function pushUnique(lines: string[], next: string | null | undefined) {
+  const t = next?.trim();
+  if (!t) return;
+  for (let i = lines.length - 1; i >= 0; i--) {
+    if (alreadyContains(t, lines[i]) && compactAlnum(t) !== compactAlnum(lines[i])) {
+      lines.splice(i, 1);
+    }
   }
-  if (stop.phone) lines.push(`Tel ${stop.phone}`);
-  const extra = [stop.window && `Window: ${stop.window}`, stop.appointment && `Appt: ${stop.appointment}`].filter(
-    Boolean,
-  ) as string[];
-  if (extra.length) lines.push(extra.join(" · "));
+  if (lines.some((e) => alreadyContains(e, t))) return;
+  lines.push(t);
+}
+
+export function formatCityLine(city: string, state: string, zip: string): string {
+  const place = [city.trim(), state.trim()].filter(Boolean);
+  const left = place.length >= 2 ? `${place[0]}, ${place[1]}` : place[0] ?? "";
+  return [left, zip.trim()].filter(Boolean).join(" ");
+}
+
+/**
+ * One clean pickup/delivery block: street, city + postal once, phone, window.
+ * Does not repeat a postal that is already on the city line or in the street.
+ */
+export function formatLocationLines(cityLine: string, stops: LoadStopDetail[]): string[] {
+  const lines: string[] = [];
+  const primary = stops[0] ?? null;
+  const extra = stops.slice(1);
+
+  pushUnique(lines, primary?.address ?? null);
+  pushUnique(lines, cityLine);
+  pushUnique(lines, primary?.postal ?? null);
+  pushUnique(lines, primary?.phone ?? null);
+  const extras = [
+    primary?.window && `Window: ${primary.window}`,
+    primary?.appointment && `Appt: ${primary.appointment}`,
+  ].filter(Boolean) as string[];
+  for (const e of extras) pushUnique(lines, e);
+
+  extra.forEach((stop) => {
+    const block: string[] = [];
+    pushUnique(block, stop.address);
+    pushUnique(block, stop.postal);
+    pushUnique(block, stop.phone);
+    const more = [
+      stop.window && `Window: ${stop.window}`,
+      stop.appointment && `Appt: ${stop.appointment}`,
+    ].filter(Boolean) as string[];
+    for (const m of more) pushUnique(block, m);
+    if (!block.length) return;
+    const label = `Stop ${stop.index}`;
+    lines.push(`${label}: ${block.join(" · ")}`);
+  });
+
   return lines;
 }

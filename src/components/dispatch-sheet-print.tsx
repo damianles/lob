@@ -9,7 +9,7 @@ import { formatInstant, formatPostedDateWithOptionalTime } from "@/lib/format-po
 import {
   extractLoadExecution,
   firstStopTime,
-  formatStopBlock,
+  formatLocationLines,
   type LoadExecutionDetails,
 } from "@/lib/load-execution";
 import { equipmentShortTag } from "@/lib/lumber-equipment";
@@ -102,45 +102,25 @@ export function DispatchSheetPrint(props: DispatchSheetPrintProps) {
         {execution.ftlLtl ? <Field label="Mode">{execution.ftlLtl}</Field> : null}
         <Field label="Equipment">{equipmentShortTag(props.equipmentType)}</Field>
         <Field label="Weight">{`${props.weightLbs.toLocaleString()} lb`}</Field>
-        {pickupLabel ? <Field label="Pickup date">{pickupLabel}</Field> : null}
-        {deliveryLabel ? <Field label="Delivery date">{deliveryLabel}</Field> : null}
 
         <div className="sm:col-span-2">
           <dt className="text-[10px] font-semibold uppercase tracking-wide text-stone-500">Pickup</dt>
-          <dd className="mt-0.5 font-medium">{props.originLine}</dd>
-          {execution.pickups.map((stop) => {
-            const lines = formatStopBlock(stop);
-            if (!lines.length) return null;
-            return (
-              <dd key={`pu-${stop.index}`} className="mt-1 text-stone-700">
-                {execution.pickups.length > 1 ? <span className="font-semibold">Stop {stop.index}. </span> : null}
-                {lines.map((line) => (
-                  <span key={line} className="block">
-                    {line}
-                  </span>
-                ))}
-              </dd>
-            );
-          })}
+          {pickupLabel ? <dd className="mt-0.5 text-stone-600">{pickupLabel}</dd> : null}
+          {formatLocationLines(props.originLine, execution.pickups).map((line) => (
+            <dd key={line} className="mt-0.5 font-medium text-stone-900">
+              {line}
+            </dd>
+          ))}
         </div>
 
         <div className="sm:col-span-2">
           <dt className="text-[10px] font-semibold uppercase tracking-wide text-stone-500">Delivery</dt>
-          <dd className="mt-0.5 font-medium">{props.destinationLine}</dd>
-          {execution.deliveries.map((stop) => {
-            const lines = formatStopBlock(stop);
-            if (!lines.length) return null;
-            return (
-              <dd key={`del-${stop.index}`} className="mt-1 text-stone-700">
-                {execution.deliveries.length > 1 ? <span className="font-semibold">Stop {stop.index}. </span> : null}
-                {lines.map((line) => (
-                  <span key={line} className="block">
-                    {line}
-                  </span>
-                ))}
-              </dd>
-            );
-          })}
+          {deliveryLabel ? <dd className="mt-0.5 text-stone-600">{deliveryLabel}</dd> : null}
+          {formatLocationLines(props.destinationLine, execution.deliveries).map((line) => (
+            <dd key={line} className="mt-0.5 font-medium text-stone-900">
+              {line}
+            </dd>
+          ))}
         </div>
 
         {specText ? (

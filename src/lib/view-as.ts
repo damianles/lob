@@ -140,3 +140,10 @@ export function isViewAsPresetActive(
   if (p.role === "DISPATCHER" || p.role === "DRIVER") return viewer.kind === "CARRIER";
   return false;
 }
+
+/** Landing path after an admin View-as switch so we do not keep mill paperwork (rate con, etc.). */
+export function viewAsHomePath(payload: ViewAsPayload | null): string {
+  if (!payload || payload.role === "ADMIN") return "/";
+  if (payload.role === "SHIPPER") return "/shipments";
+  return "/";
+}

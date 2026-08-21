@@ -114,7 +114,15 @@ export function ExtendedPostingPanel({
   function stopLines(raw: unknown, i: number): string | null {
     const r = asRecord(raw);
     if (!r) return null;
-    const bits = [str(r.address), str(r.postal), str(r.phone) && `Tel ${str(r.phone)}`].filter(Boolean);
+    const address = str(r.address);
+    const postal = str(r.postal);
+    const phone = str(r.phone);
+    const bits: string[] = [];
+    if (address) bits.push(address);
+    const addrCompact = (address ?? "").toUpperCase().replace(/\s+/g, "");
+    const postalCompact = (postal ?? "").toUpperCase().replace(/\s+/g, "");
+    if (postal && (!addrCompact || !addrCompact.includes(postalCompact))) bits.push(postal);
+    if (phone) bits.push(phone);
     return bits.length ? `${i + 1}. ${bits.join(" · ")}` : null;
   }
 

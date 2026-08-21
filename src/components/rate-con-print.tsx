@@ -10,7 +10,8 @@ import { formatInstant, formatPostedDateWithOptionalTime } from "@/lib/format-po
 import {
   extractLoadExecution,
   firstStopTime,
-  formatStopBlock,
+  formatCityLine,
+  formatLocationLines,
 } from "@/lib/load-execution";
 import type { LumberSpec } from "@/lib/lumber-spec";
 
@@ -89,8 +90,6 @@ export function RateConPrint({ load, shipper, carrier, lumber, extendedPosting }
             <h1 className="mt-1 text-2xl font-bold tracking-tight">Load {load.referenceNumber}</h1>
             <p className="text-sm text-zinc-600">
               {formattedBooked ? `Booked ${formattedBooked}` : null}
-              {formattedPickup ? ` · Pickup ${formattedPickup}` : null}
-              {formattedDelivery ? ` · Delivery ${formattedDelivery}` : null}
             </p>
           </div>
           <div className="text-right">
@@ -128,19 +127,15 @@ export function RateConPrint({ load, shipper, carrier, lumber, extendedPosting }
         <section className="mb-6 grid grid-cols-2 gap-6">
           <div>
             <h2 className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Pickup</h2>
-            <p className="mt-1 text-sm font-semibold">
-              {load.pickupCity}, {load.pickupState} {load.pickupZip}
-            </p>
-            {execution.pickups.map((stop) => {
-              const lines = formatStopBlock(stop);
-              if (!lines.length) return null;
-              return (
-                <p key={`pu-${stop.index}`} className="mt-1 text-xs text-zinc-700">
-                  {lines.join(" · ")}
-                </p>
-              );
-            })}
             {formattedPickup ? <p className="mt-1 text-xs text-zinc-600">{formattedPickup}</p> : null}
+            {formatLocationLines(
+              formatCityLine(load.pickupCity, load.pickupState, load.pickupZip),
+              execution.pickups,
+            ).map((line) => (
+              <p key={line} className="mt-0.5 text-sm font-semibold text-zinc-900">
+                {line}
+              </p>
+            ))}
             {load.isRush && (
               <p className="mt-1 inline-block rounded bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-amber-900">
                 RUSH
@@ -149,21 +144,15 @@ export function RateConPrint({ load, shipper, carrier, lumber, extendedPosting }
           </div>
           <div>
             <h2 className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Delivery</h2>
-            <p className="mt-1 text-sm font-semibold">
-              {load.deliveryCity}, {load.deliveryState} {load.deliveryZip}
-            </p>
-            {execution.deliveries.map((stop) => {
-              const lines = formatStopBlock(stop);
-              if (!lines.length) return null;
-              return (
-                <p key={`del-${stop.index}`} className="mt-1 text-xs text-zinc-700">
-                  {lines.join(" · ")}
-                </p>
-              );
-            })}
-            {formattedDelivery ? (
-              <p className="mt-1 text-xs text-zinc-600">{formattedDelivery}</p>
-            ) : null}
+            {formattedDelivery ? <p className="mt-1 text-xs text-zinc-600">{formattedDelivery}</p> : null}
+            {formatLocationLines(
+              formatCityLine(load.deliveryCity, load.deliveryState, load.deliveryZip),
+              execution.deliveries,
+            ).map((line) => (
+              <p key={line} className="mt-0.5 text-sm font-semibold text-zinc-900">
+                {line}
+              </p>
+            ))}
           </div>
         </section>
 

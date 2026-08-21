@@ -1,7 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { useViewerRole } from "@/components/providers/app-providers";
@@ -9,6 +8,7 @@ import { roleAccentClasses } from "@/lib/viewer-role";
 import {
   VIEW_AS_PRESETS,
   isViewAsPresetActive,
+  viewAsHomePath,
   viewAsInitialsClasses,
   type ViewAsPayload,
 } from "@/lib/view-as";
@@ -17,13 +17,9 @@ import {
  * Admin-only role-perspective switcher.
  *
  * Lets LOB admins pick "View as Supplier" or "View as Carrier". Sets the
- * `lob.viewAs` cookie via POST /api/admin/view-as, then forces a full page
- * reload so server components re-render with the simulated role applied. When
- * simulating, the bar shows a clear "Reset to admin" pill with the active
- * persona label.
- *
- * Hidden entirely for non-admins (the `realKind` check keeps it safe even
- * while a viewer is mid-simulation — the real role is what gates visibility).
+ * `lob.viewAs` cookie via POST /api/admin/view-as, then navigates to that
+ * persona's home (not the current page) so mill paperwork such as rate
+ * confirmation is not left on screen. Hidden for non-admins.
  */
 
 const Z_MENU = 110; /* > AppNav z-50, > admin bar z-100 */
@@ -56,10 +52,9 @@ function measureMenuBox(button: HTMLElement | null): MenuBox | null {
 }
 
 export function AdminViewAsBar() {
-  const { viewer, refresh } = useViewerRole();
-  const router = useRouter();
+  const { viewer } = useViewerRole();
   const [open, setOpen] = useState(false);
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
   const [menuBox, setMenuBox] = useState<MenuBox | null>(null);
   const [mounted, setMounted] = useState(false);
   const barRef = useRef<HTMLDivElement>(null);
@@ -127,6 +122,7 @@ export function AdminViewAsBar() {
   if (viewer.realKind !== "ADMIN") return null;
 
   const reset = async () => {
+    setPending(true);
     try {
       await fetch("/api/admin/view-as", {
         method: "POST",
@@ -134,18 +130,14 @@ export function AdminViewAsBar() {
         body: JSON.stringify({ payload: null }),
       });
     } catch {
-      /* swallow — UI will refresh anyway */
+      /* swallow — navigation still applies the cookie if the POST succeeded */
     }
     setOpen(false);
-    startTransition(() => {
-      refresh();
-      // router.refresh re-runs server components with the cleared cookie
-      // (the load board, supplier form, etc. all re-derive against actor.role).
-      router.refresh();
-    });
+    window.location.assign(viewAsHomePath(null));
   };
 
   const apply = async (payload: ViewAsPayload) => {
+    setPending(true);
     try {
       await fetch("/api/admin/view-as", {
         method: "POST",
@@ -156,10 +148,7 @@ export function AdminViewAsBar() {
       /* ignore */
     }
     setOpen(false);
-    startTransition(() => {
-      refresh();
-      router.refresh();
-    });
+    window.location.assign(viewAsHomePath(payload));
   };
 
   // When simulating, paint the bar in the simulated role's accent so admin

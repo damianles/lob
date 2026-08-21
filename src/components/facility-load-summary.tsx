@@ -3,7 +3,7 @@ import { formatPostedDateWithOptionalTime } from "@/lib/format-posted-datetime";
 import {
   extractLoadExecution,
   firstStopTime,
-  formatStopBlock,
+  formatLocationLines,
 } from "@/lib/load-execution";
 
 export type FacilityLoadOps = {
@@ -36,31 +36,23 @@ export function FacilityLoadSummary({ ops }: { ops: FacilityLoadOps }) {
         <div>
           <dt className="text-xs text-zinc-500">Pickup</dt>
           <dd>
-            {ops.originLine}
-            {execution.pickups.map((stop) => {
-              const lines = formatStopBlock(stop);
-              if (!lines.length) return null;
-              return (
-                <span key={`pu-${stop.index}`} className="mt-1 block text-zinc-700">
-                  {lines.join(" · ")}
-                </span>
-              );
-            })}
+            {pickupWhen ? <span className="block text-zinc-600">{pickupWhen}</span> : null}
+            {formatLocationLines(ops.originLine, execution.pickups).map((line) => (
+              <span key={line} className="block">
+                {line}
+              </span>
+            ))}
           </dd>
         </div>
         <div>
           <dt className="text-xs text-zinc-500">Delivery</dt>
           <dd>
-            {ops.destinationLine}
-            {execution.deliveries.map((stop) => {
-              const lines = formatStopBlock(stop);
-              if (!lines.length) return null;
-              return (
-                <span key={`del-${stop.index}`} className="mt-1 block text-zinc-700">
-                  {lines.join(" · ")}
-                </span>
-              );
-            })}
+            {deliveryWhen ? <span className="block text-zinc-600">{deliveryWhen}</span> : null}
+            {formatLocationLines(ops.destinationLine, execution.deliveries).map((line) => (
+              <span key={line} className="block">
+                {line}
+              </span>
+            ))}
           </dd>
         </div>
         <div className="grid gap-2 sm:grid-cols-2">
@@ -73,18 +65,6 @@ export function FacilityLoadSummary({ ops }: { ops: FacilityLoadOps }) {
             <dd>{ops.weightLbs.toLocaleString()} lb</dd>
           </div>
         </div>
-        {pickupWhen ? (
-          <div>
-            <dt className="text-xs text-zinc-500">Requested pickup</dt>
-            <dd>{pickupWhen}</dd>
-          </div>
-        ) : null}
-        {deliveryWhen ? (
-          <div>
-            <dt className="text-xs text-zinc-500">Requested delivery</dt>
-            <dd>{deliveryWhen}</dd>
-          </div>
-        ) : null}
         {ops.carrierName ? (
           <div>
             <dt className="text-xs text-zinc-500">Carrier</dt>
