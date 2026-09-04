@@ -106,7 +106,7 @@ export function DispatchSheetPrint(props: DispatchSheetPrintProps) {
         <div className="sm:col-span-2">
           <dt className="text-[10px] font-semibold uppercase tracking-wide text-stone-500">Pickup</dt>
           {pickupLabel ? <dd className="mt-0.5 text-stone-600">{pickupLabel}</dd> : null}
-          {formatLocationLines(props.originLine, execution.pickups).map((line) => (
+          {formatLocationLines(props.originLine, execution.pickups, "pickup").map((line) => (
             <dd key={line} className="mt-0.5 font-medium text-stone-900">
               {line}
             </dd>
@@ -116,7 +116,7 @@ export function DispatchSheetPrint(props: DispatchSheetPrintProps) {
         <div className="sm:col-span-2">
           <dt className="text-[10px] font-semibold uppercase tracking-wide text-stone-500">Delivery</dt>
           {deliveryLabel ? <dd className="mt-0.5 text-stone-600">{deliveryLabel}</dd> : null}
-          {formatLocationLines(props.destinationLine, execution.deliveries).map((line) => (
+          {formatLocationLines(props.destinationLine, execution.deliveries, "delivery").map((line) => (
             <dd key={line} className="mt-0.5 font-medium text-stone-900">
               {line}
             </dd>

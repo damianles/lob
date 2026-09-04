@@ -13,7 +13,7 @@ import { laneQueryTokenString } from "@/lib/place-helpers";
 export type ShipmentRow = {
   id: string;
   referenceNumber: string;
-  status: "POSTED" | "BOOKED" | "ASSIGNED" | "IN_TRANSIT" | "DELIVERED" | "CANCELLED";
+  status: "POSTED" | "BOOKED" | "ASSIGNED" | "IN_TRANSIT" | "DELIVERED" | "CANCELLED" | "NEEDS_REPOST" | "UNLISTED";
   isRush: boolean;
   equipmentType: string;
   weightLbs: number;
@@ -93,6 +93,8 @@ function statusLabel(s: ShipmentRow["status"]): string {
     case "ASSIGNED": return "Driver assigned";
     case "IN_TRANSIT": return "In transit";
     case "DELIVERED": return "Delivered";
+    case "NEEDS_REPOST": return "Needs repost";
+    case "UNLISTED": return "Unlisted";
     case "CANCELLED": return "Cancelled";
   }
 }
@@ -104,6 +106,8 @@ function statusBadge(s: ShipmentRow["status"]): string {
     case "ASSIGNED": return "bg-indigo-50 text-indigo-900 ring-indigo-200";
     case "IN_TRANSIT": return "bg-amber-50 text-amber-900 ring-amber-200";
     case "DELIVERED": return "bg-emerald-50 text-emerald-900 ring-emerald-200";
+    case "NEEDS_REPOST": return "bg-amber-50 text-amber-950 ring-amber-200";
+    case "UNLISTED": return "bg-zinc-100 text-zinc-600 ring-zinc-200";
     case "CANCELLED": return "bg-rose-50 text-rose-900 ring-rose-200";
   }
 }
@@ -169,7 +173,7 @@ export function ShipmentsWorkspace({
       : Infinity;
 
     return shipments.filter((r) => {
-      if (filters.status === "ACTIVE" && (r.status === "DELIVERED" || r.status === "CANCELLED")) return false;
+      if (filters.status === "ACTIVE" && (r.status === "DELIVERED" || r.status === "CANCELLED" || r.status === "UNLISTED")) return false;
       if (filters.status === "DELIVERED" && r.status !== "DELIVERED") return false;
       if (filters.status === "POSTED" && r.status !== "POSTED") return false;
       if (filters.status === "CANCELLED" && r.status !== "CANCELLED") return false;

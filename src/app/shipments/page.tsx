@@ -3,9 +3,11 @@ import { LoadStatus } from "@prisma/client";
 
 import { LobBrandStrip } from "@/components/lob-brand-strip";
 import { LobSidebar } from "@/components/lob-sidebar";
+import { NeedsRepostPanel } from "@/components/needs-repost-panel";
 import { ShipmentsWorkspace, type ShipmentRow, type ShipmentsActor } from "@/components/shipments-workspace";
 import { prisma } from "@/lib/prisma";
 import { getActorContext } from "@/lib/request-context";
+import { sweepLoadLifecycle } from "@/lib/load-lifecycle";
 
 export const dynamic = "force-dynamic";
 
@@ -73,6 +75,10 @@ export default async function ShipmentsPage({
         </div>
       </main>
     );
+  }
+
+  if (perspective === "shipper") {
+    await sweepLoadLifecycle().catch(() => {});
   }
 
   const loads = await prisma.load.findMany({
@@ -145,6 +151,11 @@ export default async function ShipmentsPage({
             {posted ? (
               <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-950">
                 {posted}
+              </div>
+            ) : null}
+            {perspective === "shipper" ? (
+              <div className="mb-4">
+                <NeedsRepostPanel />
               </div>
             ) : null}
             <div className="mb-4 flex flex-wrap items-end justify-between gap-3">

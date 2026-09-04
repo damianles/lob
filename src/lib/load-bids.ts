@@ -1,4 +1,4 @@
-import { LoadBidStatus, LoadRateMode, LoadStatus, type Prisma } from "@prisma/client";
+import { LoadBidStatus, LoadRateMode, LoadStatus, PostedLaneOutcome, type Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/prisma";
 
@@ -88,6 +88,15 @@ export async function acceptLoadBid(args: {
     await tx.load.update({
       where: { id: bid.loadId },
       data: { status: LoadStatus.BOOKED },
+    });
+
+    await tx.laneRateObservation.updateMany({
+      where: { loadId: bid.loadId },
+      data: {
+        bookedRateUsd: bid.amountUsd,
+        bookedAt: now,
+        outcome: PostedLaneOutcome.BOOKED,
+      },
     });
 
     return { bidId: bid.id, booking };

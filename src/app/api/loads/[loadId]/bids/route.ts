@@ -1,17 +1,15 @@
 import { LoadBidKind, LoadBidStatus, LoadRateMode, LoadStatus, VerificationStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 
+import { BID_ACCEPT_HOURS } from "@/lib/board-visibility";
 import { carrierMayViewPostedLoad } from "@/lib/carrier-load-access";
 import { expireStaleBids, LoadBidError } from "@/lib/load-bids";
+import { computeBidAcceptExpiresAt } from "@/lib/load-lifecycle";
 import { validateRateBand } from "@/lib/market-rate-lane";
 import { prisma } from "@/lib/prisma";
 import { TAKE_IT_LABEL } from "@/lib/rate-mode";
 import { getActorContext } from "@/lib/request-context";
 import { createLoadBidSchema } from "@/lib/validation";
-
-function hoursUntil(d: Date) {
-  return Math.max(1, Math.ceil((d.getTime() - Date.now()) / (60 * 60 * 1000)));
-}
 
 export async function GET(_req: Request, ctx: { params: Promise<{ loadId: string }> }) {
   const actor = await getActorContext();
@@ -136,7 +134,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ loadId: string
 
   const windowEnd = isOpenBid
     ? load.bidWindowExpiresAt ?? load.requestedPickupAt
-    : new Date(now.getTime() + 48 * 60 * 60 * 1000);
+    : new Date(now.getTime() + BID_ACCEPT_HOURS * 60 * 60 * 1000);
 
   const band = await validateRateBand({
     originState: load.originState,
@@ -153,10 +151,20 @@ export async function POST(req: Request, ctx: { params: Promise<{ loadId: string
     return NextResponse.json({ error: band.message }, { status: 400 });
   }
 
-  const requestedHours = parsed.data.expiresInHours;
-  const maxHours = hoursUntil(windowEnd);
-  const hours = Math.min(requestedHours ?? (isOpenBid ? maxHours : 24), maxHours);
-  const expiresAt = new Date(now.getTime() + hours * 60 * 60 * 1000);
+  // Supplier has at most 24h to accept from (re)submit; never past the load bid window.
+  const expiresAt = computeBidAcceptExpiresAt({
+    now,
+    bidWindowExpiresAt: isOpenBid ? windowEnd : new Date(now.getTime() + BID_ACCEPT_HOURS * 60 * 60 * 1000),
+  });
+  const finalExpires =
+    parsed.data.expiresInHours != null
+      ? new Date(
+          Math.min(
+            expiresAt.getTime(),
+            now.getTime() + Math.min(BID_ACCEPT_HOURS, parsed.data.expiresInHours) * 60 * 60 * 1000,
+          ),
+        )
+      : expiresAt;
 
   try {
     const existing = await prisma.loadBid.findFirst({
@@ -171,7 +179,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ loadId: string
       amountUsd: parsed.data.amountUsd,
       currency: load.offerCurrency,
       note: parsed.data.note?.trim() || null,
-      expiresAt,
+      expiresAt: finalExpires,
       kind: isCounter ? LoadBidKind.COUNTER : LoadBidKind.BID,
       submittedByUserId: actor.userId,
     };

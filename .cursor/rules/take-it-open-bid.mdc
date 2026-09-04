@@ -19,12 +19,15 @@ This feature has its own branch: `feat/take-it-open-bid`.
 ## Behavior
 
 - Book API must use the posted Firm Rate (ignore client-typed rates). Reject Open bid books; tell them to bid.
-- One pending bid/counter per carrier per load (update in place).
+- One pending bid/counter per carrier per load (update in place). Adjusting a bid resets the 24h supplier accept clock.
 - Accepting a bid books the load at that amount and declines other pending bids.
+- Open bid window hard max **72h**. Same load id: max **2** bid cycles; cycle 2 end without accept → `UNLISTED`.
+- Firm Rate stays on the board **7 days** past pickup (vs 48h for Open bid). After that → `NEEDS_REPOST` + in-app alert (email stub PENDING). Soft-warn on new post; do not hard-block.
 - Bids and posted rates must sit inside the lane stop-gaps (default ±30% of the rolling average; ±50% on thin lanes). No band until there is at least one comparable lumber move.
 - Decision context on book/bid (avg, last book on the lane, $/mi, allowed range) is free. Full Insights stays a future monthly add-on.
 - Open Bids nav shows a pending inbox count (mill: bids to review; carrier: bids waiting on the mill).
 - Facility/driver pages must never show rates.
+- Posted-lane analytics: `LaneRateObservation` with `source=POSTED`, `outcome`, optional `bookedRateUsd` — separate from booked freight market views.
 
 ## Key files
 

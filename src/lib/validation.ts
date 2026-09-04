@@ -33,10 +33,10 @@ export const createLoadSchema = z.object({
   /** TAKE_IT only: allow carriers to counter the posted rate. */
   allowCounterOffers: z.boolean().default(false),
   /**
-   * OPEN_BID window length in hours (1–336). Ignored for Firm Rate.
-   * Use 0 with bidUntilPickup to close at pickup instead.
+   * OPEN_BID window length in hours (1–72 hard max). Ignored for Firm Rate.
    */
-  bidWindowHours: z.number().int().min(0).max(336).optional(),
+  bidWindowHours: z.number().int().min(0).max(72).optional(),
+  /** @deprecated Ignored — Open bid is hard-capped at 72h; kept for older clients. */
   bidUntilPickup: z.boolean().default(false),
   extendedPosting: z.record(z.string(), z.unknown()).optional(),
   carrierVisibilityMode: z.enum(["OPEN", "TIER_ASSIGNED"]).default("OPEN"),
@@ -129,10 +129,10 @@ export const createLoadSchema = z.object({
           path: ["allowCounterOffers"],
         });
       }
-      if (!d.bidUntilPickup && (!d.bidWindowHours || d.bidWindowHours < 1)) {
+      if (!d.bidWindowHours || d.bidWindowHours < 1 || d.bidWindowHours > 72) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "Set how long bidding stays open, or choose until pickup.",
+          message: "Open bid window must be 1–72 hours.",
           path: ["bidWindowHours"],
         });
       }
@@ -199,8 +199,10 @@ export const createBookingSchema = z.object({
 export const createLoadBidSchema = z.object({
   amountUsd: z.number().positive(),
   note: z.string().trim().max(500).optional(),
-  /** Hours this bid/counter stays open (1–168). Defaults to remaining bid window or 24h. */
-  expiresInHours: z.number().int().min(1).max(168).optional(),
+  /**
+   * Optional; server always caps supplier accept window at 24h (and remaining bid window).
+   */
+  expiresInHours: z.number().int().min(1).max(24).optional(),
 });
 
 export const reviewLoadBidSchema = z.object({

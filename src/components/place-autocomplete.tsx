@@ -11,9 +11,9 @@ const DEBOUNCE_MS = 280;
 type DetailsPayload = ParsedPlace & { lat: number | null; lng: number | null; name: string | null };
 
 /**
- * Type-ahead + dropdown backed by /api/places (Google Places, server key).
+ * Type-ahead + dropdown backed by /api/places (OpenStreetMap Nominatim by default).
  * When a row is selected, fetches place details and calls `onResolved` with city/state/zip/line1.
- * If the API is not configured, shows a one-line note and no network calls.
+ * If the API is unavailable, shows a one-line note and no further network calls.
  */
 export function PlaceAutocomplete({
   mode = "city",
@@ -77,7 +77,7 @@ export function PlaceAutocomplete({
             fromServer
               ? `Places: ${fromServer}`
               : r.status === 502
-                ? "Google rejected the request (check API key, billing, and API enablement in Google Cloud)."
+                ? "Place search failed — try again in a moment, or type the city and postal manually."
                 : "Could not load places suggestions.",
           );
         })
@@ -108,7 +108,16 @@ export function PlaceAutocomplete({
             return;
           }
           const j = (await r.json().catch(() => ({}))) as { data?: DetailsPayload };
-          if (j.data) onResolved(j.data);
+          if (j.data) {
+            onResolved(j.data);
+            if (!(j.data.zip ?? "").trim()) {
+              setWarn(
+                "Postal / ZIP was not found for this place — enter it manually so carriers get a complete address.",
+              );
+            } else {
+              setWarn(null);
+            }
+          }
         })
         .finally(() => setLoading(false));
     },

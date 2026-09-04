@@ -123,6 +123,16 @@ export async function POST(
       data: { status: LoadBidStatus.DECLINED },
     });
 
+    const now = new Date();
+    await tx.laneRateObservation.updateMany({
+      where: { loadId },
+      data: {
+        bookedRateUsd: load.offeredRateUsd!,
+        bookedAt: now,
+        outcome: "BOOKED",
+      },
+    });
+
     return newBooking;
   }).catch((e: unknown) => {
     if (e instanceof Error && e.message === "LOAD_NOT_POSTED") return null;

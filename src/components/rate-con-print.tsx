@@ -131,6 +131,7 @@ export function RateConPrint({ load, shipper, carrier, lumber, extendedPosting }
             {formatLocationLines(
               formatCityLine(load.pickupCity, load.pickupState, load.pickupZip),
               execution.pickups,
+              "pickup",
             ).map((line) => (
               <p key={line} className="mt-0.5 text-sm font-semibold text-zinc-900">
                 {line}
@@ -148,6 +149,7 @@ export function RateConPrint({ load, shipper, carrier, lumber, extendedPosting }
             {formatLocationLines(
               formatCityLine(load.deliveryCity, load.deliveryState, load.deliveryZip),
               execution.deliveries,
+              "delivery",
             ).map((line) => (
               <p key={line} className="mt-0.5 text-sm font-semibold text-zinc-900">
                 {line}

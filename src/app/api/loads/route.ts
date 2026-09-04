@@ -36,11 +36,13 @@ export async function GET() {
     }
   }
 
-  const boardCutoff = new Date(Date.now() - 48 * 60 * 60 * 1000);
-
   if (actor.role === "SHIPPER" && !actor.companyId) {
     return NextResponse.json({ data: [] });
   }
+
+  const { postedOnBoardWhere } = await import("@/lib/board-visibility");
+  const { sweepLoadLifecycle } = await import("@/lib/load-lifecycle");
+  await sweepLoadLifecycle().catch(() => {});
 
   const clauses: Prisma.LoadWhereInput[] =
     actor.role === "SHIPPER" && actor.companyId
@@ -48,8 +50,12 @@ export async function GET() {
       : [
           {
             OR: [
-              { status: { not: LoadStatus.POSTED } },
-              { AND: [{ status: LoadStatus.POSTED }, { requestedPickupAt: { gte: boardCutoff } }] },
+              {
+                status: {
+                  notIn: [LoadStatus.POSTED, LoadStatus.NEEDS_REPOST, LoadStatus.UNLISTED],
+                },
+              },
+              postedOnBoardWhere(),
             ],
           },
         ];
@@ -375,7 +381,8 @@ export async function POST(req: Request) {
                   equipmentNorm: normalizeEquipmentForBenchmark(payload.equipmentType),
                   rateUsd: new Prisma.Decimal(rateNative.toFixed(2)),
                   offerCurrency: payload.offerCurrency,
-                  source: RateObservationSource.APP,
+                  source: RateObservationSource.POSTED,
+                  outcome: "OPEN",
                 },
               },
             }

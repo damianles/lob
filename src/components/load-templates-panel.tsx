@@ -147,7 +147,7 @@ export function LoadTemplatesPanel({
       }
       setName("");
       setShowSave(false);
-      setMsg(`Saved recurring load/lane "${j.data.name}".`);
+      setMsg(`Saved lane with products "${j.data.name}".`);
       refresh();
     } finally {
       setSaving(false);
@@ -158,7 +158,7 @@ export function LoadTemplatesPanel({
     if (!picked) return;
     const t = list.find((x) => x.id === picked);
     if (!t) return;
-    if (!confirm(`Delete recurring load/lane "${t.name}"?`)) return;
+    if (!confirm(`Delete saved lane "${t.name}"?`)) return;
     const r = await fetch(`/api/templates/${picked}`, { method: "DELETE" });
     if (!r.ok) {
       const j = await r.json().catch(() => ({}));
@@ -193,7 +193,7 @@ export function LoadTemplatesPanel({
             onClick={() => setShowSave(true)}
             className="rounded-lg border border-emerald-600 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-100"
           >
-            Save as Recurring Load/Lane
+            Save as Saved Lane (with products)
           </button>
         ) : (
           <>
@@ -201,7 +201,7 @@ export function LoadTemplatesPanel({
               autoFocus
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Name this recurring load/lane"
+              placeholder="Name this saved lane"
               className="min-w-[12rem] flex-1 rounded border border-emerald-300 px-3 py-2 text-sm"
             />
             <button
@@ -232,9 +232,11 @@ export function LoadTemplatesPanel({
   return (
     <section className="rounded border border-emerald-200 bg-white/90 p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h4 className="text-xs font-bold uppercase tracking-wide text-emerald-900">Recurring Load/Lane</h4>
+        <h4 className="text-xs font-bold uppercase tracking-wide text-emerald-900">
+          Saved lanes (with products)
+        </h4>
         <p className="text-[11px] text-zinc-500">
-          Saved lane + product setup — dates are always set fresh when you post.
+          Lane + product setup — dates are always entered fresh when you post.
         </p>
       </div>
       {msg && <p className="mt-2 text-[11px] text-emerald-800">{msg}</p>}
@@ -249,7 +251,7 @@ export function LoadTemplatesPanel({
             {loading
               ? "Loading…"
               : list.length
-                ? "Pick a recurring load/lane…"
+                ? "Pick a saved lane with products…"
                 : "None saved yet"}
           </option>
           {list.map((t) => (
@@ -286,7 +288,7 @@ export function LoadTemplatesPanel({
             onClick={() => setShowSave(true)}
             className="rounded-md border border-emerald-600 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-100"
           >
-            + Save current as Recurring Load/Lane
+            + Save current as lane with products
           </button>
         ) : (
           <>

@@ -90,8 +90,11 @@ export function ShipperBidReviewList({
                 <p className="text-xs text-zinc-600">
                   {b.carrierName}
                   {b.priorMovesWithYou > 0 ? ` · ${b.priorMovesWithYou} prior move${b.priorMovesWithYou === 1 ? "" : "s"} with you` : ""}
-                  {" · "}
-                  {formatTimeRemaining(b.expiresAt) ?? `expires ${new Date(b.expiresAt).toLocaleString()}`}
+                </p>
+                <p className="mt-0.5 text-xs font-medium text-amber-900">
+                  {formatTimeRemaining(b.expiresAt)
+                    ? `You have ${formatTimeRemaining(b.expiresAt)} to accept (24h from bid)`
+                    : `Accept by ${new Date(b.expiresAt).toLocaleString()}`}
                 </p>
                 <p className="mt-0.5 text-[11px] tabular-nums text-zinc-500">
                   {vsPosted != null

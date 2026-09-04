@@ -65,6 +65,8 @@ export function getStatusBadgeVariant(status: LoadStatus): BadgeVariant {
     IN_TRANSIT: "in-transit",
     DELIVERED: "delivered",
     CANCELLED: "error",
+    NEEDS_REPOST: "warning",
+    UNLISTED: "default",
   };
   return statusMap[status] || "default";
 }

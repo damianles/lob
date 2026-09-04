@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
+import { SoftWarnNeedsRepost } from "@/components/needs-repost-panel";
 import { AddressDataLists } from "@/components/address-datalists";
 import { PlaceAutocomplete } from "@/components/place-autocomplete";
 import { LanePriceChip } from "@/components/lane-price-chip";
@@ -26,6 +27,7 @@ import {
 type CarrierPick = { id: string; legalName: string };
 
 type PuDel = {
+  companyName: string;
   address: string;
   postal: string;
   phone: string;
@@ -36,6 +38,7 @@ type PuDel = {
 };
 
 const emptyLoc: PuDel = {
+  companyName: "",
   address: "",
   postal: "",
   phone: "",
@@ -83,7 +86,6 @@ export function SupplierPostLoadForm({
   const [customerOrderNo, setCustomerOrderNo] = useState("");
   const [poNumber, setPoNumber] = useState("");
   const [customerName, setCustomerName] = useState("");
-  const [urgency, setUrgency] = useState("3");
   const [requestedPickupDate, setRequestedPickupDate] = useState("");
   const [requestedDeliveryDate, setRequestedDeliveryDate] = useState("");
 
@@ -144,8 +146,9 @@ export function SupplierPostLoadForm({
   const [rateMode, setRateMode] = useState<"TAKE_IT" | "OPEN_BID">("TAKE_IT");
   const [allowCounterOffers, setAllowCounterOffers] = useState(false);
   const [bidWindowHours, setBidWindowHours] = useState("24");
-  const [bidUntilPickup, setBidUntilPickup] = useState(false);
   const [customBidHours, setCustomBidHours] = useState("");
+  const [softWarnCount, setSoftWarnCount] = useState<number | null>(null);
+  const softWarnAckRef = useRef(false);
   const [isRush, setIsRush] = useState(false);
   const [notes, setNotes] = useState("");
   const [tenderUrl, setTenderUrl] = useState("");
@@ -370,10 +373,10 @@ export function SupplierPostLoadForm({
         return;
       }
     }
-    if (rateMode === "OPEN_BID" && !bidUntilPickup) {
+    if (rateMode === "OPEN_BID") {
       const hours = Number(customBidHours || bidWindowHours);
-      if (!Number.isFinite(hours) || hours < 1 || hours > 336) {
-        setErr("Set a bid window between 1 and 336 hours, or choose until pickup.");
+      if (!Number.isFinite(hours) || hours < 1 || hours > 72) {
+        setErr("Open bid window must be between 1 and 72 hours.");
         return;
       }
     }
@@ -385,8 +388,16 @@ export function SupplierPostLoadForm({
       setErr("Destination city, state or province, and postal or ZIP code are required.");
       return;
     }
+    if (!pickups[0]?.companyName.trim()) {
+      setErr("Pickup company name is required (who loads the truck).");
+      return;
+    }
     if (!pickups[0]?.address.trim()) {
       setErr("Pickup 1 address is required.");
+      return;
+    }
+    if (!deliveries[0]?.companyName.trim()) {
+      setErr("Delivery company name is required (who receives the truck).");
       return;
     }
     if (!deliveries[0]?.address.trim()) {
@@ -407,11 +418,19 @@ export function SupplierPostLoadForm({
       customerOrderNo: customerOrderNo.trim() || undefined,
       poNumber: poNumber.trim() || undefined,
       customerName: customerName.trim() || undefined,
-      urgency: Number(urgency) || 3,
       pickupCountry,
       deliveryCountry,
-      pickups: pickups.map((p, i) => ({ ...p, index: i + 1 })),
-      deliveries: deliveries.map((d, i) => ({ ...d, index: i + 1 })),
+      // Shipment-level dates only — stamped onto every location for downstream sheets.
+      pickups: pickups.map((p, i) => ({
+        ...p,
+        index: i + 1,
+        date: requestedPickupDate,
+      })),
+      deliveries: deliveries.map((d, i) => ({
+        ...d,
+        index: i + 1,
+        date: requestedDeliveryDate,
+      })),
       ftlLtl,
       ltl:
         ftlLtl === "LTL"
@@ -465,7 +484,23 @@ export function SupplierPostLoadForm({
       lumber: hasAnyLumberSpec(lumber) ? lumber : undefined,
     };
 
+    if (!softWarnAckRef.current) {
+      try {
+        const check = await fetch("/api/loads/needs-repost");
+        const cj = await check.json().catch(() => ({}));
+        const n = typeof cj.count === "number" ? cj.count : 0;
+        if (check.ok && n > 0) {
+          setSoftWarnCount(n);
+          return;
+        }
+      } catch {
+        // soft-warn is best-effort; continue publish
+      }
+    }
+
     setBusy(true);
+    setSoftWarnCount(null);
+    softWarnAckRef.current = false;
     const res = await fetch("/api/loads", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -487,10 +522,8 @@ export function SupplierPostLoadForm({
         rateMode,
         allowCounterOffers: rateMode === "TAKE_IT" ? allowCounterOffers : false,
         bidWindowHours:
-          rateMode === "OPEN_BID" && !bidUntilPickup
-            ? Number(customBidHours || bidWindowHours) || 24
-            : undefined,
-        bidUntilPickup: rateMode === "OPEN_BID" ? bidUntilPickup : false,
+          rateMode === "OPEN_BID" ? Number(customBidHours || bidWindowHours) || 24 : undefined,
+        bidUntilPickup: false,
         extendedPosting,
         carrierVisibilityMode,
         visibleTiers: carrierVisibilityMode === "TIER_ASSIGNED" ? [...visibleTiers] : [],
@@ -519,6 +552,22 @@ export function SupplierPostLoadForm({
 
   return (
     <div className={pageLayout ? "rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-6" : "border-b border-emerald-200 bg-emerald-50/80 px-4 py-4"}>
+      <SoftWarnNeedsRepost
+        open={softWarnCount != null && softWarnCount > 0}
+        count={softWarnCount ?? 0}
+        onCancel={() => {
+          setSoftWarnCount(null);
+          window.location.href = "/shipments";
+        }}
+        onContinue={() => {
+          softWarnAckRef.current = true;
+          setSoftWarnCount(null);
+          queueMicrotask(() => {
+            const form = document.querySelector("form");
+            form?.requestSubmit();
+          });
+        }}
+      />
       {!pageLayout && (
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-sm font-semibold text-emerald-900">Post a lumber load (supplier)</h3>
@@ -546,8 +595,25 @@ export function SupplierPostLoadForm({
                 destinationAddress: deliveries[0]?.address,
                 destinationPhone: deliveries[0]?.phone,
               })}
+              getProductSnapshot={() => ({
+                originCity,
+                originState,
+                originZip,
+                destinationCity,
+                destinationState,
+                destinationZip,
+                equipmentType,
+                weightLbs,
+                isRush,
+                isPrivate: false,
+                rateUsd,
+                currency,
+                notes,
+                lumber,
+              })}
             />
             <LoadTemplatesPanel
+              variant="picker"
               getCurrentSnapshot={() => ({
                 originCity,
                 originState,
@@ -592,16 +658,6 @@ export function SupplierPostLoadForm({
             <input className="rounded border px-2 py-2 text-sm" placeholder="Customer order # (optional)" value={customerOrderNo} onChange={(e) => setCustomerOrderNo(e.target.value)} />
             <input className="rounded border px-2 py-2 text-sm" placeholder="PO # (optional)" value={poNumber} onChange={(e) => setPoNumber(e.target.value)} />
             <input className="rounded border px-2 py-2 text-sm" placeholder="Customer name (optional)" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
-            <label className="flex flex-col text-xs text-zinc-600 sm:col-span-1">
-              Shipment urgency (1–5)
-              <select className="mt-1 rounded border px-2 py-2 text-sm" value={urgency} onChange={(e) => setUrgency(e.target.value)}>
-                {[1, 2, 3, 4, 5].map((n) => (
-                  <option key={n} value={String(n)}>
-                    {n}
-                  </option>
-                ))}
-              </select>
-            </label>
             <label className="flex flex-col text-xs text-zinc-600">
               Requested pickup date *
               <input
@@ -634,8 +690,22 @@ export function SupplierPostLoadForm({
         <section className="rounded border border-emerald-200 bg-white/90 p-3">
           <h4 className="text-xs font-bold uppercase tracking-wide text-emerald-900">Lane</h4>
           <p className="mt-1 text-xs text-zinc-500">
-            Origin and destination for this load. Use Saved Lanes when you post often on the same route.
+            City / state / postal for the open board and rate tools. Searching a pickup or delivery address below will
+            fill these when they are empty.
           </p>
+          <div className="mt-2 sm:col-span-full">
+            <PlaceAutocomplete
+              mode="city"
+              label="Search origin city (fills city, state, postal)"
+              onResolved={(p) => {
+                if (p.city) setOriginCity(p.city);
+                if (p.state) setOriginState(p.state.slice(0, 2).toUpperCase());
+                if (p.zip) setOriginZip(p.zip);
+                if (p.countryCode === "CA") setPickupCountry("CANADA");
+                if (p.countryCode === "US") setPickupCountry("USA");
+              }}
+            />
+          </div>
           <div className="mt-2 grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
             <input
               className="rounded border px-2 py-2 text-sm"
@@ -694,13 +764,26 @@ export function SupplierPostLoadForm({
               required
             />
           </div>
+          <div className="mt-2">
+            <PlaceAutocomplete
+              mode="city"
+              label="Search destination city (fills city, state, postal)"
+              onResolved={(p) => {
+                if (p.city) setDestinationCity(p.city);
+                if (p.state) setDestinationState(p.state.slice(0, 2).toUpperCase());
+                if (p.zip) setDestinationZip(p.zip);
+                if (p.countryCode === "CA") setDeliveryCountry("CANADA");
+                if (p.countryCode === "US") setDeliveryCountry("USA");
+              }}
+            />
+          </div>
         </section>
 
         <section className="rounded border border-emerald-200 bg-white/90 p-3">
           <h4 className="text-xs font-bold uppercase tracking-wide text-emerald-900">Pickup</h4>
           <div className="mt-2 flex flex-wrap gap-3">
             <label className="text-xs text-zinc-600">
-              # Stops
+              # Pickup locations
               <select className="ml-1 rounded border px-2 py-1 text-sm" value={numPickups} onChange={(e) => setNumPickups(Number(e.target.value))}>
                 {[1, 2, 3, 4].map((n) => (
                   <option key={n} value={n}>
@@ -719,26 +802,42 @@ export function SupplierPostLoadForm({
           </div>
           {pickups.map((p, i) => (
             <div key={i} className="mt-3 grid gap-2 border-t border-emerald-100 pt-3 sm:grid-cols-2 lg:grid-cols-3">
-              <p className="text-xs font-semibold text-zinc-700 sm:col-span-2 lg:col-span-3">Pickup {i + 1}</p>
+              <p className="text-xs font-semibold text-zinc-700 sm:col-span-2 lg:col-span-3">
+                Pickup Location {i + 1}
+              </p>
+              <input
+                className="rounded border px-2 py-2 text-sm sm:col-span-2 lg:col-span-3"
+                placeholder="Company name * (mill / yard / shipper site)"
+                value={p.companyName}
+                onChange={(e) => syncPickup(i, { companyName: e.target.value })}
+                required={i === 0}
+              />
               {(i === 0 || numPickups > 1) && (
                 <div className="sm:col-span-2 lg:col-span-3">
                   <PlaceAutocomplete
                     mode="address"
-                    label={i === 0 ? "Search street address (optional, fills line + postal)" : `Search pickup ${i + 1} (optional)`}
-                    onResolved={(p) => {
-                      const line = p.line1 || p.formattedAddress;
+                    label={i === 0 ? "Search street address (fills address, city, postal)" : `Search pickup location ${i + 1}`}
+                    onResolved={(place) => {
+                      const line = place.line1 || place.formattedAddress;
+                      const zip = (place.zip || "").trim();
                       syncPickup(i, {
                         address: line,
-                        postal: p.zip,
+                        postal: zip || p.postal,
                       });
+                      if (i === 0) {
+                        if (place.city) setOriginCity(place.city);
+                        if (place.state) setOriginState(place.state.slice(0, 2).toUpperCase());
+                        if (zip) setOriginZip(zip);
+                        if (place.countryCode === "CA") setPickupCountry("CANADA");
+                        if (place.countryCode === "US") setPickupCountry("USA");
+                      }
                     }}
                   />
                 </div>
               )}
               <input className="rounded border px-2 py-2 text-sm sm:col-span-2" placeholder="Address *" value={p.address} onChange={(e) => syncPickup(i, { address: e.target.value })} required={i === 0} />
-              <input className="rounded border px-2 py-2 text-sm" placeholder="Postal / ZIP" value={p.postal} onChange={(e) => syncPickup(i, { postal: e.target.value })} list="recent-origin-zips" autoComplete="off" />
+              <input className="rounded border px-2 py-2 text-sm" placeholder="Postal / ZIP *" value={p.postal} onChange={(e) => syncPickup(i, { postal: e.target.value })} list="recent-origin-zips" autoComplete="off" required={i === 0} />
               <input className="rounded border px-2 py-2 text-sm" placeholder="Phone" value={p.phone} onChange={(e) => syncPickup(i, { phone: e.target.value })} />
-              <input className="rounded border px-2 py-2 text-sm" type="date" placeholder="Date" value={p.date} onChange={(e) => syncPickup(i, { date: e.target.value })} />
               <input className="rounded border px-2 py-2 text-sm" placeholder="Time / notes" value={p.time} onChange={(e) => syncPickup(i, { time: e.target.value })} />
               <input className="rounded border px-2 py-2 text-sm" placeholder="Window" value={p.window} onChange={(e) => syncPickup(i, { window: e.target.value })} />
               <input className="rounded border px-2 py-2 text-sm sm:col-span-2" placeholder="Appointment info" value={p.appointment} onChange={(e) => syncPickup(i, { appointment: e.target.value })} />
@@ -750,7 +849,7 @@ export function SupplierPostLoadForm({
           <h4 className="text-xs font-bold uppercase tracking-wide text-emerald-900">Delivery</h4>
           <div className="mt-2 flex flex-wrap gap-3">
             <label className="text-xs text-zinc-600">
-              # Stops
+              # Delivery locations
               <select className="ml-1 rounded border px-2 py-1 text-sm" value={numDeliveries} onChange={(e) => setNumDeliveries(Number(e.target.value))}>
                 {[1, 2, 3, 4].map((n) => (
                   <option key={n} value={n}>
@@ -769,26 +868,42 @@ export function SupplierPostLoadForm({
           </div>
           {deliveries.map((d, i) => (
             <div key={i} className="mt-3 grid gap-2 border-t border-emerald-100 pt-3 sm:grid-cols-2 lg:grid-cols-3">
-              <p className="text-xs font-semibold text-zinc-700 sm:col-span-2 lg:col-span-3">Delivery {i + 1}</p>
+              <p className="text-xs font-semibold text-zinc-700 sm:col-span-2 lg:col-span-3">
+                Delivery Location {i + 1}
+              </p>
+              <input
+                className="rounded border px-2 py-2 text-sm sm:col-span-2 lg:col-span-3"
+                placeholder="Company name * (customer / receiver / yard)"
+                value={d.companyName}
+                onChange={(e) => syncDelivery(i, { companyName: e.target.value })}
+                required={i === 0}
+              />
               {(i === 0 || numDeliveries > 1) && (
                 <div className="sm:col-span-2 lg:col-span-3">
                   <PlaceAutocomplete
                     mode="address"
-                    label={i === 0 ? "Search street address (optional, fills line + postal)" : `Search delivery ${i + 1} (optional)`}
-                    onResolved={(p) => {
-                      const line = p.line1 || p.formattedAddress;
+                    label={i === 0 ? "Search street address (fills address, city, postal)" : `Search delivery location ${i + 1}`}
+                    onResolved={(place) => {
+                      const line = place.line1 || place.formattedAddress;
+                      const zip = (place.zip || "").trim();
                       syncDelivery(i, {
                         address: line,
-                        postal: p.zip,
+                        postal: zip || d.postal,
                       });
+                      if (i === 0) {
+                        if (place.city) setDestinationCity(place.city);
+                        if (place.state) setDestinationState(place.state.slice(0, 2).toUpperCase());
+                        if (zip) setDestinationZip(zip);
+                        if (place.countryCode === "CA") setDeliveryCountry("CANADA");
+                        if (place.countryCode === "US") setDeliveryCountry("USA");
+                      }
                     }}
                   />
                 </div>
               )}
               <input className="rounded border px-2 py-2 text-sm sm:col-span-2" placeholder="Address *" value={d.address} onChange={(e) => syncDelivery(i, { address: e.target.value })} required={i === 0} />
-              <input className="rounded border px-2 py-2 text-sm" placeholder="Postal / ZIP" value={d.postal} onChange={(e) => syncDelivery(i, { postal: e.target.value })} list="recent-destination-zips" autoComplete="off" />
+              <input className="rounded border px-2 py-2 text-sm" placeholder="Postal / ZIP *" value={d.postal} onChange={(e) => syncDelivery(i, { postal: e.target.value })} list="recent-destination-zips" autoComplete="off" required={i === 0} />
               <input className="rounded border px-2 py-2 text-sm" placeholder="Phone" value={d.phone} onChange={(e) => syncDelivery(i, { phone: e.target.value })} />
-              <input className="rounded border px-2 py-2 text-sm" type="date" value={d.date} onChange={(e) => syncDelivery(i, { date: e.target.value })} required={i === 0} />
               <input className="rounded border px-2 py-2 text-sm" placeholder="Time" value={d.time} onChange={(e) => syncDelivery(i, { time: e.target.value })} />
               <input className="rounded border px-2 py-2 text-sm" placeholder="Window" value={d.window} onChange={(e) => syncDelivery(i, { window: e.target.value })} />
               <input className="rounded border px-2 py-2 text-sm sm:col-span-2" placeholder="Appointment info" value={d.appointment} onChange={(e) => syncDelivery(i, { appointment: e.target.value })} />
@@ -1195,19 +1310,18 @@ export function SupplierPostLoadForm({
 
           {rateMode === "OPEN_BID" && (
             <div className="mt-3 space-y-2">
-              <p className="text-xs font-medium text-zinc-700">Bid window</p>
+              <p className="text-xs font-medium text-zinc-700">Bid window (max 72 hours)</p>
               <div className="flex flex-wrap gap-2">
                 {BID_WINDOW_PRESETS_HOURS.map((h) => (
                   <button
                     key={h}
                     type="button"
-                    disabled={bidUntilPickup}
                     onClick={() => {
                       setBidWindowHours(String(h));
                       setCustomBidHours("");
                     }}
                     className={`rounded-full border px-3 py-1 text-xs font-medium ${
-                      !bidUntilPickup && !customBidHours && bidWindowHours === String(h)
+                      !customBidHours && bidWindowHours === String(h)
                         ? "border-lob-navy bg-lob-navy/10 text-lob-navy"
                         : "border-stone-200 bg-white text-zinc-600"
                     }`}
@@ -1220,24 +1334,14 @@ export function SupplierPostLoadForm({
                   <input
                     className="w-16 rounded border px-2 py-1 text-xs"
                     placeholder="hrs"
-                    disabled={bidUntilPickup}
                     value={customBidHours}
                     onChange={(e) => setCustomBidHours(e.target.value)}
                   />
                 </label>
               </div>
-              <label className="flex items-center gap-2 text-sm text-zinc-800">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4"
-                  checked={bidUntilPickup}
-                  onChange={(e) => setBidUntilPickup(e.target.checked)}
-                />
-                Keep bidding open until pickup
-              </label>
               <p className="text-[11px] text-zinc-500">
-                Bidding closes when the window ends, unless you accept a bid sooner. Carriers cannot book this load
-                instantly.
+                Hard max 72 hours per cycle (same load id, up to 2 cycles). Carriers get 24 hours for you to accept
+                each bid; they can withdraw or adjust anytime before you accept.
               </p>
             </div>
           )}
@@ -1290,10 +1394,22 @@ export function SupplierPostLoadForm({
           <button type="submit" disabled={busy} className="rounded-lg bg-emerald-700 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
             {busy ? "Publishing…" : "Publish to board"}
           </button>
-          <LoadTemplatesPanel
+          <SavedLanesPanel
             variant="save-only"
-            onLoad={applyTemplate}
-            getCurrentSnapshot={() => ({
+            onPick={applyLane}
+            getCurrentLane={() => ({
+              originCity,
+              originState,
+              originZip,
+              originAddress: pickups[0]?.address,
+              originPhone: pickups[0]?.phone,
+              destinationCity,
+              destinationState,
+              destinationZip,
+              destinationAddress: deliveries[0]?.address,
+              destinationPhone: deliveries[0]?.phone,
+            })}
+            getProductSnapshot={() => ({
               originCity,
               originState,
               originZip,

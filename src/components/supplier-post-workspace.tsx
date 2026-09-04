@@ -16,14 +16,13 @@ import { SupplierPostLoadForm } from "@/components/supplier-post-load-form";
 type Step =
   | { kind: "choose" }
   | { kind: "pick-lane" }
-  | { kind: "pick-recurring" }
   | { kind: "adjust-prompt"; template: LoadTemplate }
   | { kind: "recent" }
   | {
       kind: "form";
       seedLane?: SavedLane | null;
       seedTemplate?: LoadTemplate | null;
-      /** Always clear dates when coming from recurring / recent. */
+      /** Always clear dates when coming from saved lane with products / recent. */
       clearDates?: boolean;
       banner?: string;
     };
@@ -85,17 +84,7 @@ export function SupplierPostWorkspace({ companyName }: { companyName: string | n
               >
                 <span className="text-base font-semibold text-lob-navy">Saved Lanes</span>
                 <span className="mt-1 text-sm text-stone-600">
-                  Pick a lane — only fills addresses. You enter products, dates, and price fresh.
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setStep({ kind: "pick-recurring" })}
-                className="flex w-full flex-col items-start rounded-2xl border border-stone-200 bg-white p-5 text-left shadow-sm transition hover:border-lob-navy/30 hover:shadow-md"
-              >
-                <span className="text-base font-semibold text-lob-navy">Recurring Load/Lane</span>
-                <span className="mt-1 text-sm text-stone-600">
-                  Reuse a saved setup (lane + product). Dates are always new; you can adjust details if needed.
+                  Reuse addresses only, or a lane that also includes products. Dates are always entered fresh.
                 </span>
               </button>
               <button
@@ -128,6 +117,7 @@ export function SupplierPostWorkspace({ companyName }: { companyName: string | n
                 ← Back
               </button>
               <SavedLanesPanel
+                variant="picker"
                 onPick={(lane) =>
                   setStep({
                     kind: "form",
@@ -144,18 +134,6 @@ export function SupplierPostWorkspace({ companyName }: { companyName: string | n
                   destinationZip: "",
                 })}
               />
-            </div>
-          )}
-
-          {step.kind === "pick-recurring" && (
-            <div className="mx-auto max-w-xl space-y-4">
-              <button
-                type="button"
-                onClick={() => setStep({ kind: "choose" })}
-                className="text-sm font-medium text-lob-navy underline hover:no-underline"
-              >
-                ← Back
-              </button>
               <LoadTemplatesPanel
                 variant="picker"
                 onLoad={(t) => setStep({ kind: "adjust-prompt", template: t })}
@@ -218,10 +196,10 @@ export function SupplierPostWorkspace({ companyName }: { companyName: string | n
               </div>
               <button
                 type="button"
-                onClick={() => setStep({ kind: "pick-recurring" })}
+                onClick={() => setStep({ kind: "pick-lane" })}
                 className="mt-4 text-sm text-lob-navy underline hover:no-underline"
               >
-                Pick a different recurring load/lane
+                Pick a different saved lane
               </button>
             </div>
           )}

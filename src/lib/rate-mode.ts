@@ -1,3 +1,5 @@
+import { MAX_BID_WINDOW_HOURS } from "@/lib/board-visibility";
+
 export type LoadRateMode = "TAKE_IT" | "OPEN_BID";
 export type LoadBidKind = "BID" | "COUNTER";
 
@@ -15,7 +17,7 @@ export function rateModeLabel(mode: LoadRateMode | string | null | undefined): s
 
 export function rateModeHint(mode: LoadRateMode, allowCounters: boolean): string {
   if (mode === "OPEN_BID") {
-    return "Carriers submit bids. You accept one before the window closes — no instant book.";
+    return `Carriers submit bids for up to ${MAX_BID_WINDOW_HOURS}h. You accept one before the window closes — no instant book.`;
   }
   if (allowCounters) {
     return `Posted ${TAKE_IT_LABEL}. Carriers can book it as-is or send a counter.`;
@@ -55,16 +57,25 @@ export function formatBidWindowHours(hours: number): string {
   return `${hours}h`;
 }
 
+/**
+ * Open bid window end — hard-capped at 72h from now (never "until pickup" beyond that).
+ */
 export function computeBidWindowExpiresAt(args: {
   now?: Date;
   pickupAt: Date;
-  bidUntilPickup: boolean;
+  bidUntilPickup?: boolean;
   bidWindowHours?: number | null;
 }): Date {
   const now = args.now ?? new Date();
-  if (args.bidUntilPickup) return args.pickupAt;
-  const hours = args.bidWindowHours && args.bidWindowHours > 0 ? args.bidWindowHours : 24;
-  return new Date(now.getTime() + hours * 60 * 60 * 1000);
+  const hoursRaw = args.bidWindowHours && args.bidWindowHours > 0 ? args.bidWindowHours : 24;
+  const hours = Math.min(MAX_BID_WINDOW_HOURS, Math.max(1, hoursRaw));
+  const fromHours = new Date(now.getTime() + hours * 60 * 60 * 1000);
+  const hardCap = new Date(now.getTime() + MAX_BID_WINDOW_HOURS * 60 * 60 * 1000);
+  // Legacy bidUntilPickup: still hard-capped at 72h.
+  if (args.bidUntilPickup) {
+    return new Date(Math.min(args.pickupAt.getTime(), hardCap.getTime()));
+  }
+  return new Date(Math.min(fromHours.getTime(), hardCap.getTime()));
 }
 
 /** Short remaining-time label for bid windows (`3h left`, `ended`). */

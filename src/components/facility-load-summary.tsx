@@ -37,7 +37,7 @@ export function FacilityLoadSummary({ ops }: { ops: FacilityLoadOps }) {
           <dt className="text-xs text-zinc-500">Pickup</dt>
           <dd>
             {pickupWhen ? <span className="block text-zinc-600">{pickupWhen}</span> : null}
-            {formatLocationLines(ops.originLine, execution.pickups).map((line) => (
+            {formatLocationLines(ops.originLine, execution.pickups, "pickup").map((line) => (
               <span key={line} className="block">
                 {line}
               </span>
@@ -48,7 +48,7 @@ export function FacilityLoadSummary({ ops }: { ops: FacilityLoadOps }) {
           <dt className="text-xs text-zinc-500">Delivery</dt>
           <dd>
             {deliveryWhen ? <span className="block text-zinc-600">{deliveryWhen}</span> : null}
-            {formatLocationLines(ops.destinationLine, execution.deliveries).map((line) => (
+            {formatLocationLines(ops.destinationLine, execution.deliveries, "delivery").map((line) => (
               <span key={line} className="block">
                 {line}
               </span>

@@ -6,6 +6,8 @@
 
 export type LoadStopDetail = {
   index: number;
+  /** Mill yard, warehouse, or receiving company at this stop. */
+  companyName: string | null;
   address: string | null;
   postal: string | null;
   phone: string | null;
@@ -41,6 +43,7 @@ function str(v: unknown): string | null {
 function parseStop(raw: unknown, index: number): LoadStopDetail | null {
   const r = asRecord(raw);
   if (!r) return null;
+  const companyName = str(r.companyName);
   const address = str(r.address);
   const postal = str(r.postal);
   const phone = str(r.phone);
@@ -48,8 +51,10 @@ function parseStop(raw: unknown, index: number): LoadStopDetail | null {
   const time = str(r.time);
   const window = str(r.window);
   const appointment = str(r.appointment);
-  if (!address && !postal && !phone && !date && !time && !window && !appointment) return null;
-  return { index, address, postal, phone, date, time, window, appointment };
+  if (!companyName && !address && !postal && !phone && !date && !time && !window && !appointment) {
+    return null;
+  }
+  return { index, companyName, address, postal, phone, date, time, window, appointment };
 }
 
 function parseStops(raw: unknown): LoadStopDetail[] {
@@ -116,27 +121,27 @@ export function formatCityLine(city: string, state: string, zip: string): string
 }
 
 /**
- * One clean pickup/delivery block: street, city + postal once, phone, window.
- * Does not repeat a postal that is already on the city line or in the street.
+ * One clean pickup/delivery block: company, street, city + postal, phone, window.
+ * Labels use Pickup Location / Delivery Location (never "Stop").
  */
-export function formatLocationLines(cityLine: string, stops: LoadStopDetail[]): string[] {
+export function formatLocationLines(
+  cityLine: string,
+  stops: LoadStopDetail[],
+  kind: "pickup" | "delivery" = "pickup",
+): string[] {
   const lines: string[] = [];
-  const primary = stops[0] ?? null;
-  const extra = stops.slice(1);
+  if (!stops.length) {
+    pushUnique(lines, cityLine);
+    return lines;
+  }
 
-  pushUnique(lines, primary?.address ?? null);
-  pushUnique(lines, cityLine);
-  pushUnique(lines, primary?.postal ?? null);
-  pushUnique(lines, primary?.phone ?? null);
-  const extras = [
-    primary?.window && `Window: ${primary.window}`,
-    primary?.appointment && `Appt: ${primary.appointment}`,
-  ].filter(Boolean) as string[];
-  for (const e of extras) pushUnique(lines, e);
+  const placeLabel = kind === "pickup" ? "Pickup Location" : "Delivery Location";
 
-  extra.forEach((stop) => {
+  stops.forEach((stop) => {
     const block: string[] = [];
+    pushUnique(block, stop.companyName);
     pushUnique(block, stop.address);
+    if (stop.index === 1) pushUnique(block, cityLine);
     pushUnique(block, stop.postal);
     pushUnique(block, stop.phone);
     const more = [
@@ -145,8 +150,7 @@ export function formatLocationLines(cityLine: string, stops: LoadStopDetail[]): 
     ].filter(Boolean) as string[];
     for (const m of more) pushUnique(block, m);
     if (!block.length) return;
-    const label = `Stop ${stop.index}`;
-    lines.push(`${label}: ${block.join(" · ")}`);
+    lines.push(`${placeLabel} ${stop.index}: ${block.join(" · ")}`);
   });
 
   return lines;

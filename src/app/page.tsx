@@ -138,13 +138,12 @@ export default async function Home() {
       }
     }
 
-    const pickupCutoff = new Date(Date.now() - 48 * 60 * 60 * 1000);
+    const { postedOnBoardWhere } = await import("@/lib/board-visibility");
+    const { sweepLoadLifecycle } = await import("@/lib/load-lifecycle");
+    await sweepLoadLifecycle().catch(() => {});
 
     loads = await prisma.load.findMany({
-      where: {
-        status: LoadStatus.POSTED,
-        requestedPickupAt: { gte: pickupCutoff },
-      },
+      where: postedOnBoardWhere(),
       orderBy: [{ isRush: "desc" }, { createdAt: "desc" }],
       include: loadBoardInclude,
       take: 200,
