@@ -2,6 +2,7 @@ import { VerificationStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { capacityScorecardsForCarriers } from "@/lib/capacity-scorecard";
 import { parseDateInputToUtc, validateCapacityAvailabilityWindow } from "@/lib/capacity-window";
 import { normalizeStoredPostal } from "@/lib/postal";
 import { prisma } from "@/lib/prisma";
@@ -94,6 +95,7 @@ export async function GET(req: Request) {
       availableFrom: true,
       availableUntil: true,
       createdAt: true,
+      carrierCompanyId: true,
       // Carrier reveal stays minimal: type + owner-op flag + verification only.
       // Identity (name, DOT/MC) is intentionally omitted on the open board.
       carrier: {
@@ -105,6 +107,8 @@ export async function GET(req: Request) {
       },
     },
   });
+
+  const scores = await capacityScorecardsForCarriers(rows.map((r) => r.carrierCompanyId));
 
   const data = rows.map((r) => ({
     id: r.id,
@@ -123,6 +127,7 @@ export async function GET(req: Request) {
     carrierType: r.carrier?.carrierType ?? null,
     isOwnerOperator: r.carrier?.isOwnerOperator ?? false,
     carrierVerified: r.carrier?.verificationStatus === "APPROVED",
+    scorecard: scores.get(r.carrierCompanyId) ?? null,
   }));
 
   return NextResponse.json({ data });

@@ -3,11 +3,13 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { CarrierTypeTag } from "@/components/carrier-type-tag";
+import { CapacityScoreChips } from "@/components/capacity-score-chips";
 import { RequestCapacityModal } from "@/components/request-capacity-modal";
 import { Button } from "@/components/ui/button";
 import { formatDisplayDate } from "@/lib/format-display-date";
 import { inferOfferCurrency } from "@/lib/lane-currency";
 import { formatMoney } from "@/lib/money";
+import type { CapacityScorecardPublic } from "@/lib/capacity-scorecard";
 import { PlaceAutocomplete } from "@/components/place-autocomplete";
 import { LUMBER_EQUIPMENT } from "@/lib/lumber-equipment";
 import Link from "next/link";
@@ -35,6 +37,7 @@ type OpenRow = LaneRow & {
   carrierType: "ASSET_BASED" | "BROKER" | null;
   isOwnerOperator: boolean;
   carrierVerified: boolean;
+  scorecard: CapacityScorecardPublic | null;
 };
 
 /** Carrier's own posts — they already know who they are. */
@@ -341,8 +344,8 @@ export function CapacityWorkspace() {
           <h2 className="text-lg font-semibold text-zinc-900">Search carrier capacity</h2>
           <p className="mt-1 text-sm text-zinc-600">
             Filter by city or postal (optional). Request a truck with an existing load or create one from the lane —
-            identity stays
-            hidden until they accept.
+            identity stays hidden until they accept. Score chips use 90-day accept / reply / finish rates (anonymous;
+            needs a few decisions before numbers show). Carriers you excluded in preferences never appear here.
           </p>
           <div className="mt-3 grid max-w-2xl gap-2 sm:grid-cols-2">
             <PlaceAutocomplete
@@ -403,24 +406,27 @@ export function CapacityWorkspace() {
                   <tr key={r.id} className="border-b border-zinc-100">
                     <td className="px-3 py-2">{capacityLaneLabel(r)}</td>
                     <td className="px-3 py-2">
-                      <div className="flex flex-wrap items-center gap-1">
-                        {r.carrierType || r.isOwnerOperator ? (
-                          <CarrierTypeTag
-                            carrierType={r.carrierType}
-                            isOwnerOperator={r.isOwnerOperator}
-                            compact
-                          />
-                        ) : (
-                          <span className="text-[11px] text-zinc-400 italic">Unverified</span>
-                        )}
-                        {r.carrierVerified && (
-                          <span
-                            className="inline-flex items-center rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-900 ring-1 ring-emerald-300"
-                            title="Carrier identity & docs verified by LOB"
-                          >
-                            ✓ Verified
-                          </span>
-                        )}
+                      <div className="flex flex-col gap-1">
+                        <div className="flex flex-wrap items-center gap-1">
+                          {r.carrierType || r.isOwnerOperator ? (
+                            <CarrierTypeTag
+                              carrierType={r.carrierType}
+                              isOwnerOperator={r.isOwnerOperator}
+                              compact
+                            />
+                          ) : (
+                            <span className="text-[11px] text-zinc-400 italic">Unverified</span>
+                          )}
+                          {r.carrierVerified && (
+                            <span
+                              className="inline-flex items-center rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-900 ring-1 ring-emerald-300"
+                              title="Carrier identity & docs verified by LOB"
+                            >
+                              ✓ Verified
+                            </span>
+                          )}
+                        </div>
+                        <CapacityScoreChips score={r.scorecard} />
                       </div>
                     </td>
                     <td className="px-3 py-2">{r.equipmentType}</td>
@@ -507,6 +513,7 @@ export function CapacityWorkspace() {
           capacityId={requestFor.id}
           capacityLabel={capacityLaneLabel(requestFor)}
           askingLabel={capacityRateLabel(requestFor)}
+          scorecard={requestFor.scorecard}
           prefill={{
             originZip: requestFor.originZip,
             originCity: requestFor.originCity,

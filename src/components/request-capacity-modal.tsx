@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { CapacityScoreChips } from "@/components/capacity-score-chips";
 import { formatDisplayDate } from "@/lib/format-display-date";
 import { formatMoney } from "@/lib/money";
+import type { CapacityScorecardPublic } from "@/lib/capacity-scorecard";
 
 type MatchableLoad = {
   id: string;
@@ -41,6 +43,7 @@ export function RequestCapacityModal({
   capacityLabel,
   askingLabel,
   prefill,
+  scorecard,
   open,
   onClose,
   onSent,
@@ -49,6 +52,7 @@ export function RequestCapacityModal({
   capacityLabel: string;
   askingLabel: string;
   prefill: CapacitySpawnPrefill;
+  scorecard?: CapacityScorecardPublic | null;
   open: boolean;
   onClose: () => void;
   onSent: (info?: { spawned?: boolean; referenceNumber?: string | null }) => void;
@@ -174,6 +178,7 @@ export function RequestCapacityModal({
         <p className="mt-2 text-xs text-zinc-500">
           Capacity: {capacityLabel} · Asking {askingLabel} · Equip {prefill.equipmentType}
         </p>
+        {scorecard ? <CapacityScoreChips score={scorecard} className="mt-2" /> : null}
 
         <div className="mt-4 flex gap-1 rounded-lg border border-stone-200 bg-stone-50 p-1">
           <button
