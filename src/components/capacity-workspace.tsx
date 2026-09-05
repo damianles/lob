@@ -340,7 +340,8 @@ export function CapacityWorkspace() {
         <section>
           <h2 className="text-lg font-semibold text-zinc-900">Search carrier capacity</h2>
           <p className="mt-1 text-sm text-zinc-600">
-            Filter by city or postal (optional). Request a truck by attaching one of your posted loads — identity stays
+            Filter by city or postal (optional). Request a truck with an existing load or create one from the lane —
+            identity stays
             hidden until they accept.
           </p>
           <div className="mt-3 grid max-w-2xl gap-2 sm:grid-cols-2">
@@ -506,9 +507,25 @@ export function CapacityWorkspace() {
           capacityId={requestFor.id}
           capacityLabel={capacityLaneLabel(requestFor)}
           askingLabel={capacityRateLabel(requestFor)}
+          prefill={{
+            originZip: requestFor.originZip,
+            originCity: requestFor.originCity,
+            originState: requestFor.originState,
+            destinationZip: requestFor.destinationZip,
+            destinationCity: requestFor.destinationCity,
+            destinationState: requestFor.destinationState,
+            equipmentType: requestFor.equipmentType,
+            askingRateUsd: requestFor.askingRateUsd,
+            availableFrom: requestFor.availableFrom,
+            availableUntil: requestFor.availableUntil,
+          }}
           onClose={() => setRequestFor(null)}
-          onSent={() => {
-            setMsg("Request sent. Carrier identity stays hidden until they accept.");
+          onSent={(info) => {
+            setMsg(
+              info?.spawned && info.referenceNumber
+                ? `Created ${info.referenceNumber} and sent request. Carrier stays anonymous until accept.`
+                : "Request sent. Carrier identity stays hidden until they accept.",
+            );
             void loadInterests();
           }}
         />

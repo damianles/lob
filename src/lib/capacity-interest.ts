@@ -1,12 +1,20 @@
+import { randomUUID } from "node:crypto";
 import {
   CapacityInterestStatus,
   LoadBidStatus,
+  LoadRateMode,
   LoadStatus,
   OfferCurrency,
   PostedLaneOutcome,
   Prisma,
+  RateObservationSource,
 } from "@prisma/client";
 
+import { allocateLobReference } from "@/lib/allocate-lob-reference";
+import { canonicalCityKey } from "@/lib/city-canonical";
+import { inferOfferCurrency } from "@/lib/lane-currency";
+import { normalizeEquipmentForBenchmark, zip5ForBenchmark } from "@/lib/market-rate-lane";
+import { parseRequestedPickupAt } from "@/lib/parse-pickup-date";
 import { prisma } from "@/lib/prisma";
 
 export class CapacityInterestError extends Error {
@@ -17,6 +25,164 @@ export class CapacityInterestError extends Error {
     super(message);
     this.name = "CapacityInterestError";
   }
+}
+
+export type CapacitySpawnInput = {
+  weightLbs: number;
+  requestedPickupAt: string;
+  requestedDeliveryAt?: string;
+  /** Override capacity asking rate when set. */
+  offeredRateUsd?: number;
+  originCity?: string;
+  originState?: string;
+  destinationCity?: string;
+  destinationState?: string;
+};
+
+/**
+ * Create a Firm Rate POSTED load from an open capacity lane, then return its id.
+ * Used when the mill has no matching posted load and wants to request this truck.
+ */
+export async function spawnLoadFromCapacity(args: {
+  shipperCompanyId: string;
+  createdByUserId: string;
+  capacity: {
+    id: string;
+    originZip: string;
+    originCity: string | null;
+    originState: string | null;
+    destinationZip: string;
+    destinationCity: string | null;
+    destinationState: string | null;
+    equipmentType: string;
+    askingRateUsd: Prisma.Decimal | number;
+    availableFrom: Date;
+    availableUntil: Date;
+  };
+  spawn: CapacitySpawnInput;
+}): Promise<{ loadId: string; referenceNumber: string }> {
+  const originCity = (args.spawn.originCity?.trim() || args.capacity.originCity?.trim() || "").trim();
+  const originState = (args.spawn.originState?.trim() || args.capacity.originState?.trim() || "")
+    .trim()
+    .toUpperCase()
+    .slice(0, 2);
+  const destinationCity = (
+    args.spawn.destinationCity?.trim() ||
+    args.capacity.destinationCity?.trim() ||
+    ""
+  ).trim();
+  const destinationState = (
+    args.spawn.destinationState?.trim() ||
+    args.capacity.destinationState?.trim() ||
+    ""
+  )
+    .trim()
+    .toUpperCase()
+    .slice(0, 2);
+
+  if (originCity.length < 2 || originState.length !== 2) {
+    throw new CapacityInterestError("Origin city and 2-letter state/province are required to create a load.", 400);
+  }
+  if (destinationCity.length < 2 || destinationState.length !== 2) {
+    throw new CapacityInterestError(
+      "Destination city and 2-letter state/province are required to create a load.",
+      400,
+    );
+  }
+  if (!Number.isFinite(args.spawn.weightLbs) || args.spawn.weightLbs < 1) {
+    throw new CapacityInterestError("Enter a positive weight (lbs).", 400);
+  }
+
+  const pickupAt = parseRequestedPickupAt(args.spawn.requestedPickupAt);
+  if (!pickupAt) {
+    throw new CapacityInterestError("Invalid pickup date.", 400);
+  }
+
+  const fromDay = new Date(
+    Date.UTC(
+      args.capacity.availableFrom.getUTCFullYear(),
+      args.capacity.availableFrom.getUTCMonth(),
+      args.capacity.availableFrom.getUTCDate(),
+    ),
+  );
+  const untilDay = new Date(
+    Date.UTC(
+      args.capacity.availableUntil.getUTCFullYear(),
+      args.capacity.availableUntil.getUTCMonth(),
+      args.capacity.availableUntil.getUTCDate(),
+      23,
+      59,
+      59,
+      999,
+    ),
+  );
+  if (pickupAt < fromDay || pickupAt > untilDay) {
+    throw new CapacityInterestError("Pickup date must fall inside this capacity’s available window.", 400);
+  }
+
+  let deliveryAt: Date | null = null;
+  if (args.spawn.requestedDeliveryAt) {
+    deliveryAt = parseRequestedPickupAt(args.spawn.requestedDeliveryAt);
+    if (!deliveryAt) throw new CapacityInterestError("Invalid delivery date.", 400);
+  }
+
+  const rateNative =
+    args.spawn.offeredRateUsd != null && Number.isFinite(args.spawn.offeredRateUsd)
+      ? args.spawn.offeredRateUsd
+      : Number(args.capacity.askingRateUsd);
+  if (!(rateNative > 0)) {
+    throw new CapacityInterestError("Rate must be positive.", 400);
+  }
+
+  const offerCurrency = inferOfferCurrency(originState, destinationState) as OfferCurrency;
+
+  return prisma.$transaction(async (tx) => {
+    const referenceNumber = await allocateLobReference(tx, args.shipperCompanyId);
+    const row = await tx.load.create({
+      data: {
+        referenceNumber,
+        originCity,
+        originState,
+        originZip: args.capacity.originZip,
+        destinationCity,
+        destinationState,
+        destinationZip: args.capacity.destinationZip,
+        weightLbs: Math.round(args.spawn.weightLbs),
+        equipmentType: args.capacity.equipmentType,
+        isRush: false,
+        isPrivate: true,
+        offerCurrency,
+        offeredRateUsd: new Prisma.Decimal(rateNative.toFixed(2)),
+        rateMode: LoadRateMode.TAKE_IT,
+        allowCounterOffers: false,
+        shipperCompanyId: args.shipperCompanyId,
+        createdByUserId: args.createdByUserId,
+        uniquePickupCode: randomUUID().slice(0, 6).toUpperCase(),
+        requestedPickupAt: pickupAt,
+        requestedDeliveryAt: deliveryAt,
+        extendedPosting: {
+          capacitySpawn: { capacityOfferId: args.capacity.id },
+        },
+        laneRateObservation: {
+          create: {
+            observedAt: new Date(),
+            originState,
+            destState: destinationState,
+            originCityCanon: canonicalCityKey(originCity),
+            destCityCanon: canonicalCityKey(destinationCity),
+            originZip5: zip5ForBenchmark(args.capacity.originZip),
+            destZip5: zip5ForBenchmark(args.capacity.destinationZip),
+            equipmentNorm: normalizeEquipmentForBenchmark(args.capacity.equipmentType),
+            rateUsd: new Prisma.Decimal(rateNative.toFixed(2)),
+            offerCurrency,
+            source: RateObservationSource.POSTED,
+            outcome: "OPEN",
+          },
+        },
+      },
+    });
+    return { loadId: row.id, referenceNumber: row.referenceNumber };
+  });
 }
 
 /**
