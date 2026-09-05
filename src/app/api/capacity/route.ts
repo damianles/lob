@@ -3,16 +3,17 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { parseDateInputToUtc, validateCapacityAvailabilityWindow } from "@/lib/capacity-window";
+import { normalizeStoredPostal } from "@/lib/postal";
 import { prisma } from "@/lib/prisma";
 import { getActorContext } from "@/lib/request-context";
 
 const createSchema = z.object({
-  originZip: z.string().min(5).max(10),
-  originCity: z.string().optional(),
-  originState: z.string().max(2).optional(),
-  destinationZip: z.string().min(5).max(10),
-  destinationCity: z.string().optional(),
-  destinationState: z.string().max(2).optional(),
+  originZip: z.string().min(3).max(12),
+  originCity: z.string().trim().min(1).max(80).optional(),
+  originState: z.string().trim().max(2).optional(),
+  destinationZip: z.string().min(3).max(12),
+  destinationCity: z.string().trim().min(1).max(80).optional(),
+  destinationState: z.string().trim().max(2).optional(),
   equipmentType: z.string().min(1),
   askingRateUsd: z.number().positive(),
   notes: z.string().max(500).optional(),
@@ -50,14 +51,31 @@ export async function GET(req: Request) {
     blockedCarrierIds = ex.map((e) => e.carrierCompanyId);
   }
 
+  const originNeedle = originZip ? normalizeStoredPostal(originZip).replace(/\s+/g, "") : "";
+  const destNeedle = destinationZip ? normalizeStoredPostal(destinationZip).replace(/\s+/g, "") : "";
+
   const rows = await prisma.capacityOffer.findMany({
     where: {
       status: "OPEN",
       availableUntil: { gte: today },
       ...(blockedCarrierIds.length ? { carrierCompanyId: { notIn: blockedCarrierIds } } : {}),
-      ...(originZip ? { originZip: { startsWith: originZip.replace(/\D/g, "").slice(0, 5) } } : {}),
-      ...(destinationZip
-        ? { destinationZip: { startsWith: destinationZip.replace(/\D/g, "").slice(0, 5) } }
+      ...(originNeedle
+        ? {
+            OR: [
+              { originZip: { startsWith: originNeedle.slice(0, 5), mode: "insensitive" } },
+              { originZip: { contains: originNeedle.slice(0, 3), mode: "insensitive" } },
+              { originCity: { contains: originZip, mode: "insensitive" } },
+            ],
+          }
+        : {}),
+      ...(destNeedle
+        ? {
+            OR: [
+              { destinationZip: { startsWith: destNeedle.slice(0, 5), mode: "insensitive" } },
+              { destinationZip: { contains: destNeedle.slice(0, 3), mode: "insensitive" } },
+              { destinationCity: { contains: destinationZip, mode: "insensitive" } },
+            ],
+          }
         : {}),
     },
     orderBy: { updatedAt: "desc" },
@@ -147,15 +165,21 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: windowErr }, { status: 400 });
   }
 
+  const originZip = normalizeStoredPostal(parsed.data.originZip);
+  const destinationZip = normalizeStoredPostal(parsed.data.destinationZip);
+  if (originZip.length < 3 || destinationZip.length < 3) {
+    return NextResponse.json({ error: "Enter a valid origin and destination postal / ZIP." }, { status: 400 });
+  }
+
   const row = await prisma.capacityOffer.create({
     data: {
       carrierCompanyId: actor.companyId,
-      originZip: parsed.data.originZip.replace(/\D/g, "").slice(0, 5),
-      originCity: parsed.data.originCity,
-      originState: parsed.data.originState?.toUpperCase(),
-      destinationZip: parsed.data.destinationZip.replace(/\D/g, "").slice(0, 5),
-      destinationCity: parsed.data.destinationCity,
-      destinationState: parsed.data.destinationState?.toUpperCase(),
+      originZip,
+      originCity: parsed.data.originCity?.trim() || null,
+      originState: parsed.data.originState?.toUpperCase() || null,
+      destinationZip,
+      destinationCity: parsed.data.destinationCity?.trim() || null,
+      destinationState: parsed.data.destinationState?.toUpperCase() || null,
       equipmentType: parsed.data.equipmentType,
       askingRateUsd: parsed.data.askingRateUsd,
       notes: parsed.data.notes,

@@ -26,3 +26,18 @@ export function looksLikeUsZip(raw: string): boolean {
   const d = raw.replace(/\D/g, "");
   return d.length >= 5;
 }
+
+/**
+ * Store a US ZIP or Canadian postal for CapacityOffer / filters.
+ * Do not strip letters — Canadian codes become nonsense (e.g. T2G 3B4 → 234).
+ */
+export function normalizeStoredPostal(raw: string): string {
+  const t = raw.trim().toUpperCase().replace(/\s+/g, "");
+  if (!t) return "";
+  if (looksLikeCanadianPostal(t)) {
+    if (t.length >= 6) return `${t.slice(0, 3)} ${t.slice(3, 6)}`;
+    return t.slice(0, 3);
+  }
+  const digits = t.replace(/\D/g, "");
+  return digits.length >= 5 ? digits.slice(0, 5) : t;
+}

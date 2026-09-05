@@ -42,6 +42,17 @@ function capacityRateLabel(r: LaneRow): string {
   return formatMoney(r.askingRateUsd, ccy);
 }
 
+/** Prefer city names — ZIP/postal alone is opaque to customers. */
+function capacityPlaceLabel(city: string | null, state: string | null, zip: string): string {
+  const place = [city?.trim(), state?.trim()].filter(Boolean).join(", ");
+  if (place) return place;
+  return zip.trim() || "—";
+}
+
+function capacityLaneLabel(r: LaneRow): string {
+  return `${capacityPlaceLabel(r.originCity, r.originState, r.originZip)} → ${capacityPlaceLabel(r.destinationCity, r.destinationState, r.destinationZip)}`;
+}
+
 function ymd(d: Date) {
   return d.toISOString().slice(0, 10);
 }
@@ -63,7 +74,11 @@ export function CapacityWorkspace() {
 
   const [post, setPost] = useState({
     originZip: "",
+    originCity: "",
+    originState: "",
     destinationZip: "",
+    destinationCity: "",
+    destinationState: "",
     equipmentType: "SB",
     askingRateUsd: "",
     notes: "",
@@ -79,8 +94,8 @@ export function CapacityWorkspace() {
 
   const loadShipper = useCallback(async () => {
     const params = new URLSearchParams();
-    if (originZip.replace(/\D/g, "").length >= 3) params.set("originZip", originZip);
-    if (destinationZip.replace(/\D/g, "").length >= 3) params.set("destinationZip", destinationZip);
+    if (originZip.trim().length >= 2) params.set("originZip", originZip);
+    if (destinationZip.trim().length >= 2) params.set("destinationZip", destinationZip);
     const r = await fetch(`/api/capacity?${params}`);
     if (!r.ok) {
       setShipperRows([]);
@@ -121,6 +136,14 @@ export function CapacityWorkspace() {
   async function submitCapacity(e: React.FormEvent) {
     e.preventDefault();
     setMsg(null);
+    if (!post.originCity.trim() || !post.destinationCity.trim()) {
+      setMsg("Enter origin and destination cities (search fills them from Places).");
+      return;
+    }
+    if (!post.originZip.trim() || !post.destinationZip.trim()) {
+      setMsg("Enter origin and destination postal / ZIP codes.");
+      return;
+    }
     const rate = Number(post.askingRateUsd);
     if (!Number.isFinite(rate) || rate <= 0) {
       setMsg("Enter a valid asking rate.");
@@ -131,7 +154,11 @@ export function CapacityWorkspace() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         originZip: post.originZip,
+        originCity: post.originCity.trim() || undefined,
+        originState: post.originState.trim() || undefined,
         destinationZip: post.destinationZip,
+        destinationCity: post.destinationCity.trim() || undefined,
+        destinationState: post.destinationState.trim() || undefined,
         equipmentType: post.equipmentType,
         askingRateUsd: rate,
         notes: post.notes || undefined,
@@ -207,31 +234,37 @@ export function CapacityWorkspace() {
       {isShipperLike && (
         <section>
           <h2 className="text-lg font-semibold text-zinc-900">Search carrier capacity</h2>
-          <p className="mt-1 text-sm text-zinc-600">Filter by ZIP (optional). Only active (unexpired) windows appear.</p>
+          <p className="mt-1 text-sm text-zinc-600">Filter by city or postal (optional). Only active windows appear.</p>
           <div className="mt-3 grid max-w-2xl gap-2 sm:grid-cols-2">
             <PlaceAutocomplete
               mode="geocode"
-              label="Search origin (fills ZIP from Places)"
+              label="Search origin"
               placeholder="City or postal code…"
-              onResolved={(p) => p.zip && setOriginZip(p.zip.toUpperCase())}
+              onResolved={(p) => {
+                if (p.city) setOriginZip(p.city);
+                else if (p.zip) setOriginZip(p.zip.toUpperCase());
+              }}
             />
             <PlaceAutocomplete
               mode="geocode"
-              label="Search destination (fills ZIP from Places)"
+              label="Search destination"
               placeholder="City or postal code…"
-              onResolved={(p) => p.zip && setDestinationZip(p.zip.toUpperCase())}
+              onResolved={(p) => {
+                if (p.city) setDestinationZip(p.city);
+                else if (p.zip) setDestinationZip(p.zip.toUpperCase());
+              }}
             />
           </div>
           <div className="mt-2 flex flex-wrap gap-3">
             <input
               className="rounded border px-3 py-2 text-sm"
-              placeholder="Origin ZIP"
+              placeholder="Origin city or postal"
               value={originZip}
               onChange={(e) => setOriginZip(e.target.value)}
             />
             <input
               className="rounded border px-3 py-2 text-sm"
-              placeholder="Destination ZIP"
+              placeholder="Destination city or postal"
               value={destinationZip}
               onChange={(e) => setDestinationZip(e.target.value)}
             />
@@ -258,10 +291,7 @@ export function CapacityWorkspace() {
               <tbody>
                 {shipperRows.map((r) => (
                   <tr key={r.id} className="border-b border-zinc-100">
-                    <td className="px-3 py-2">
-                      {[r.originCity, r.originState].filter(Boolean).join(", ") || r.originZip} →{" "}
-                      {[r.destinationCity, r.destinationState].filter(Boolean).join(", ") || r.destinationZip}
-                    </td>
+                    <td className="px-3 py-2">{capacityLaneLabel(r)}</td>
                     <td className="px-3 py-2">
                       <div className="flex flex-wrap items-center gap-1">
                         {r.carrierType || r.isOwnerOperator ? (
@@ -311,20 +341,28 @@ export function CapacityWorkspace() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <PlaceAutocomplete
                   mode="geocode"
-                  label="Search origin (fills origin ZIP)"
+                  label="Search origin"
                   placeholder="City or postal code…"
                   onResolved={(p) => {
-                    if (p.zip) setPost((o) => ({ ...o, originZip: p.zip.toUpperCase() }));
+                    setPost((o) => ({
+                      ...o,
+                      originZip: (p.zip || o.originZip).toUpperCase(),
+                      originCity: p.city || o.originCity,
+                      originState: (p.state || o.originState).slice(0, 2).toUpperCase(),
+                    }));
                   }}
                 />
                 <PlaceAutocomplete
                   mode="geocode"
-                  label="Search destination (fills dest ZIP)"
+                  label="Search destination"
                   placeholder="City or postal code…"
                   onResolved={(p) => {
-                    if (p.zip) {
-                      setPost((o) => ({ ...o, destinationZip: p.zip.toUpperCase() }));
-                    }
+                    setPost((o) => ({
+                      ...o,
+                      destinationZip: (p.zip || o.destinationZip).toUpperCase(),
+                      destinationCity: p.city || o.destinationCity,
+                      destinationState: (p.state || o.destinationState).slice(0, 2).toUpperCase(),
+                    }));
                   }}
                 />
               </div>
@@ -332,14 +370,44 @@ export function CapacityWorkspace() {
                 <input
                   required
                   className="rounded border px-3 py-2 text-sm"
-                  placeholder="Origin ZIP *"
-                  value={post.originZip}
-                  onChange={(e) => setPost((p) => ({ ...p, originZip: e.target.value }))}
+                  placeholder="Origin city *"
+                  value={post.originCity}
+                  onChange={(e) => setPost((p) => ({ ...p, originCity: e.target.value }))}
                 />
                 <input
                   required
                   className="rounded border px-3 py-2 text-sm"
-                  placeholder="Destination ZIP *"
+                  placeholder="Destination city *"
+                  value={post.destinationCity}
+                  onChange={(e) => setPost((p) => ({ ...p, destinationCity: e.target.value }))}
+                />
+              </div>
+              <div className="grid gap-3 sm:grid-cols-4">
+                <input
+                  className="rounded border px-3 py-2 text-sm"
+                  placeholder="Origin ST/prov"
+                  maxLength={2}
+                  value={post.originState}
+                  onChange={(e) => setPost((p) => ({ ...p, originState: e.target.value.toUpperCase() }))}
+                />
+                <input
+                  required
+                  className="rounded border px-3 py-2 text-sm"
+                  placeholder="Origin ZIP/postal *"
+                  value={post.originZip}
+                  onChange={(e) => setPost((p) => ({ ...p, originZip: e.target.value }))}
+                />
+                <input
+                  className="rounded border px-3 py-2 text-sm"
+                  placeholder="Dest ST/prov"
+                  maxLength={2}
+                  value={post.destinationState}
+                  onChange={(e) => setPost((p) => ({ ...p, destinationState: e.target.value.toUpperCase() }))}
+                />
+                <input
+                  required
+                  className="rounded border px-3 py-2 text-sm"
+                  placeholder="Dest ZIP/postal *"
                   value={post.destinationZip}
                   onChange={(e) => setPost((p) => ({ ...p, destinationZip: e.target.value }))}
                 />
@@ -413,7 +481,7 @@ export function CapacityWorkspace() {
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="font-medium text-zinc-900">
-                      {r.originZip} → {r.destinationZip} · {r.equipmentType} · {capacityRateLabel(r)}
+                      {capacityLaneLabel(r)} · {r.equipmentType} · {capacityRateLabel(r)}
                     </p>
                     <p className="mt-1 text-xs text-zinc-500">{fmtRange(r.availableFrom, r.availableUntil)}</p>
                     {r.isExpired && (
