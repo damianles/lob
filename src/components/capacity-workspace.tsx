@@ -12,6 +12,7 @@ import { formatMoney } from "@/lib/money";
 import type { CapacityScorecardPublic } from "@/lib/capacity-scorecard-shared";
 import { PlaceAutocomplete } from "@/components/place-autocomplete";
 import { LUMBER_EQUIPMENT } from "@/lib/lumber-equipment";
+import { placeLaneFields } from "@/lib/place-helpers";
 import Link from "next/link";
 
 type Me = { role?: string; companyId?: string | null };
@@ -368,8 +369,9 @@ export function CapacityWorkspace() {
               label="Search origin"
               placeholder="City or postal code…"
               onResolved={(p) => {
-                if (p.city) setOriginZip(p.city);
-                else if (p.zip) setOriginZip(p.zip.toUpperCase());
+                const lane = placeLaneFields(p);
+                // Filter matches city or postal; prefer city for readable search, keep zip available via API OR.
+                setOriginZip(lane.city || lane.zip);
               }}
             />
             <PlaceAutocomplete
@@ -377,8 +379,8 @@ export function CapacityWorkspace() {
               label="Search destination"
               placeholder="City or postal code…"
               onResolved={(p) => {
-                if (p.city) setDestinationZip(p.city);
-                else if (p.zip) setDestinationZip(p.zip.toUpperCase());
+                const lane = placeLaneFields(p);
+                setDestinationZip(lane.city || lane.zip);
               }}
             />
           </div>
@@ -618,7 +620,8 @@ export function CapacityWorkspace() {
         <section>
           <h2 className="text-lg font-semibold text-zinc-900">Post capacity</h2>
           <p className="mt-1 text-sm text-zinc-600">
-            Search fills city, province/state, and postal. Lanes are shown as <strong>city → city</strong> on the board.
+            Search fills <strong>city, province/state, and postal</strong>. The board shows{" "}
+            <strong>city → city</strong> only — postals stay on the form and in the database for matching.
           </p>
           <form onSubmit={submitCapacity} className="mt-4 grid max-w-xl gap-3 rounded-lg border border-zinc-200 bg-white p-4">
             <div className="space-y-2">
@@ -628,11 +631,13 @@ export function CapacityWorkspace() {
                   label="Search origin"
                   placeholder="City or postal code…"
                   onResolved={(p) => {
+                    const lane = placeLaneFields(p);
                     setPost((o) => ({
                       ...o,
-                      originZip: (p.zip || o.originZip).toUpperCase(),
-                      originCity: p.city || o.originCity,
-                      originState: (p.state || o.originState).slice(0, 2).toUpperCase(),
+                      originCity: lane.city || o.originCity,
+                      originState: lane.state || o.originState,
+                      // Always keep / refresh postal when Places returns one.
+                      originZip: lane.zip || o.originZip,
                     }));
                   }}
                 />
@@ -641,11 +646,12 @@ export function CapacityWorkspace() {
                   label="Search destination"
                   placeholder="City or postal code…"
                   onResolved={(p) => {
+                    const lane = placeLaneFields(p);
                     setPost((o) => ({
                       ...o,
-                      destinationZip: (p.zip || o.destinationZip).toUpperCase(),
-                      destinationCity: p.city || o.destinationCity,
-                      destinationState: (p.state || o.destinationState).slice(0, 2).toUpperCase(),
+                      destinationCity: lane.city || o.destinationCity,
+                      destinationState: lane.state || o.destinationState,
+                      destinationZip: lane.zip || o.destinationZip,
                     }));
                   }}
                 />

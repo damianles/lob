@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { SoftWarnNeedsRepost } from "@/components/needs-repost-panel";
 import { AddressDataLists } from "@/components/address-datalists";
 import { PlaceAutocomplete } from "@/components/place-autocomplete";
+import { placeLaneFields } from "@/lib/place-helpers";
 import { LanePriceChip } from "@/components/lane-price-chip";
 import { LoadTemplatesPanel, type LoadTemplate } from "@/components/load-templates-panel";
 import { LumberSpecForm } from "@/components/lumber-spec-form";
@@ -698,9 +699,10 @@ export function SupplierPostLoadForm({
               mode="city"
               label="Search origin city (fills city, state, postal)"
               onResolved={(p) => {
-                if (p.city) setOriginCity(p.city);
-                if (p.state) setOriginState(p.state.slice(0, 2).toUpperCase());
-                if (p.zip) setOriginZip(p.zip);
+                const lane = placeLaneFields(p);
+                if (lane.city) setOriginCity(lane.city);
+                if (lane.state) setOriginState(lane.state);
+                if (lane.zip) setOriginZip(lane.zip);
                 if (p.countryCode === "CA") setPickupCountry("CANADA");
                 if (p.countryCode === "US") setPickupCountry("USA");
               }}
@@ -769,9 +771,10 @@ export function SupplierPostLoadForm({
               mode="city"
               label="Search destination city (fills city, state, postal)"
               onResolved={(p) => {
-                if (p.city) setDestinationCity(p.city);
-                if (p.state) setDestinationState(p.state.slice(0, 2).toUpperCase());
-                if (p.zip) setDestinationZip(p.zip);
+                const lane = placeLaneFields(p);
+                if (lane.city) setDestinationCity(lane.city);
+                if (lane.state) setDestinationState(lane.state);
+                if (lane.zip) setDestinationZip(lane.zip);
                 if (p.countryCode === "CA") setDeliveryCountry("CANADA");
                 if (p.countryCode === "US") setDeliveryCountry("USA");
               }}
@@ -819,15 +822,15 @@ export function SupplierPostLoadForm({
                     label={i === 0 ? "Search street address (fills address, city, postal)" : `Search pickup location ${i + 1}`}
                     onResolved={(place) => {
                       const line = place.line1 || place.formattedAddress;
-                      const zip = (place.zip || "").trim();
+                      const lane = placeLaneFields(place);
                       syncPickup(i, {
                         address: line,
-                        postal: zip || p.postal,
+                        postal: lane.zip || p.postal,
                       });
                       if (i === 0) {
-                        if (place.city) setOriginCity(place.city);
-                        if (place.state) setOriginState(place.state.slice(0, 2).toUpperCase());
-                        if (zip) setOriginZip(zip);
+                        if (lane.city) setOriginCity(lane.city);
+                        if (lane.state) setOriginState(lane.state);
+                        if (lane.zip) setOriginZip(lane.zip);
                         if (place.countryCode === "CA") setPickupCountry("CANADA");
                         if (place.countryCode === "US") setPickupCountry("USA");
                       }
@@ -885,15 +888,15 @@ export function SupplierPostLoadForm({
                     label={i === 0 ? "Search street address (fills address, city, postal)" : `Search delivery location ${i + 1}`}
                     onResolved={(place) => {
                       const line = place.line1 || place.formattedAddress;
-                      const zip = (place.zip || "").trim();
+                      const lane = placeLaneFields(place);
                       syncDelivery(i, {
                         address: line,
-                        postal: zip || d.postal,
+                        postal: lane.zip || d.postal,
                       });
                       if (i === 0) {
-                        if (place.city) setDestinationCity(place.city);
-                        if (place.state) setDestinationState(place.state.slice(0, 2).toUpperCase());
-                        if (zip) setDestinationZip(zip);
+                        if (lane.city) setDestinationCity(lane.city);
+                        if (lane.state) setDestinationState(lane.state);
+                        if (lane.zip) setDestinationZip(lane.zip);
                         if (place.countryCode === "CA") setDeliveryCountry("CANADA");
                         if (place.countryCode === "US") setDeliveryCountry("USA");
                       }

@@ -504,11 +504,9 @@ export async function listThinLanes(): Promise<{ lane: string; sampleCount: numb
     .filter((r) => (r.sampleCount ?? 0) > 0 && (r.sampleCount ?? 0) < 5)
     .map((r) => ({
       lane:
-        r.originZip && r.destinationZip
-          ? `${r.originZip}→${r.destinationZip}`
-          : r.originCity && r.destinationCity
-            ? `${r.originCity}, ${r.originState}→${r.destinationCity}, ${r.destinationState}`
-            : `${r.originState}→${r.destinationState}`,
+        r.originCity && r.destinationCity
+          ? `${r.originCity}, ${r.originState}→${r.destinationCity}, ${r.destinationState}`
+          : `${r.originState}→${r.destinationState}`,
       sampleCount: r.sampleCount ?? 0,
       equipmentType: r.equipmentType,
     }));

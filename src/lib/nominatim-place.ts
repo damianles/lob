@@ -5,6 +5,7 @@
  */
 
 import type { ParsedPlace } from "@/lib/google-place";
+import { regionCodeForLob } from "@/lib/place-helpers";
 
 export type NominatimResult = {
   place_id: number;
@@ -52,7 +53,8 @@ function stateCode(addr: NominatimResult["address"]): string {
   if (iso && iso.includes("-")) return iso.split("-")[1]!.toUpperCase();
   const s = (addr.state ?? "").trim();
   if (/^[A-Za-z]{2}$/.test(s)) return s.toUpperCase();
-  return s.slice(0, 2).toUpperCase();
+  // Full names (e.g. Alberta) — never naive slice (would become AL).
+  return regionCodeForLob({ state: s, countryCode: (addr.country_code ?? "").toUpperCase() });
 }
 
 function cityFrom(addr: NominatimResult["address"]): string {

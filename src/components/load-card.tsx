@@ -242,9 +242,6 @@ export function LoadCard({
             </svg>
             <span>{load.weightLbs.toLocaleString()} lbs</span>
           </div>
-          <div className="text-stone-500">
-            {load.originZip} → {load.destinationZip}
-          </div>
         </div>
 
         {specPills.length > 0 && (
