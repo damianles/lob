@@ -3,11 +3,14 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { CarrierTypeTag } from "@/components/carrier-type-tag";
+import { RequestCapacityModal } from "@/components/request-capacity-modal";
+import { Button } from "@/components/ui/button";
 import { formatDisplayDate } from "@/lib/format-display-date";
 import { inferOfferCurrency } from "@/lib/lane-currency";
 import { formatMoney } from "@/lib/money";
 import { PlaceAutocomplete } from "@/components/place-autocomplete";
 import { LUMBER_EQUIPMENT } from "@/lib/lumber-equipment";
+import Link from "next/link";
 
 type Me = { role?: string; companyId?: string | null };
 
@@ -49,7 +52,14 @@ function capacityPlaceLabel(city: string | null, state: string | null, zip: stri
   return zip.trim() || "—";
 }
 
-function capacityLaneLabel(r: LaneRow): string {
+function capacityLaneLabel(r: {
+  originCity: string | null;
+  originState: string | null;
+  originZip: string;
+  destinationCity: string | null;
+  destinationState: string | null;
+  destinationZip: string;
+}): string {
   return `${capacityPlaceLabel(r.originCity, r.originState, r.originZip)} → ${capacityPlaceLabel(r.destinationCity, r.destinationState, r.destinationZip)}`;
 }
 
@@ -64,6 +74,48 @@ function defaultUntilFrom(fromStr: string) {
   return ymd(until);
 }
 
+type CarrierInterestRow = {
+  id: string;
+  status: string;
+  note: string | null;
+  createdAt: string;
+  shipperName: string;
+  load: {
+    id: string;
+    referenceNumber: string;
+    originCity: string;
+    originState: string;
+    destinationCity: string;
+    destinationState: string;
+    equipmentType: string;
+    offeredRateUsd: number | null;
+    offerCurrency: "USD" | "CAD";
+    requestedPickupAt: string;
+  };
+  capacity: {
+    askingRateUsd: number;
+    equipmentType: string;
+  };
+};
+
+type ShipperInterestRow = {
+  id: string;
+  status: string;
+  createdAt: string;
+  carrierRevealed: boolean;
+  load: { id: string; referenceNumber: string };
+  capacity: {
+    equipmentType: string;
+    askingRateUsd: number;
+    originCity: string | null;
+    originState: string | null;
+    originZip: string;
+    destinationCity: string | null;
+    destinationState: string | null;
+    destinationZip: string;
+  };
+};
+
 export function CapacityWorkspace() {
   const [me, setMe] = useState<Me | null>(null);
   const [shipperRows, setShipperRows] = useState<OpenRow[]>([]);
@@ -71,6 +123,10 @@ export function CapacityWorkspace() {
   const [originZip, setOriginZip] = useState("");
   const [destinationZip, setDestinationZip] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
+  const [requestFor, setRequestFor] = useState<OpenRow | null>(null);
+  const [carrierInterests, setCarrierInterests] = useState<CarrierInterestRow[]>([]);
+  const [shipperInterests, setShipperInterests] = useState<ShipperInterestRow[]>([]);
+  const [interestBusy, setInterestBusy] = useState<string | null>(null);
 
   const [post, setPost] = useState({
     originZip: "",
@@ -115,23 +171,69 @@ export function CapacityWorkspace() {
     setMine(j.data ?? []);
   }, []);
 
+  const loadInterests = useCallback(async () => {
+    const r = await fetch("/api/capacity/interests");
+    if (!r.ok) {
+      setCarrierInterests([]);
+      setShipperInterests([]);
+      return;
+    }
+    const j = await r.json();
+    if (j.perspective === "carrier") {
+      setCarrierInterests(j.data ?? []);
+      setShipperInterests([]);
+    } else {
+      setShipperInterests(j.data ?? []);
+      setCarrierInterests([]);
+    }
+  }, []);
+
   useEffect(() => {
     void loadMe();
   }, [loadMe]);
 
   useEffect(() => {
-    if (me?.role === "SHIPPER" || me?.role === "ADMIN") void loadShipper();
-  }, [me, loadShipper]);
+    if (me?.role === "SHIPPER" || me?.role === "ADMIN") {
+      void loadShipper();
+      void loadInterests();
+    }
+  }, [me, loadShipper, loadInterests]);
 
   useEffect(() => {
-    if (me?.role === "DISPATCHER" || me?.role === "ADMIN") void loadMine();
-  }, [me, loadMine]);
+    if (me?.role === "DISPATCHER" || me?.role === "ADMIN") {
+      void loadMine();
+      void loadInterests();
+    }
+  }, [me, loadMine, loadInterests]);
 
   const isShipperLike = me?.role === "SHIPPER" || me?.role === "ADMIN";
   const isCarrier = me?.role === "DISPATCHER";
 
   const fmtRange = (a: string, b: string) =>
     `${formatDisplayDate(a)} – ${formatDisplayDate(b)}`;
+
+  async function reviewInterest(id: string, decision: "ACCEPT" | "DECLINE") {
+    setInterestBusy(id);
+    setMsg(null);
+    const res = await fetch(`/api/capacity/interests/${id}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ decision }),
+    });
+    const j = await res.json().catch(() => ({}));
+    setInterestBusy(null);
+    if (!res.ok) {
+      setMsg(typeof j.error === "string" ? j.error : "Could not update request.");
+      return;
+    }
+    setMsg(
+      decision === "ACCEPT"
+        ? "Accepted — load booked. Open the shipment for details (identity unlocks there)."
+        : "Request declined.",
+    );
+    void loadInterests();
+    void loadMine();
+  }
 
   async function submitCapacity(e: React.FormEvent) {
     e.preventDefault();
@@ -215,8 +317,11 @@ export function CapacityWorkspace() {
             <strong>Loads</strong> (sidebar) lists freight posted by mills and wholesalers.
           </li>
           <li>
-            <strong>Capacity</strong> lists trucks carriers are willing to run (carrier names stay hidden on the open
-            board).
+            <strong>Capacity</strong> lists trucks carriers are willing to run. Carrier names stay hidden until they
+            accept your request.
+          </li>
+          <li>
+            Carriers you <strong>exclude</strong> in Carrier Preferences never appear here (and never see your loads).
           </li>
           <li>
             Each post is valid for up to <strong>five calendar days</strong> (inclusive). After the last day, carriers
@@ -234,7 +339,10 @@ export function CapacityWorkspace() {
       {isShipperLike && (
         <section>
           <h2 className="text-lg font-semibold text-zinc-900">Search carrier capacity</h2>
-          <p className="mt-1 text-sm text-zinc-600">Filter by city or postal (optional). Only active windows appear.</p>
+          <p className="mt-1 text-sm text-zinc-600">
+            Filter by city or postal (optional). Request a truck by attaching one of your posted loads — identity stays
+            hidden until they accept.
+          </p>
           <div className="mt-3 grid max-w-2xl gap-2 sm:grid-cols-2">
             <PlaceAutocomplete
               mode="geocode"
@@ -286,6 +394,7 @@ export function CapacityWorkspace() {
                   <th className="px-3 py-2 text-right">Asking</th>
                   <th className="px-3 py-2">Available</th>
                   <th className="px-3 py-2">Notes</th>
+                  <th className="px-3 py-2 text-right">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -319,6 +428,11 @@ export function CapacityWorkspace() {
                     </td>
                     <td className="px-3 py-2 text-xs text-zinc-600">{fmtRange(r.availableFrom, r.availableUntil)}</td>
                     <td className="max-w-[200px] truncate px-3 py-2 text-xs text-zinc-500">{r.notes ?? "—"}</td>
+                    <td className="px-3 py-2 text-right">
+                      <Button type="button" size="sm" onClick={() => setRequestFor(r)}>
+                        Request
+                      </Button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -327,6 +441,137 @@ export function CapacityWorkspace() {
               <p className="p-6 text-center text-sm text-zinc-500">No matching capacity in active windows.</p>
             )}
           </div>
+
+          {shipperInterests.length > 0 && (
+            <div className="mt-6">
+              <h3 className="text-sm font-semibold text-zinc-900">Your capacity requests</h3>
+              <ul className="mt-2 divide-y divide-stone-100 rounded-lg border border-stone-200 bg-white">
+                {shipperInterests.map((row) => (
+                  <li key={row.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
+                    <div>
+                      <p className="font-medium text-zinc-900">
+                        {row.load.referenceNumber}{" "}
+                        <span className="text-xs font-normal uppercase text-zinc-500">{row.status}</span>
+                      </p>
+                      <p className="text-xs text-zinc-600">
+                        {capacityLaneLabel(row.capacity)} · {row.capacity.equipmentType} ·{" "}
+                        {formatMoney(
+                          row.capacity.askingRateUsd,
+                          inferOfferCurrency(row.capacity.originState ?? "", row.capacity.destinationState ?? ""),
+                        )}
+                      </p>
+                    </div>
+                    {row.status === "ACCEPTED" ? (
+                      <Link href={`/loads/${row.load.id}`} className="text-xs font-medium text-lob-navy underline">
+                        Open shipment
+                      </Link>
+                    ) : row.status === "PENDING" ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={interestBusy === row.id}
+                        onClick={() => {
+                          setInterestBusy(row.id);
+                          void fetch(`/api/capacity/interests/${row.id}`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ decision: "WITHDRAW" }),
+                          }).then(async (res) => {
+                            setInterestBusy(null);
+                            if (!res.ok) {
+                              const j = await res.json().catch(() => ({}));
+                              setMsg(typeof j.error === "string" ? j.error : "Could not withdraw.");
+                              return;
+                            }
+                            setMsg("Request withdrawn.");
+                            void loadInterests();
+                          });
+                        }}
+                      >
+                        Withdraw
+                      </Button>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
+      )}
+
+      {requestFor && (
+        <RequestCapacityModal
+          open
+          capacityId={requestFor.id}
+          capacityLabel={capacityLaneLabel(requestFor)}
+          askingLabel={capacityRateLabel(requestFor)}
+          onClose={() => setRequestFor(null)}
+          onSent={() => {
+            setMsg("Request sent. Carrier identity stays hidden until they accept.");
+            void loadInterests();
+          }}
+        />
+      )}
+
+      {isCarrier && carrierInterests.length > 0 && (
+        <section>
+          <h2 className="text-lg font-semibold text-zinc-900">Capacity requests</h2>
+          <p className="mt-1 text-sm text-zinc-600">
+            Mills requesting your posted trucks. Accept books their load at their posted rate (or your asking rate if
+            none).
+          </p>
+          <ul className="mt-3 divide-y divide-stone-100 rounded-lg border border-stone-200 bg-white">
+            {carrierInterests.map((row) => (
+              <li key={row.id} className="flex flex-wrap items-center justify-between gap-3 px-3 py-3">
+                <div>
+                  <p className="text-sm font-semibold text-zinc-900">
+                    {row.shipperName} · {row.load.referenceNumber}
+                  </p>
+                  <p className="text-xs text-zinc-600">
+                    {row.load.originCity}, {row.load.originState} → {row.load.destinationCity},{" "}
+                    {row.load.destinationState} · PU {formatDisplayDate(row.load.requestedPickupAt)}
+                  </p>
+                  <p className="mt-0.5 text-xs text-zinc-500">
+                    Load rate:{" "}
+                    {row.load.offeredRateUsd != null
+                      ? formatMoney(row.load.offeredRateUsd, row.load.offerCurrency)
+                      : "not posted — will use your asking rate"}{" "}
+                    · Asking{" "}
+                    {formatMoney(
+                      row.capacity.askingRateUsd,
+                      inferOfferCurrency(
+                        // Prefer load lane for currency when capacity states missing
+                        row.load.originState,
+                        row.load.destinationState,
+                      ),
+                    )}
+                  </p>
+                  {row.note ? <p className="mt-1 text-xs text-zinc-500">{row.note}</p> : null}
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={interestBusy != null}
+                    isLoading={interestBusy === row.id}
+                    onClick={() => void reviewInterest(row.id, "ACCEPT")}
+                  >
+                    Accept &amp; book
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={interestBusy != null}
+                    onClick={() => void reviewInterest(row.id, "DECLINE")}
+                  >
+                    Decline
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 

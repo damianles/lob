@@ -184,6 +184,8 @@ model Company {
   reportedIncidents     Incident[]                @relation("IncidentReporter")
   incidentsAgainst      Incident[]                @relation("IncidentTarget")
   capacityOffers        CapacityOffer[]
+  capacityInterestsAsShipper CapacityInterest[] @relation("CapacityInterestShipper")
+  capacityInterestsAsCarrier CapacityInterest[] @relation("CapacityInterestCarrier")
   blocksCarriers        ShipperCarrierExclusion[] @relation("ShipperBlocksCarrier")
   blockedByShippers     ShipperCarrierExclusion[] @relation("CarrierBlockedByShipper")
   shipperCarrierTiers   ShipperCarrierTier[]      @relation("ShipperSavesCarrierTiers")
@@ -259,6 +261,8 @@ model User {
   loadBidsSubmitted   LoadBid[]               @relation("LoadBidSubmitter")
   loadBidsReviewed    LoadBid[]               @relation("LoadBidReviewer")
   shipperLoadAlerts   ShipperLoadAlert[]      @relation("ShipperAlertRecipient")
+  capacityInterestsCreated CapacityInterest[] @relation("CapacityInterestCreator")
+  capacityInterestsReviewed CapacityInterest[] @relation("CapacityInterestReviewer")
 }
 
 model Load {
@@ -392,6 +396,7 @@ model Load {
   dateChangeRequests  LoadDateChangeRequest[]
   bids                LoadBid[]
   shipperAlerts       ShipperLoadAlert[]
+  capacityInterests   CapacityInterest[]
 
   @@unique([shipperCompanyId, externalRef], name: "Load_shipper_externalRef_unique")
   @@index([lumberSpecies])
@@ -764,8 +769,17 @@ model EmptyMileSetting {
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 }
 
+enum CapacityInterestStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  WITHDRAWN
+  EXPIRED
+}
+
 /**
- * Carrier-posted lane capacity; shipper-facing listings omit carrier identity until a future match flow.
+ * Carrier-posted lane capacity; shipper-facing listings omit carrier identity until
+ * a CapacityInterest is accepted (then booking reveals identity on the load).
  */
 model CapacityOffer {
   id               String   @id @default(cuid())
@@ -779,6 +793,9 @@ model CapacityOffer {
   equipmentType    String
   askingRateUsd    Decimal  @db.Decimal(10, 2)
   notes            String?
+  /**
+   * OPEN | MATCHED | CANCELLED
+   */
   status           String   @default("OPEN")
   /**
    * First day this capacity is offered (inclusive).
@@ -791,11 +808,43 @@ model CapacityOffer {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  carrier Company @relation(fields: [carrierCompanyId], references: [id], onDelete: Cascade)
+  carrier   Company            @relation(fields: [carrierCompanyId], references: [id], onDelete: Cascade)
+  interests CapacityInterest[]
 
   @@index([status])
   @@index([originZip, destinationZip])
   @@index([availableUntil])
+}
+
+/**
+ * Supplier requests an anonymous capacity offer for one of their posted loads.
+ * Carrier Accept books the load; identity stays hidden until then.
+ */
+model CapacityInterest {
+  id                String                 @id @default(cuid())
+  capacityOfferId   String
+  loadId            String
+  shipperCompanyId  String
+  carrierCompanyId  String
+  status            CapacityInterestStatus @default(PENDING)
+  note              String?
+  createdByUserId   String
+  reviewedAt        DateTime?
+  reviewedByUserId  String?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+
+  capacity   CapacityOffer @relation(fields: [capacityOfferId], references: [id], onDelete: Cascade)
+  load       Load          @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  shipper    Company       @relation("CapacityInterestShipper", fields: [shipperCompanyId], references: [id], onDelete: Cascade)
+  carrier    Company       @relation("CapacityInterestCarrier", fields: [carrierCompanyId], references: [id], onDelete: Cascade)
+  createdBy  User          @relation("CapacityInterestCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  reviewedBy User?         @relation("CapacityInterestReviewer", fields: [reviewedByUserId], references: [id], onDelete: SetNull)
+
+  @@unique([capacityOfferId, loadId])
+  @@index([carrierCompanyId, status])
+  @@index([shipperCompanyId, status])
+  @@index([loadId, status])
 }
 
 /**
