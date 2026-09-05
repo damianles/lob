@@ -48,13 +48,15 @@ function capacityRateLabel(r: LaneRow): string {
   return formatMoney(r.askingRateUsd, ccy);
 }
 
-/** Prefer city names — ZIP/postal alone is opaque to customers. */
-function capacityPlaceLabel(city: string | null, state: string | null, zip: string): string {
-  const place = [city?.trim(), state?.trim()].filter(Boolean).join(", ");
-  if (place) return place;
-  return zip.trim() || "—";
+/** City (+ optional state/prov). Never use postal as the lane label. */
+function capacityPlaceLabel(city: string | null, state: string | null, _zip?: string): string {
+  const c = city?.trim() ?? "";
+  if (!c) return "";
+  const s = state?.trim() ?? "";
+  return s ? `${c}, ${s}` : c;
 }
 
+/** Always city → city. Incomplete rows show a clear prompt, not a ZIP. */
 function capacityLaneLabel(r: {
   originCity: string | null;
   originState: string | null;
@@ -63,7 +65,10 @@ function capacityLaneLabel(r: {
   destinationState: string | null;
   destinationZip: string;
 }): string {
-  return `${capacityPlaceLabel(r.originCity, r.originState, r.originZip)} → ${capacityPlaceLabel(r.destinationCity, r.destinationState, r.destinationZip)}`;
+  const from = capacityPlaceLabel(r.originCity, r.originState);
+  const to = capacityPlaceLabel(r.destinationCity, r.destinationState);
+  if (from && to) return `${from} → ${to}`;
+  return "City → city incomplete — repost with cities";
 }
 
 function ymd(d: Date) {
@@ -98,6 +103,12 @@ type CarrierInterestRow = {
   capacity: {
     askingRateUsd: number;
     equipmentType: string;
+    originCity: string | null;
+    originState: string | null;
+    originZip: string;
+    destinationCity: string | null;
+    destinationState: string | null;
+    destinationZip: string;
   };
 };
 
@@ -607,7 +618,7 @@ export function CapacityWorkspace() {
         <section>
           <h2 className="text-lg font-semibold text-zinc-900">Post capacity</h2>
           <p className="mt-1 text-sm text-zinc-600">
-            Pick a date range of at most five days. Shippers only see rows until the end of the last day (UTC).
+            Search fills city, province/state, and postal. Lanes are shown as <strong>city → city</strong> on the board.
           </p>
           <form onSubmit={submitCapacity} className="mt-4 grid max-w-xl gap-3 rounded-lg border border-zinc-200 bg-white p-4">
             <div className="space-y-2">

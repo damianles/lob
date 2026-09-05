@@ -30,6 +30,15 @@ export async function POST(
   if (!prev) {
     return NextResponse.json({ error: "Capacity post not found." }, { status: 404 });
   }
+  if (!prev.originCity?.trim() || !prev.destinationCity?.trim()) {
+    return NextResponse.json(
+      {
+        error:
+          "This post is missing origin/destination cities. Create a new capacity post with cities instead of reposting.",
+      },
+      { status: 400 },
+    );
+  }
 
   const body = await req.json();
   const parsed = bodySchema.safeParse(body);

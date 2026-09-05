@@ -59,6 +59,9 @@ export async function GET(req: Request) {
     where: {
       status: "OPEN",
       availableUntil: { gte: today },
+      // Board is city→city only — hide legacy ZIP-only rows.
+      originCity: { not: null },
+      destinationCity: { not: null },
       ...(blockedCarrierIds.length ? { carrierCompanyId: { notIn: blockedCarrierIds } } : {}),
       ...(originNeedle
         ? {
