@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { formatDisplayDate } from "@/lib/format-display-date";
 import { inferOfferCurrency } from "@/lib/lane-currency";
 import { formatMoney } from "@/lib/money";
-import type { CapacityScorecardPublic } from "@/lib/capacity-scorecard";
+import type { CapacityScorecardPublic } from "@/lib/capacity-scorecard-shared";
 import { PlaceAutocomplete } from "@/components/place-autocomplete";
 import { LUMBER_EQUIPMENT } from "@/lib/lumber-equipment";
 import Link from "next/link";
@@ -245,6 +245,10 @@ export function CapacityWorkspace() {
       setMsg("Enter origin and destination cities (search fills them from Places).");
       return;
     }
+    if (!post.originState.trim() || !post.destinationState.trim()) {
+      setMsg("Enter origin and destination state / province (2 letters).");
+      return;
+    }
     if (!post.originZip.trim() || !post.destinationZip.trim()) {
       setMsg("Enter origin and destination postal / ZIP codes.");
       return;
@@ -259,11 +263,11 @@ export function CapacityWorkspace() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         originZip: post.originZip,
-        originCity: post.originCity.trim() || undefined,
-        originState: post.originState.trim() || undefined,
+        originCity: post.originCity.trim(),
+        originState: post.originState.trim().toUpperCase(),
         destinationZip: post.destinationZip,
-        destinationCity: post.destinationCity.trim() || undefined,
-        destinationState: post.destinationState.trim() || undefined,
+        destinationCity: post.destinationCity.trim(),
+        destinationState: post.destinationState.trim().toUpperCase(),
         equipmentType: post.equipmentType,
         askingRateUsd: rate,
         notes: post.notes || undefined,

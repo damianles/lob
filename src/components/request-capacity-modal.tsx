@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { CapacityScoreChips } from "@/components/capacity-score-chips";
 import { formatDisplayDate } from "@/lib/format-display-date";
 import { formatMoney } from "@/lib/money";
-import type { CapacityScorecardPublic } from "@/lib/capacity-scorecard";
+import type { CapacityScorecardPublic } from "@/lib/capacity-scorecard-shared";
 
 type MatchableLoad = {
   id: string;

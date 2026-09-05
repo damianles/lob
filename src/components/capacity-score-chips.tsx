@@ -1,5 +1,5 @@
-import type { CapacityScoreBand, CapacityScorecardPublic } from "@/lib/capacity-scorecard";
-import { formatRespondHours } from "@/lib/capacity-scorecard";
+import type { CapacityScoreBand, CapacityScorecardPublic } from "@/lib/capacity-scorecard-shared";
+import { formatRespondHours } from "@/lib/capacity-scorecard-shared";
 
 function bandStyles(band: CapacityScoreBand) {
   switch (band) {

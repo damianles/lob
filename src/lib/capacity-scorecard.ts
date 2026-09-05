@@ -1,28 +1,24 @@
+import "server-only";
+
 import { CapacityInterestStatus, LoadStatus } from "@prisma/client";
 
+import {
+  CAPACITY_SCORE_MIN_COMPLETIONS,
+  CAPACITY_SCORE_MIN_DECISIONS,
+  CAPACITY_SCORE_WINDOW_DAYS,
+  emptyCapacityScorecard,
+  type CapacityScoreBand,
+  type CapacityScorecardPublic,
+} from "@/lib/capacity-scorecard-shared";
 import { prisma } from "@/lib/prisma";
 
-/** Rolling window for capacity performance signals. */
-export const CAPACITY_SCORE_WINDOW_DAYS = 90;
-/** Hide rates until the carrier has this many accept/decline decisions. */
-export const CAPACITY_SCORE_MIN_DECISIONS = 5;
-/** Min terminal (delivered/cancelled) capacity books before showing completion %. */
-export const CAPACITY_SCORE_MIN_COMPLETIONS = 3;
-
-export type CapacityScoreBand = "excellent" | "good" | "caution" | "new";
-
-/**
- * Anonymous carrier performance from capacity requests.
- * Never includes identity — safe to attach to the open capacity board.
- */
-export type CapacityScorecardPublic = {
-  sampleSize: number;
-  acceptRatePct: number | null;
-  medianRespondHours: number | null;
-  completionSampleSize: number;
-  completionRatePct: number | null;
-  band: CapacityScoreBand;
-};
+export type { CapacityScoreBand, CapacityScorecardPublic };
+export {
+  CAPACITY_SCORE_MIN_COMPLETIONS,
+  CAPACITY_SCORE_MIN_DECISIONS,
+  CAPACITY_SCORE_WINDOW_DAYS,
+  formatRespondHours,
+} from "@/lib/capacity-scorecard-shared";
 
 function median(nums: number[]): number | null {
   if (nums.length === 0) return null;
@@ -87,15 +83,6 @@ function scoreFromRows(
   };
 }
 
-const emptyScore = (): CapacityScorecardPublic => ({
-  sampleSize: 0,
-  acceptRatePct: null,
-  medianRespondHours: null,
-  completionSampleSize: 0,
-  completionRatePct: null,
-  band: "new",
-});
-
 /**
  * Batch capacity scorecards for carrier company ids (90-day accept/decline window).
  */
@@ -105,7 +92,7 @@ export async function capacityScorecardsForCarriers(
 ): Promise<Map<string, CapacityScorecardPublic>> {
   const unique = [...new Set(carrierCompanyIds.filter(Boolean))];
   const out = new Map<string, CapacityScorecardPublic>();
-  for (const id of unique) out.set(id, emptyScore());
+  for (const id of unique) out.set(id, emptyCapacityScorecard());
   if (unique.length === 0) return out;
 
   const since = new Date(now.getTime() - CAPACITY_SCORE_WINDOW_DAYS * 86_400_000);
@@ -125,7 +112,10 @@ export async function capacityScorecardsForCarriers(
     },
   });
 
-  const byCarrier = new Map<string, Array<{ status: CapacityInterestStatus; createdAt: Date; reviewedAt: Date | null; loadStatus: LoadStatus }>>();
+  const byCarrier = new Map<
+    string,
+    Array<{ status: CapacityInterestStatus; createdAt: Date; reviewedAt: Date | null; loadStatus: LoadStatus }>
+  >();
   for (const id of unique) byCarrier.set(id, []);
   for (const r of rows) {
     const list = byCarrier.get(r.carrierCompanyId);
@@ -142,12 +132,4 @@ export async function capacityScorecardsForCarriers(
     out.set(id, scoreFromRows(list));
   }
   return out;
-}
-
-export function formatRespondHours(hours: number | null): string | null {
-  if (hours == null) return null;
-  if (hours < 1) return `${Math.max(1, Math.round(hours * 60))}m`;
-  if (hours < 24) return `${hours}h`;
-  const days = Math.round((hours / 24) * 10) / 10;
-  return `${days}d`;
 }
