@@ -6,6 +6,7 @@
  *
  * Currently shipped:
  * - lob-app-icon.png            — square dark-navy mark (1024×1024) — favicons, sidebar, social avatar
+ * - lob-app-icon-knockout.png   — LOB letters only, navy field removed (876×387) — masthead on banner
  * - lob-brand-lockup.png        — horizontal "LOB | Lumber One Board" (1024×799 canvas, content centered)
  * - lob-dark-lockup.png         — navy field, white LOB + “Lumber One Board” (1024×799) — sidebar / other chrome
  * - lob-dark-wordmark.png       — navy field, “Lumber One Board” only (847×110) — raster crop (not the live masthead)
@@ -21,6 +22,11 @@
 /** Square app icon (dark navy + wood-O) — favicon source, sidebar mark, social avatar. */
 export const LOB_APP_ICON_SRC = "/brand/lob-app-icon.png";
 export const LOB_APP_ICON_SIZE = 1024;
+
+/** LOB letters knocked out (no navy box) — sit on `bg-lob-navy` in the masthead. */
+export const LOB_APP_ICON_KNOCKOUT_SRC = "/brand/lob-app-icon-knockout.png";
+export const LOB_APP_ICON_KNOCKOUT_WIDTH = 876;
+export const LOB_APP_ICON_KNOCKOUT_HEIGHT = 387;
 
 /** Wide concept art — alternate marketing/share card (currently same as hero). */
 export const LOB_CONCEPT_PRIMARY_SRC = "/brand/lob-concept-primary.png";

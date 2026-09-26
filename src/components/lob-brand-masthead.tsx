@@ -2,6 +2,11 @@ import Link from "next/link";
 import { Nunito } from "next/font/google";
 
 import { LobAppIconMark } from "@/components/lob-app-icon-mark";
+import {
+  LOB_APP_ICON_KNOCKOUT_HEIGHT,
+  LOB_APP_ICON_KNOCKOUT_SRC,
+  LOB_APP_ICON_KNOCKOUT_WIDTH,
+} from "@/lib/brand";
 import { BRAND_PRODUCT_NAME } from "@/lib/brand-marketing";
 
 const mastheadWordmark = Nunito({
@@ -23,10 +28,13 @@ export function LobBrandMasthead() {
         aria-label={`${BRAND_PRODUCT_NAME} — home`}
       >
         <LobAppIconMark
-          className="h-[clamp(2.25rem,7vw,5.25rem)] w-[clamp(2.25rem,7vw,5.25rem)] shrink-0 rounded-lg sm:rounded-xl"
+          src={LOB_APP_ICON_KNOCKOUT_SRC}
+          width={LOB_APP_ICON_KNOCKOUT_WIDTH}
+          height={LOB_APP_ICON_KNOCKOUT_HEIGHT}
+          className="h-[clamp(1.65rem,7.2vw,5.25rem)] w-auto shrink-0"
           decorative
           priority
-          sizes="(max-width: 640px) 72px, (max-width: 1280px) 112px, 168px"
+          sizes="(max-width: 640px) 140px, (max-width: 1280px) 220px, 320px"
         />
         <span
           className={`${mastheadWordmark.className} whitespace-nowrap text-[clamp(1.65rem,7.2vw,5.25rem)] font-extrabold leading-none tracking-[-0.03em]`}

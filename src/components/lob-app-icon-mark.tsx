@@ -11,6 +11,9 @@ type Props = {
   /** Shown as `alt` when `decorative` is false. */
   accessibilityTitle?: string;
   sizes?: string;
+  src?: string;
+  width?: number;
+  height?: number;
 };
 
 /**
@@ -23,13 +26,16 @@ export function LobAppIconMark({
   decorative = false,
   accessibilityTitle = BRAND_PRODUCT_NAME,
   sizes = "(max-width: 640px) 44px, 48px",
+  src = LOB_APP_ICON_SRC,
+  width = LOB_APP_ICON_SIZE,
+  height = LOB_APP_ICON_SIZE,
 }: Props) {
   return (
     <Image
-      src={LOB_APP_ICON_SRC}
+      src={src}
       alt={decorative ? "" : accessibilityTitle}
-      width={LOB_APP_ICON_SIZE}
-      height={LOB_APP_ICON_SIZE}
+      width={width}
+      height={height}
       priority={priority}
       className={className ? `${className} object-contain` : "object-contain"}
       sizes={sizes}
