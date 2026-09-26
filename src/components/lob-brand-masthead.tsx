@@ -1,17 +1,18 @@
-import Image from "next/image";
 import Link from "next/link";
+import { Nunito } from "next/font/google";
 
-import {
-  LOB_DARK_WORDMARK_HEIGHT,
-  LOB_DARK_WORDMARK_SRC,
-  LOB_DARK_WORDMARK_WIDTH,
-} from "@/lib/brand";
 import { BRAND_PRODUCT_NAME } from "@/lib/brand-marketing";
 
+const mastheadWordmark = Nunito({
+  weight: "800",
+  subsets: ["latin"],
+  display: "swap",
+});
+
 /**
- * Branded masthead — full-bleed navy bar with the dark wordmark only
- * (“Lumber One Board”, gold “One”). The LOB acronym lockup stays for
- * sidebar / other chrome — not this bar.
+ * Branded masthead — full-bleed navy bar with a vector “Lumber One Board”
+ * wordmark (gold “One”). Raster lockup stays for sidebar / other chrome.
+ * Vector type stays sharp when scaled across the viewport.
  */
 export function LobBrandMasthead() {
   return (
@@ -21,15 +22,13 @@ export function LobBrandMasthead() {
         className="mx-auto flex w-full items-center justify-center px-4 py-4 sm:px-8 sm:py-5"
         aria-label={`${BRAND_PRODUCT_NAME} — home`}
       >
-        <Image
-          src={LOB_DARK_WORDMARK_SRC}
-          alt={BRAND_PRODUCT_NAME}
-          width={LOB_DARK_WORDMARK_WIDTH}
-          height={LOB_DARK_WORDMARK_HEIGHT}
-          priority
-          sizes="(max-width: 640px) 92vw, (max-width: 1280px) 80vw, 72rem"
-          className="h-auto w-[min(92vw,72rem)] object-contain"
-        />
+        <span
+          className={`${mastheadWordmark.className} whitespace-nowrap text-[clamp(1.65rem,7.2vw,5.25rem)] font-extrabold leading-none tracking-[-0.03em]`}
+        >
+          <span className="text-white">Lumber</span>
+          <span className="text-[#98662a]"> One </span>
+          <span className="text-white">Board</span>
+        </span>
       </Link>
     </div>
   );

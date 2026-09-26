@@ -8,7 +8,7 @@
  * - lob-app-icon.png            — square dark-navy mark (1024×1024) — favicons, sidebar, social avatar
  * - lob-brand-lockup.png        — horizontal "LOB | Lumber One Board" (1024×799 canvas, content centered)
  * - lob-dark-lockup.png         — navy field, white LOB + “Lumber One Board” (1024×799) — sidebar / other chrome
- * - lob-dark-wordmark.png       — navy field, “Lumber One Board” only (847×110) — global masthead
+ * - lob-dark-wordmark.png       — navy field, “Lumber One Board” only (847×110) — raster crop (not the live masthead)
  * - lob-mark-compact.png        — same horizontal lockup at compact size (1024×799)
  * - lob-brand-hero.png          — split panel: logo + "The #1 Lumber Load Board" + URL (1024×540)
  * - lob-concept-primary.png     — alt wide concept (currently mirrors hero — 1024×540)
