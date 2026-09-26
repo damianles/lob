@@ -494,7 +494,12 @@ async function renderLoadDetailPage({ params }: { params: Promise<{ loadId: stri
             )}
 
             {load.extendedPosting != null && (isShipperOwner || isRealAdmin || isBookedCarrier) && (
-              <ExtendedPostingPanel data={load.extendedPosting} className="mt-4" />
+              <ExtendedPostingPanel
+                data={load.extendedPosting}
+                className="mt-4"
+                origin={{ city: load.originCity, state: load.originState, zip: load.originZip }}
+                destination={{ city: load.destinationCity, state: load.destinationState, zip: load.destinationZip }}
+              />
             )}
 
             {load.booking && isShipperOwner && (

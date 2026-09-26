@@ -6,6 +6,7 @@ import { SoftWarnNeedsRepost } from "@/components/needs-repost-panel";
 import { AddressDataLists } from "@/components/address-datalists";
 import { PlaceAutocomplete } from "@/components/place-autocomplete";
 import { placeLaneFields } from "@/lib/place-helpers";
+import { streetLineFromStoredAddress } from "@/lib/load-execution";
 import { LanePriceChip } from "@/components/lane-price-chip";
 import { LoadTemplatesPanel, type LoadTemplate } from "@/components/load-templates-panel";
 import { LumberSpecForm } from "@/components/lumber-spec-form";
@@ -30,6 +31,8 @@ type CarrierPick = { id: string; legalName: string };
 type PuDel = {
   companyName: string;
   address: string;
+  city: string;
+  state: string;
   postal: string;
   phone: string;
   date: string;
@@ -41,6 +44,8 @@ type PuDel = {
 const emptyLoc: PuDel = {
   companyName: "",
   address: "",
+  city: "",
+  state: "",
   postal: "",
   phone: "",
   date: "",
@@ -265,6 +270,8 @@ export function SupplierPostLoadForm({
         next[0] = {
           ...next[0],
           address: l.originAddress ?? next[0].address,
+          city: l.originCity || next[0].city,
+          state: l.originState || next[0].state,
           phone: l.originPhone ?? next[0].phone,
           postal: l.originZip || next[0].postal,
         };
@@ -277,6 +284,8 @@ export function SupplierPostLoadForm({
         next[0] = {
           ...next[0],
           address: l.destinationAddress ?? next[0].address,
+          city: l.destinationCity || next[0].city,
+          state: l.destinationState || next[0].state,
           phone: l.destinationPhone ?? next[0].phone,
           postal: l.destinationZip || next[0].postal,
         };
@@ -821,10 +830,12 @@ export function SupplierPostLoadForm({
                     mode="address"
                     label={i === 0 ? "Search street address (fills address, city, postal)" : `Search pickup location ${i + 1}`}
                     onResolved={(place) => {
-                      const line = place.line1 || place.formattedAddress;
+                      const line = place.line1 || streetLineFromStoredAddress(place.formattedAddress, place.zip);
                       const lane = placeLaneFields(place);
                       syncPickup(i, {
                         address: line,
+                        city: lane.city || p.city,
+                        state: lane.state || p.state,
                         postal: lane.zip || p.postal,
                       });
                       if (i === 0) {
@@ -840,7 +851,7 @@ export function SupplierPostLoadForm({
               )}
               <input className="rounded border px-2 py-2 text-sm sm:col-span-2" placeholder="Address *" value={p.address} onChange={(e) => syncPickup(i, { address: e.target.value })} required={i === 0} />
               <input className="rounded border px-2 py-2 text-sm" placeholder="Postal / ZIP *" value={p.postal} onChange={(e) => syncPickup(i, { postal: e.target.value })} list="recent-origin-zips" autoComplete="off" required={i === 0} />
-              <input className="rounded border px-2 py-2 text-sm" placeholder="Phone" value={p.phone} onChange={(e) => syncPickup(i, { phone: e.target.value })} />
+              <input className="rounded border px-2 py-2 text-sm" placeholder="Contact phone number" value={p.phone} onChange={(e) => syncPickup(i, { phone: e.target.value })} />
               <input className="rounded border px-2 py-2 text-sm" placeholder="Time / notes" value={p.time} onChange={(e) => syncPickup(i, { time: e.target.value })} />
               <input className="rounded border px-2 py-2 text-sm" placeholder="Window" value={p.window} onChange={(e) => syncPickup(i, { window: e.target.value })} />
               <input className="rounded border px-2 py-2 text-sm sm:col-span-2" placeholder="Appointment info" value={p.appointment} onChange={(e) => syncPickup(i, { appointment: e.target.value })} />
@@ -887,10 +898,12 @@ export function SupplierPostLoadForm({
                     mode="address"
                     label={i === 0 ? "Search street address (fills address, city, postal)" : `Search delivery location ${i + 1}`}
                     onResolved={(place) => {
-                      const line = place.line1 || place.formattedAddress;
+                      const line = place.line1 || streetLineFromStoredAddress(place.formattedAddress, place.zip);
                       const lane = placeLaneFields(place);
                       syncDelivery(i, {
                         address: line,
+                        city: lane.city || d.city,
+                        state: lane.state || d.state,
                         postal: lane.zip || d.postal,
                       });
                       if (i === 0) {
@@ -906,7 +919,7 @@ export function SupplierPostLoadForm({
               )}
               <input className="rounded border px-2 py-2 text-sm sm:col-span-2" placeholder="Address *" value={d.address} onChange={(e) => syncDelivery(i, { address: e.target.value })} required={i === 0} />
               <input className="rounded border px-2 py-2 text-sm" placeholder="Postal / ZIP *" value={d.postal} onChange={(e) => syncDelivery(i, { postal: e.target.value })} list="recent-destination-zips" autoComplete="off" required={i === 0} />
-              <input className="rounded border px-2 py-2 text-sm" placeholder="Phone" value={d.phone} onChange={(e) => syncDelivery(i, { phone: e.target.value })} />
+              <input className="rounded border px-2 py-2 text-sm" placeholder="Contact phone number" value={d.phone} onChange={(e) => syncDelivery(i, { phone: e.target.value })} />
               <input className="rounded border px-2 py-2 text-sm" placeholder="Time" value={d.time} onChange={(e) => syncDelivery(i, { time: e.target.value })} />
               <input className="rounded border px-2 py-2 text-sm" placeholder="Window" value={d.window} onChange={(e) => syncDelivery(i, { window: e.target.value })} />
               <input className="rounded border px-2 py-2 text-sm sm:col-span-2" placeholder="Appointment info" value={d.appointment} onChange={(e) => syncDelivery(i, { appointment: e.target.value })} />

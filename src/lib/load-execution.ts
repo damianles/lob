@@ -9,6 +9,8 @@ export type LoadStopDetail = {
   /** Mill yard, warehouse, or receiving company at this stop. */
   companyName: string | null;
   address: string | null;
+  city: string | null;
+  state: string | null;
   postal: string | null;
   phone: string | null;
   date: string | null;
@@ -45,16 +47,18 @@ function parseStop(raw: unknown, index: number): LoadStopDetail | null {
   if (!r) return null;
   const companyName = str(r.companyName);
   const address = str(r.address);
+  const city = str(r.city);
+  const state = str(r.state);
   const postal = str(r.postal);
   const phone = str(r.phone);
   const date = str(r.date);
   const time = str(r.time);
   const window = str(r.window);
   const appointment = str(r.appointment);
-  if (!companyName && !address && !postal && !phone && !date && !time && !window && !appointment) {
+  if (!companyName && !address && !city && !state && !postal && !phone && !date && !time && !window && !appointment) {
     return null;
   }
-  return { index, companyName, address, postal, phone, date, time, window, appointment };
+  return { index, companyName, address, city, state, postal, phone, date, time, window, appointment };
 }
 
 function parseStops(raw: unknown): LoadStopDetail[] {
@@ -114,6 +118,21 @@ function pushUnique(lines: string[], next: string | null | undefined) {
   lines.push(t);
 }
 
+/** Street only — drop Nominatim display_name tails and a duplicated postal. */
+export function streetLineFromStoredAddress(address: string | null | undefined, postal?: string | null): string {
+  let s = (address || "").trim();
+  if (!s) return "";
+  if (s.includes(",") && (/,.*,.*,/.test(s) || /Canada|United States|USA\b/i.test(s))) {
+    s = s.split(",")[0]!.trim();
+  }
+  const zip = (postal || "").trim();
+  if (zip) {
+    const escaped = zip.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s*");
+    s = s.replace(new RegExp(`\\b${escaped}\\b`, "i"), "").replace(/[,\s]+$/g, "").trim();
+  }
+  return s;
+}
+
 export function formatCityLine(city: string, state: string, zip: string): string {
   const place = [city.trim(), state.trim()].filter(Boolean);
   const left = place.length >= 2 ? `${place[0]}, ${place[1]}` : place[0] ?? "";
@@ -140,10 +159,12 @@ export function formatLocationLines(
   stops.forEach((stop) => {
     const block: string[] = [];
     pushUnique(block, stop.companyName);
-    pushUnique(block, stop.address);
-    if (stop.index === 1) pushUnique(block, cityLine);
+    pushUnique(block, streetLineFromStoredAddress(stop.address, stop.postal));
+    const cityState = [stop.city, stop.state].filter(Boolean).join(", ");
+    if (cityState) pushUnique(block, cityState);
+    else if (stop.index === 1) pushUnique(block, cityLine);
     pushUnique(block, stop.postal);
-    pushUnique(block, stop.phone);
+    pushUnique(block, stop.phone ? `Contact phone: ${stop.phone}` : null);
     const more = [
       stop.window && `Window: ${stop.window}`,
       stop.appointment && `Appt: ${stop.appointment}`,
