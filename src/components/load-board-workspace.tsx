@@ -23,6 +23,7 @@ import {
   LUMBER_TREATMENT_OPTIONS,
 } from "@/lib/lumber-spec";
 import { formatDisplayDate } from "@/lib/format-display-date";
+import { displayLoadStatus } from "@/lib/load-status-label";
 import { convertMoney, formatMoney } from "@/lib/money";
 import { parseRadiusToMiles } from "@/lib/units";
 import { milesBetweenPlaces } from "@/lib/zip-distance";
@@ -68,10 +69,7 @@ function matchesBoardStatus(status: string, filter: BoardStatusFilter): boolean 
 }
 
 function statusLabel(status: string) {
-  if (status === "ASSIGNED" || status === "BOOKED") return "Booked";
-  if (status === "NEEDS_REPOST") return "Needs repost";
-  if (status === "IN_TRANSIT") return "In transit";
-  return status.replace(/_/g, " ");
+  return displayLoadStatus(status);
 }
 
 function statusBadgeClass(status: string) {

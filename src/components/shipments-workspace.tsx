@@ -8,6 +8,7 @@ import { RateModeBadge } from "@/components/rate-mode-badge";
 import { PlaceAutocomplete } from "@/components/place-autocomplete";
 import { formatDisplayDate } from "@/lib/format-display-date";
 import { formatMoney } from "@/lib/money";
+import { displayLoadStatus } from "@/lib/load-status-label";
 import { laneQueryTokenString } from "@/lib/place-helpers";
 
 export type ShipmentRow = {
@@ -98,17 +99,7 @@ const DEFAULT_FILTERS: FiltersState = {
 };
 
 function statusLabel(s: ShipmentRow["status"]): string {
-  switch (s) {
-    case "POSTED": return "Posted";
-    case "BOOKED":
-    case "ASSIGNED":
-      return "Booked";
-    case "IN_TRANSIT": return "In transit";
-    case "DELIVERED": return "Delivered";
-    case "NEEDS_REPOST": return "Needs repost";
-    case "UNLISTED": return "Unlisted";
-    case "CANCELLED": return "Cancelled";
-  }
+  return displayLoadStatus(s);
 }
 
 function statusBadge(s: ShipmentRow["status"]): string {

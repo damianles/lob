@@ -11,6 +11,7 @@ import { Card, CardBody } from "@/components/ui/card";
 import { equipmentShortTag } from "@/lib/lumber-equipment";
 import { summarizeLumberSpec } from "@/lib/lumber-spec";
 import { formatMoney } from "@/lib/money";
+import { displayLoadStatus } from "@/lib/load-status-label";
 
 interface LoadCardProps {
   load: SerializableLoad;
@@ -39,7 +40,7 @@ function statusBadgeVariant(status: string): BadgeVariant {
   const map: Record<string, BadgeVariant> = {
     POSTED: "posted",
     BOOKED: "booked",
-    ASSIGNED: "assigned",
+    ASSIGNED: "booked",
     IN_TRANSIT: "in-transit",
     DELIVERED: "delivered",
     CANCELLED: "error",
@@ -48,7 +49,7 @@ function statusBadgeVariant(status: string): BadgeVariant {
 }
 
 function formatStatusLabel(status: string) {
-  return status.replace(/_/g, " ");
+  return displayLoadStatus(status);
 }
 
 export function LoadCard({

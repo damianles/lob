@@ -28,6 +28,7 @@ import { getLaneDecisionContext, getRepeatCarrierCounts } from "@/lib/lane-decis
 import { formatPostedDateWithOptionalTime } from "@/lib/format-posted-datetime";
 import { extractLoadExecution, firstStopTime } from "@/lib/load-execution";
 import { extractLumberSpec } from "@/lib/lumber-spec";
+import { displayLoadStatus } from "@/lib/load-status-label";
 import { formatMoney } from "@/lib/money";
 import { formatTimeRemaining } from "@/lib/rate-mode";
 import {
@@ -301,15 +302,7 @@ async function renderLoadDetailPage({ params }: { params: Promise<{ loadId: stri
             <div className="mt-4 flex flex-wrap gap-4 rounded-lg border border-zinc-200 bg-white p-4 text-sm">
               <div>
                 <p className="text-xs font-semibold uppercase text-zinc-500">Status</p>
-                <p className="mt-1 font-semibold text-zinc-900">
-                  {load.status === "ASSIGNED" || load.status === "BOOKED"
-                    ? "Booked"
-                    : load.status === "NEEDS_REPOST"
-                      ? "Needs repost"
-                      : load.status === "IN_TRANSIT"
-                        ? "In transit"
-                        : load.status.charAt(0) + load.status.slice(1).toLowerCase().replace(/_/g, " ")}
-                </p>
+                <p className="mt-1 font-semibold text-zinc-900">{displayLoadStatus(load.status)}</p>
               </div>
               <div>
                 <p className="text-xs font-semibold uppercase text-zinc-500">Rate</p>

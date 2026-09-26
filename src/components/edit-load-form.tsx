@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { lobWoodPrimaryButtonClass } from "@/lib/lob-button-styles";
+import { displayLoadStatus } from "@/lib/load-status-label";
 import { inferOfferCurrency } from "@/lib/lane-currency";
 import { LUMBER_EQUIPMENT } from "@/lib/lumber-equipment";
 
@@ -108,7 +109,7 @@ export function EditLoadForm({
       <p className="text-sm text-zinc-600">
         Editing <span className="font-mono font-semibold text-zinc-900">{load.referenceNumber}</span>
         <span className="text-zinc-400"> · </span>
-        {load.status}
+        {displayLoadStatus(load.status)}
         {load.booked ? (
           <span className="ml-2 rounded bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-900 ring-1 ring-amber-200">
             Booked — carrier will be notified (email queued)

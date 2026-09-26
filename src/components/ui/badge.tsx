@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { LoadStatus } from "@prisma/client";
 
+import { displayLoadStatus } from "@/lib/load-status-label";
+
 export type BadgeVariant =
   | "default"
   | "success"
@@ -61,7 +63,7 @@ export function getStatusBadgeVariant(status: LoadStatus): BadgeVariant {
   const statusMap: Record<LoadStatus, BadgeVariant> = {
     POSTED: "posted",
     BOOKED: "booked",
-    ASSIGNED: "assigned",
+    ASSIGNED: "booked",
     IN_TRANSIT: "in-transit",
     DELIVERED: "delivered",
     CANCELLED: "error",
@@ -77,7 +79,7 @@ export function StatusBadge({ status, className }: { status: LoadStatus; classNa
 
   return (
     <Badge variant={variant} pulse={pulse} className={className}>
-      {status.replace(/_/g, " ")}
+      {displayLoadStatus(status)}
     </Badge>
   );
 }
