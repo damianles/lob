@@ -34,8 +34,10 @@ export function LobSidebar({
           className="block min-w-0 rounded-xl p-1.5 transition hover:bg-white/70"
           aria-label={`${BRAND_PRODUCT_NAME} — home`}
         >
-          <p className="text-[26px] font-semibold leading-tight tracking-tight text-lob-navy">{BRAND_PRODUCT_NAME}</p>
-          <p className="mt-1.5 text-[18px] font-bold uppercase leading-snug tracking-[0.08em] text-lob-gold-muted">
+          <p className="whitespace-nowrap text-[20px] font-semibold leading-tight tracking-tight text-lob-navy">
+            {BRAND_PRODUCT_NAME}
+          </p>
+          <p className="mt-1 whitespace-nowrap text-[11px] font-bold uppercase leading-snug tracking-[0.06em] text-lob-gold-muted">
             {BRAND_POSITIONING}
           </p>
         </Link>
