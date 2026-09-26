@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { LobBrandStrip } from "@/components/lob-brand-strip";
 import { LobSidebar } from "@/components/lob-sidebar";
 import { prisma } from "@/lib/prisma";
+import { signInUrlForAppPath } from "@/lib/guest-auth-routes";
 import { getActorContext } from "@/lib/request-context";
 
 import { CarrierProfileForm } from "./carrier-profile-form";
@@ -24,8 +25,11 @@ function parseTrailerJson(raw: string | null): string[] {
 
 export default async function CarrierCompliancePage() {
   const actor = await getActorContext();
+  if (!actor.clerkUserId) {
+    redirect(signInUrlForAppPath("/carrier/compliance"));
+  }
   if (!actor.userId) {
-    redirect("/sign-in");
+    redirect("/onboarding");
   }
   if (actor.role !== "DISPATCHER" && actor.role !== "ADMIN") {
     return (

@@ -5,8 +5,11 @@ import { getActorContext } from "@/lib/request-context";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const actor = await getActorContext();
+  if (!actor.clerkUserId) {
+    redirect("/sign-in?redirect_url=/admin");
+  }
   if (!actor.userId) {
-    redirect("/sign-in");
+    redirect("/onboarding");
   }
   if (!isRealAdmin(actor)) {
     redirect("/");

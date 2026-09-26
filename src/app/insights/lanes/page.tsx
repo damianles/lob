@@ -25,7 +25,7 @@ export default async function LaneAnalyticsPage({
 }) {
   const params = await searchParams;
   const actor = await getActorContext();
-  if (!actor.userId) {
+  if (!actor.clerkUserId) {
     return (
       <div className="max-w-3xl">
         <h1 className="text-2xl font-bold">Lane Rate Analytics</h1>
@@ -33,7 +33,7 @@ export default async function LaneAnalyticsPage({
       </div>
     );
   }
-  if (!actor.companyId && actor.role !== "ADMIN") {
+  if (!actor.userId || (!actor.companyId && actor.role !== "ADMIN")) {
     return (
       <div className="max-w-3xl">
         <h1 className="text-2xl font-bold">Lane Rate Analytics</h1>

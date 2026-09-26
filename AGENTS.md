@@ -3,6 +3,7 @@
 Read this at the start of a feature chat. Do **not** re-explore the entire repo unless the task requires discovery.
 
 **User workflow:** `docs/WORKFLOW.md`  
+**Product status (where we are):** `docs/STATUS.md` — read after a long break, or when the task depends on current product state.  
 **Always-on rules:** `.cursor/rules/lob-core.mdc`
 
 ---
@@ -21,7 +22,7 @@ B2B load board for forest products: **suppliers** post loads, **carriers** book 
 |-------|------|
 | Frontend | Next.js 16 App Router, React 19, Tailwind 4 |
 | Auth | Clerk (`@clerk/nextjs`), `ClerkProvider` in `src/app/layout.tsx` |
-| Middleware | `src/proxy.ts` (`clerkMiddleware`) — protected: `/admin`, `/insights`, `/shipments`, related APIs |
+| Middleware | `src/proxy.ts` (`clerkMiddleware`) — attaches Clerk session; pages/APIs enforce access. Do not use `auth.protect()` in the proxy (Next prefetch + protect sent signed-in users to sign-in). |
 | Database | Prisma 7 + PostgreSQL |
 | Validation | Zod (`src/lib/validation.ts`) |
 

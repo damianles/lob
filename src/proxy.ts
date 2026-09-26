@@ -1,22 +1,16 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { clerkMiddleware } from "@clerk/nextjs/server";
 
-const isProtectedRoute = createRouteMatcher([
-  "/admin(.*)",
-  "/insights(.*)",
-  "/shipments(.*)",
-  "/bids(.*)",
-  "/booked(.*)",
-  "/api/admin(.*)",
-  "/api/analytics(.*)",
-  "/api/insights(.*)",
-]);
-
-export default clerkMiddleware(async (auth, req) => {
-  if (isProtectedRoute(req)) {
-    await auth.protect();
-  }
-});
+/**
+ * Attach the Clerk session to every matched request. Do not call auth.protect()
+ * here — Next.js prefetches sidebar Links, and a protect() redirect on those
+ * requests is what sent signed-in users to /sign-in when they clicked a tab.
+ * Pages and API routes already check the session themselves.
+ */
+export default clerkMiddleware();
 
 export const config = {
-  matcher: ["/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpg|jpeg|png|gif|svg|ttf|woff2?|ico)).*)"],
+  matcher: [
+    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    "/(api|trpc)(.*)",
+  ],
 };

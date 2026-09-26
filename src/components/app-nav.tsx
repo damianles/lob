@@ -21,13 +21,14 @@ const adminLinks = [
 ];
 
 export function AppNav() {
-  const { isSignedIn } = useAuth();
+  const { isSignedIn, isLoaded } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
   const { viewer } = useViewerRole();
   const accents = roleAccentClasses(viewer);
+  const signedIn = isLoaded && Boolean(isSignedIn);
 
   useEffect(() => {
-    if (!isSignedIn) {
+    if (!signedIn) {
       startTransition(() => setIsAdmin(false));
       return;
     }
@@ -43,7 +44,7 @@ export function AppNav() {
     return () => {
       cancelled = true;
     };
-  }, [isSignedIn]);
+  }, [signedIn]);
 
   const guestLinks = [
     { href: signUpUrlForAppPath("/"), label: "Register" },
@@ -53,8 +54,8 @@ export function AppNav() {
   ];
   const signedInLinks = lobTopNavLinksForViewer(viewer.kind);
   const links = [
-    ...(isSignedIn ? signedInLinks : guestLinks),
-    ...(isSignedIn && isAdmin ? adminLinks : []),
+    ...(signedIn ? signedInLinks : guestLinks),
+    ...(signedIn && isAdmin ? adminLinks : []),
   ];
 
   return (
@@ -66,9 +67,10 @@ export function AppNav() {
               <Link
                 key={l.href}
                 href={l.href}
+                prefetch={false}
                 className={cn(
                   "shrink-0 rounded-full px-3 py-1.5 text-[12px] font-semibold transition sm:px-4 sm:py-2 sm:text-sm",
-                  !isSignedIn && l.label === "Register"
+                  !signedIn && l.label === "Register"
                     ? lobWoodPrimaryButtonClass
                     : "text-stone-600 hover:bg-stone-100 hover:text-lob-navy",
                 )}
@@ -79,7 +81,7 @@ export function AppNav() {
           </nav>
         </div>
         <div className="flex shrink-0 items-center justify-end gap-2 pl-2 sm:gap-3">
-          {isSignedIn && viewer.kind !== "GUEST" && (
+          {signedIn && viewer.kind !== "GUEST" && (
             <span
               className={`inline-flex max-w-[10rem] shrink-0 items-center justify-center gap-1 truncate rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] ring-1 ring-inset sm:max-w-none ${accents.pillBg} ${accents.pillText} ${accents.pillRing}`}
               title={viewer.label}
@@ -88,7 +90,7 @@ export function AppNav() {
               {viewer.shortLabel}
             </span>
           )}
-          {isSignedIn ? (
+          {signedIn ? (
             <UserButton />
           ) : (
             <Link

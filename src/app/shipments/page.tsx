@@ -6,6 +6,7 @@ import { LobSidebar } from "@/components/lob-sidebar";
 import { NeedsRepostPanel } from "@/components/needs-repost-panel";
 import { ShipmentsWorkspace, type ShipmentRow, type ShipmentsActor } from "@/components/shipments-workspace";
 import { prisma } from "@/lib/prisma";
+import { signInUrlForAppPath } from "@/lib/guest-auth-routes";
 import { getActorContext } from "@/lib/request-context";
 import { sweepLoadLifecycle } from "@/lib/load-lifecycle";
 
@@ -18,12 +19,12 @@ export default async function ShipmentsPage({
 }) {
   const { posted } = await searchParams;
   const actor = await getActorContext();
-  if (!actor.userId) {
+  if (!actor.clerkUserId) {
     return (
       <main className="mx-auto max-w-lg p-8">
         <h1 className="text-xl font-bold">Shipments</h1>
         <p className="mt-2 text-sm text-zinc-600">Sign in to track your loads.</p>
-        <Link href="/sign-in" className="mt-4 inline-block text-lob-navy underline">
+        <Link href={signInUrlForAppPath("/shipments")} className="mt-4 inline-block text-lob-navy underline">
           Sign in
         </Link>
       </main>

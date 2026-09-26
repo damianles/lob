@@ -57,6 +57,7 @@ export function LobSidebar({
             <Link
               key={item.id}
               href={item.href}
+              prefetch={false}
               className={
                 isActive
                   ? "rounded-xl bg-white px-4 py-2.5 font-semibold text-lob-navy shadow-sm shadow-stone-900/5 ring-1 ring-stone-200/80"

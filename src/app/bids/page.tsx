@@ -16,6 +16,7 @@ import { expireStaleBids } from "@/lib/load-bids";
 import { formatMoney } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import { bidKindLabel, bidStatusLabel, formatTimeRemaining, OPEN_BID_LABEL, TAKE_IT_LABEL } from "@/lib/rate-mode";
+import { signInUrlForAppPath } from "@/lib/guest-auth-routes";
 import { getActorContext } from "@/lib/request-context";
 
 export const dynamic = "force-dynamic";
@@ -26,10 +27,10 @@ function lane(l: { originCity: string; originState: string; destinationCity: str
 
 export default async function OpenBidsPage() {
   const actor = await getActorContext();
-  if (!actor.userId) {
-    redirect("/sign-in");
+  if (!actor.clerkUserId) {
+    redirect(signInUrlForAppPath("/bids"));
   }
-  if (!actor.companyId && actor.realRole !== "ADMIN") {
+  if (!actor.userId || (!actor.companyId && actor.realRole !== "ADMIN")) {
     redirect("/onboarding");
   }
 

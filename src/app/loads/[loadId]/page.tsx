@@ -38,10 +38,38 @@ import {
 import { carrierMayViewPostedLoad } from "@/lib/carrier-load-access";
 import { syncClerkUserToDatabase } from "@/lib/sync-clerk-user";
 import { getActorContext } from "@/lib/request-context";
+import { DbWarmingBanner } from "@/components/db-warming-banner";
+import { getDatabaseErrorGuidance } from "@/lib/db-connection-hints";
 
 export const dynamic = "force-dynamic";
 
-export default async function LoadDetailPage({ params }: { params: Promise<{ loadId: string }> }) {
+export default async function LoadDetailPage(props: { params: Promise<{ loadId: string }> }) {
+  try {
+    return await renderLoadDetailPage(props);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Database error";
+    const guidance = getDatabaseErrorGuidance(msg);
+    return (
+      <main className="min-h-[calc(100vh-3.5rem)] bg-lob-paper p-6 text-stone-900">
+        <div className="mx-auto max-w-2xl">
+          <DbWarmingBanner errorMessage={msg} code={guidance.code} />
+          {guidance.code !== "pool_exhausted" ? (
+            <section className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-950">
+              <h1 className="font-semibold">{guidance.title}</h1>
+              <ul className="mt-2 list-inside list-disc space-y-1">
+                {guidance.body.map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+        </div>
+      </main>
+    );
+  }
+}
+
+async function renderLoadDetailPage({ params }: { params: Promise<{ loadId: string }> }) {
   const { loadId } = await params;
   const { userId } = await auth();
   if (!userId) {

@@ -131,6 +131,7 @@ export function MobileBottomNav() {
             <Link
               key={item.href}
               href={linkHref(item.href)}
+              prefetch={false}
               className={cn(
                 "flex flex-col items-center justify-center gap-1",
                 "min-w-0 flex-1 px-2 py-1.5",

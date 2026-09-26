@@ -40,7 +40,12 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased overflow-x-hidden pb-16 lg:pb-0`}
       >
-        <ClerkProvider>
+        <ClerkProvider
+          signInUrl="/sign-in"
+          signUpUrl="/sign-up"
+          signInFallbackRedirectUrl="/"
+          signUpFallbackRedirectUrl="/onboarding"
+        >
           <AppProviders>
             <div className="print:hidden">
               <DemoBanner />

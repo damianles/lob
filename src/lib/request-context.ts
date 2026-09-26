@@ -7,6 +7,8 @@ import { seedCompanyIdForViewAs } from "@/lib/simulated-actor-company";
 import { VIEW_AS_COOKIE, decodeViewAsCookie, type ViewAsPayload } from "@/lib/view-as";
 
 export type ActorContext = {
+  /** Clerk session id — present when the browser is signed in, even if the LOB user row is missing. */
+  clerkUserId: string | null;
   userId: string | null;
   companyId: string | null;
   /** Effective role used for UI/UX branching — equals realRole unless an admin has activated view-as. */
@@ -22,6 +24,7 @@ export type ActorContext = {
 };
 
 const UNAUTHENTICATED: ActorContext = {
+  clerkUserId: null,
   userId: null,
   companyId: null,
   role: null,
@@ -32,72 +35,76 @@ const UNAUTHENTICATED: ActorContext = {
 };
 
 export async function getActorContext(): Promise<ActorContext> {
+  let clerkUserId: string | null = null;
   try {
     const session = await auth();
-    if (!session.userId) {
-      return UNAUTHENTICATED;
-    }
-
-    let appUser = await prisma.user.findUnique({
-      where: { authProviderId: session.userId },
-      select: {
-        id: true,
-        role: true,
-        companyId: true,
-      },
-    });
-
-    if (!appUser) {
-      const synced = await syncClerkUserToDatabase();
-      if (synced.user) {
-        appUser = synced.user;
-      }
-    }
-
-    if (!appUser) {
-      return UNAUTHENTICATED;
-    }
-
-    const realRole = appUser.role;
-    const realCompanyId = appUser.companyId;
-
-    let viewAs: ViewAsPayload | null = null;
-    let effectiveRole: string = realRole;
-
-    // Honor the view-as cookie ONLY if the real user is an admin. This is the
-    // single point of trust: a non-admin who crafts the cookie sees no effect.
-    if (realRole === "ADMIN") {
-      try {
-        const c = await cookies();
-        const raw = c.get(VIEW_AS_COOKIE)?.value ?? null;
-        const decoded = decodeViewAsCookie(raw);
-        if (decoded && decoded.role && decoded.role !== "ADMIN") {
-          viewAs = decoded;
-          effectiveRole = decoded.role;
-        }
-      } catch {
-        viewAs = null;
-      }
-    }
-
-    let companyId = realCompanyId;
-    if (realRole === "ADMIN" && viewAs) {
-      const simulatedCompanyId = await seedCompanyIdForViewAs(viewAs);
-      if (simulatedCompanyId) {
-        companyId = simulatedCompanyId;
-      }
-    }
-
-    return {
-      userId: appUser.id,
-      companyId,
-      role: effectiveRole,
-      realRole,
-      realCompanyId,
-      viewAs,
-      simulated: viewAs !== null,
-    };
+    clerkUserId = session.userId ?? null;
   } catch {
     return UNAUTHENTICATED;
   }
+
+  if (!clerkUserId) {
+    return UNAUTHENTICATED;
+  }
+
+  let appUser = await prisma.user.findUnique({
+    where: { authProviderId: clerkUserId },
+    select: {
+      id: true,
+      role: true,
+      companyId: true,
+    },
+  });
+
+  if (!appUser) {
+    const synced = await syncClerkUserToDatabase();
+    if (synced.user) {
+      appUser = synced.user;
+    }
+  }
+
+  if (!appUser) {
+    return { ...UNAUTHENTICATED, clerkUserId };
+  }
+
+  const realRole = appUser.role;
+  const realCompanyId = appUser.companyId;
+
+  let viewAs: ViewAsPayload | null = null;
+  let effectiveRole: string = realRole;
+
+  // Honor the view-as cookie ONLY if the real user is an admin. This is the
+  // single point of trust: a non-admin who crafts the cookie sees no effect.
+  if (realRole === "ADMIN") {
+    try {
+      const c = await cookies();
+      const raw = c.get(VIEW_AS_COOKIE)?.value ?? null;
+      const decoded = decodeViewAsCookie(raw);
+      if (decoded && decoded.role && decoded.role !== "ADMIN") {
+        viewAs = decoded;
+        effectiveRole = decoded.role;
+      }
+    } catch {
+      viewAs = null;
+    }
+  }
+
+  let companyId = realCompanyId;
+  if (realRole === "ADMIN" && viewAs) {
+    const simulatedCompanyId = await seedCompanyIdForViewAs(viewAs);
+    if (simulatedCompanyId) {
+      companyId = simulatedCompanyId;
+    }
+  }
+
+  return {
+    clerkUserId,
+    userId: appUser.id,
+    companyId,
+    role: effectiveRole,
+    realRole,
+    realCompanyId,
+    viewAs,
+    simulated: viewAs !== null,
+  };
 }
