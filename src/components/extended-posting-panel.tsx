@@ -7,7 +7,7 @@ function ChipList({ items }: { items: string[] }) {
   return (
     <ul className="mt-1.5 flex flex-wrap gap-1.5">
       {items.map((t) => (
-        <li key={t} className="rounded-md bg-stone-100 px-2 py-0.5 text-xs font-medium text-stone-800">
+        <li key={t} className="rounded-md bg-stone-50 px-2 py-0.5 text-sm font-normal text-stone-600 ring-1 ring-stone-200/80">
           {t}
         </li>
       ))}
@@ -25,8 +25,8 @@ function Fact({ label, value }: { label: string; value: React.ReactNode }) {
   if (value === null || value === undefined || value === "") return null;
   return (
     <div className="min-w-0">
-      <dt className="text-[11px] font-bold uppercase tracking-wide text-stone-800">{label}</dt>
-      <dd className="mt-0.5 text-sm font-medium text-stone-900">{value}</dd>
+      <dt className="text-[11px] font-bold uppercase tracking-wide text-stone-900">{label}</dt>
+      <dd className="mt-1 text-[15px] font-normal leading-snug text-stone-500">{value}</dd>
     </div>
   );
 }
@@ -188,7 +188,7 @@ export function ExtendedPostingPanel({
         {tenderUrl && (
           <div>
             <SectionLabel>Tender / link</SectionLabel>
-            <a className="mt-1.5 block break-all text-sm font-medium text-lob-navy underline" href={tenderUrl} target="_blank" rel="noreferrer">
+            <a className="mt-1.5 block break-all text-[15px] font-normal text-stone-500 underline decoration-stone-300 underline-offset-2 hover:text-lob-navy" href={tenderUrl} target="_blank" rel="noreferrer">
               {tenderUrl}
             </a>
           </div>
@@ -225,7 +225,7 @@ export function ExtendedPostingPanel({
         {permitNote && (
           <div>
             <SectionLabel>Permits</SectionLabel>
-            <p className="mt-1.5 text-sm font-medium text-stone-900">{permitNote}</p>
+            <p className="mt-1.5 text-[15px] font-normal text-stone-500">{permitNote}</p>
           </div>
         )}
         {serviceChips.length > 0 && (
@@ -258,7 +258,7 @@ export function ExtendedPostingPanel({
         {execution.notes && (
           <div>
             <SectionLabel>Notes</SectionLabel>
-            <p className="mt-1.5 whitespace-pre-wrap text-sm font-medium text-stone-900">{execution.notes}</p>
+            <p className="mt-1.5 whitespace-pre-wrap text-[15px] font-normal leading-relaxed text-stone-500">{execution.notes}</p>
           </div>
         )}
       </div>
