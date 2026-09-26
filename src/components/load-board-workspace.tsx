@@ -23,7 +23,7 @@ import {
   LUMBER_TREATMENT_OPTIONS,
 } from "@/lib/lumber-spec";
 import { formatDisplayDate } from "@/lib/format-display-date";
-import { displayLoadStatus } from "@/lib/load-status-label";
+import { displayLoadStatus, loadStatusSortRank } from "@/lib/load-status-label";
 import { convertMoney, formatMoney } from "@/lib/money";
 import { parseRadiusToMiles } from "@/lib/units";
 import { milesBetweenPlaces } from "@/lib/zip-distance";
@@ -37,36 +37,6 @@ function toDisplayEquivalent(l: SerializableLoad, display: "USD" | "CAD"): numbe
 }
 
 type BoardSortKey = "pickupAt" | "deliveryAt" | "postedAt" | "rate" | "lane" | "status" | "reference";
-
-type BoardStatusFilter =
-  | "ALL"
-  | "ACTIVE"
-  | "NEEDS_REPOST"
-  | "POSTED"
-  | "BOOKED"
-  | "IN_TRANSIT"
-  | "DELIVERED"
-  | "UNLISTED"
-  | "CANCELLED";
-
-const BOARD_STATUS_FILTERS: { value: BoardStatusFilter; label: string }[] = [
-  { value: "ALL", label: "All" },
-  { value: "ACTIVE", label: "Active" },
-  { value: "NEEDS_REPOST", label: "Needs repost" },
-  { value: "POSTED", label: "Posted" },
-  { value: "BOOKED", label: "Booked" },
-  { value: "IN_TRANSIT", label: "In transit" },
-  { value: "DELIVERED", label: "Delivered" },
-  { value: "UNLISTED", label: "Unlisted" },
-  { value: "CANCELLED", label: "Cancelled" },
-];
-
-function matchesBoardStatus(status: string, filter: BoardStatusFilter): boolean {
-  if (filter === "ALL") return true;
-  if (filter === "ACTIVE") return status !== "DELIVERED" && status !== "CANCELLED" && status !== "UNLISTED";
-  if (filter === "BOOKED") return status === "BOOKED" || status === "ASSIGNED";
-  return status === filter;
-}
 
 function statusLabel(status: string) {
   return displayLoadStatus(status);
@@ -229,7 +199,6 @@ export function LoadBoardWorkspace({
   const [postedTo, setPostedTo] = useState("");
   const [pickupFrom, setPickupFrom] = useState("");
   const [pickupTo, setPickupTo] = useState("");
-  const [statusFilter, setStatusFilter] = useState<BoardStatusFilter>("ALL");
   const [sortKey, setSortKey] = useState<BoardSortKey>("postedAt");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [emrZip, setEmrZip] = useState("");
@@ -269,7 +238,6 @@ export function LoadBoardWorkspace({
       postedTo ||
       pickupFrom ||
       pickupTo ||
-      statusFilter !== "ALL" ||
       emrZip ||
       hideBrokers ||
       lumberSpecies ||
@@ -289,7 +257,6 @@ export function LoadBoardWorkspace({
     setPostedTo("");
     setPickupFrom("");
     setPickupTo("");
-    setStatusFilter("ALL");
     setEmrZip("");
     setEmrOriginRadius("");
     setEmrDestRadius("");
@@ -307,7 +274,6 @@ export function LoadBoardWorkspace({
     const emrZipTrim = emrZip.trim();
 
     const list = loads.filter((l) => {
-      if (!matchesBoardStatus(l.status, statusFilter)) return false;
       const o = `${l.originCity} ${l.originState} ${l.originZip}`.toLowerCase();
       const d = `${l.destinationCity} ${l.destinationState} ${l.destinationZip}`.toLowerCase();
       if (originQ.trim() && !o.includes(originQ.trim().toLowerCase())) return false;
@@ -388,7 +354,7 @@ export function LoadBoardWorkspace({
           case "lane":
             return `${a.originState}${a.destinationState}`.localeCompare(`${b.originState}${b.destinationState}`);
           case "status":
-            return statusLabel(a.status).localeCompare(statusLabel(b.status));
+            return loadStatusSortRank(a.status) - loadStatusSortRank(b.status);
           case "reference":
             return a.referenceNumber.localeCompare(b.referenceNumber);
           default:
@@ -409,7 +375,6 @@ export function LoadBoardWorkspace({
     postedTo,
     pickupFrom,
     pickupTo,
-    statusFilter,
     sortKey,
     sortDir,
     emrZip,
@@ -436,7 +401,7 @@ export function LoadBoardWorkspace({
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     } else {
       setSortKey(key);
-      setSortDir("desc");
+      setSortDir(key === "status" ? "asc" : "desc");
     }
   }
 
@@ -667,7 +632,7 @@ export function LoadBoardWorkspace({
 
           <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
             <p className="text-xs text-zinc-600">
-              Filter by Status in the table header. Showing {filteredLoads.length} load
+              Click a column header to sort. Showing {filteredLoads.length} load
               {filteredLoads.length !== 1 ? "s" : ""}.
             </p>
             {canExportBoardCsv && (
@@ -680,22 +645,6 @@ export function LoadBoardWorkspace({
                 Export CSV ({filteredLoads.length})
               </button>
             )}
-          </div>
-
-          <div className="mb-3 max-w-xs">
-            <label className="mb-1 block text-xs font-medium text-zinc-600">Status</label>
-            <select
-              aria-label="Filter loads by status"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as BoardStatusFilter)}
-              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm"
-            >
-              {BOARD_STATUS_FILTERS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
@@ -787,20 +736,6 @@ export function LoadBoardWorkspace({
                     className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm"
                     placeholder="Any"
                   />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-zinc-600">Status</label>
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value as BoardStatusFilter)}
-                    className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm"
-                  >
-                    {BOARD_STATUS_FILTERS.map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-zinc-600">Posted from</label>
@@ -1020,23 +955,7 @@ export function LoadBoardWorkspace({
                     sortDir={sortDir}
                     onClick={toggleSort}
                   />
-                  <th className="px-3 py-2">
-                    <label className="flex flex-col gap-0.5">
-                      <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-600">Status</span>
-                      <select
-                        aria-label="Filter loads by status"
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value as BoardStatusFilter)}
-                        className="max-w-[9.5rem] rounded border border-stone-300 bg-white px-1.5 py-1 text-[11px] font-semibold normal-case text-zinc-800"
-                      >
-                        {BOARD_STATUS_FILTERS.map((o) => (
-                          <option key={o.value} value={o.value}>
-                            {o.label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  </th>
+                  <BoardSortableTh label="Status" k="status" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
                   <th className="px-3 py-2">Equipment</th>
                   <BoardSortableTh
                     label="Rate"

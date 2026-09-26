@@ -8,7 +8,7 @@ import { RateModeBadge } from "@/components/rate-mode-badge";
 import { PlaceAutocomplete } from "@/components/place-autocomplete";
 import { formatDisplayDate } from "@/lib/format-display-date";
 import { formatMoney } from "@/lib/money";
-import { displayLoadStatus } from "@/lib/load-status-label";
+import { displayLoadStatus, loadStatusSortRank } from "@/lib/load-status-label";
 import { laneQueryTokenString } from "@/lib/place-helpers";
 
 export type ShipmentRow = {
@@ -59,20 +59,8 @@ type SortKey =
   | "weight"
   | "reference";
 
-type StatusFilter =
-  | "ALL"
-  | "ACTIVE"
-  | "NEEDS_REPOST"
-  | "POSTED"
-  | "BOOKED"
-  | "IN_TRANSIT"
-  | "DELIVERED"
-  | "UNLISTED"
-  | "CANCELLED";
-
 type FiltersState = {
   q: string;
-  status: StatusFilter;
   origin: string;
   destination: string;
   carrier: string;
@@ -86,7 +74,6 @@ type FiltersState = {
 
 const DEFAULT_FILTERS: FiltersState = {
   q: "",
-  status: "ALL",
   origin: "",
   destination: "",
   carrier: "",
@@ -114,27 +101,6 @@ function statusBadge(s: ShipmentRow["status"]): string {
     case "UNLISTED": return "bg-zinc-100 text-zinc-600 ring-zinc-200";
     case "CANCELLED": return "bg-rose-50 text-rose-900 ring-rose-200";
   }
-}
-
-const STATUS_FILTER_OPTIONS: { value: StatusFilter; label: string }[] = [
-  { value: "ALL", label: "All" },
-  { value: "ACTIVE", label: "Active" },
-  { value: "NEEDS_REPOST", label: "Needs repost" },
-  { value: "POSTED", label: "Posted" },
-  { value: "BOOKED", label: "Booked" },
-  { value: "IN_TRANSIT", label: "In transit" },
-  { value: "DELIVERED", label: "Delivered" },
-  { value: "UNLISTED", label: "Unlisted" },
-  { value: "CANCELLED", label: "Cancelled" },
-];
-
-function matchesStatusFilter(r: ShipmentRow, filter: StatusFilter): boolean {
-  if (filter === "ALL") return true;
-  if (filter === "ACTIVE") {
-    return r.status !== "DELIVERED" && r.status !== "CANCELLED" && r.status !== "UNLISTED";
-  }
-  if (filter === "BOOKED") return r.status === "BOOKED" || r.status === "ASSIGNED";
-  return r.status === filter;
 }
 
 function csvEscape(v: unknown): string {
@@ -181,7 +147,7 @@ export function ShipmentsWorkspace({
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     } else {
       setSortKey(key);
-      setSortDir("desc");
+      setSortDir(key === "status" ? "asc" : "desc");
     }
   }
 
@@ -198,8 +164,6 @@ export function ShipmentsWorkspace({
       : Infinity;
 
     return shipments.filter((r) => {
-      if (!matchesStatusFilter(r, filters.status)) return false;
-
       if (filters.rushOnly && !r.isRush) return false;
       if (filters.hideBrokers && r.carrierType === "BROKER") return false;
 
@@ -251,7 +215,7 @@ export function ShipmentsWorkspace({
           case "lane":
             return `${a.originState}${a.destinationState}`.localeCompare(`${b.originState}${b.destinationState}`);
           case "status":
-            return statusLabel(a.status).localeCompare(statusLabel(b.status));
+            return loadStatusSortRank(a.status) - loadStatusSortRank(b.status);
           case "carrier":
             return (a.carrierName ?? "").localeCompare(b.carrierName ?? "");
           case "shipper":
@@ -338,20 +302,6 @@ export function ShipmentsWorkspace({
               onChange={(e) => update("q", e.target.value)}
               className="mt-1 w-64 rounded border border-stone-300 px-2 py-1.5 text-sm"
             />
-          </label>
-          <label className="flex flex-col text-xs">
-            <span className="font-semibold uppercase tracking-wide text-stone-500">Status</span>
-            <select
-              value={filters.status}
-              onChange={(e) => update("status", e.target.value as StatusFilter)}
-              className="mt-1 rounded border border-stone-300 px-2 py-1.5 text-sm"
-            >
-              {STATUS_FILTER_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
           </label>
           <div className="min-w-[10rem] max-w-[14rem]">
             <PlaceAutocomplete
@@ -474,8 +424,8 @@ export function ShipmentsWorkspace({
       </div>
 
       <p className="mt-3 text-xs text-stone-600">
-        Showing <span className="font-semibold">{sorted.length}</span> of {shipments.length} shipments. Use Status to
-        filter the list. Click other headers to sort.
+        Showing <span className="font-semibold">{sorted.length}</span> of {shipments.length} shipments. Click any column
+        header to sort.
       </p>
 
       <div className="mt-3 overflow-x-auto rounded-lg border border-zinc-200 bg-white">
@@ -487,7 +437,7 @@ export function ShipmentsWorkspace({
               <SortableTh label="Posted" k="postedAt" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
               <SortableTh label="Pickup" k="pickupAt" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
               <SortableTh label="Delivery" k="deliveryAt" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
-              <StatusFilterTh value={filters.status} onChange={(v) => update("status", v)} />
+              <SortableTh label="Status" k="status" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
               <SortableTh label="Equipment" k="weight" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
               <SortableTh label="Rate" k="rate" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} align="right" />
               {showShipperColumn && (
@@ -583,34 +533,6 @@ export function ShipmentsWorkspace({
         )}
       </div>
     </div>
-  );
-}
-
-function StatusFilterTh({
-  value,
-  onChange,
-}: {
-  value: StatusFilter;
-  onChange: (value: StatusFilter) => void;
-}) {
-  return (
-    <th className="px-3 py-2">
-      <label className="flex flex-col gap-0.5">
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-600">Status</span>
-        <select
-          aria-label="Filter by status"
-          value={value}
-          onChange={(e) => onChange(e.target.value as StatusFilter)}
-          className="max-w-[9.5rem] rounded border border-stone-300 bg-white px-1.5 py-1 text-[11px] font-semibold normal-case text-zinc-800"
-        >
-          {STATUS_FILTER_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
-      </label>
-    </th>
   );
 }
 
