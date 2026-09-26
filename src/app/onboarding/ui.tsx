@@ -4,8 +4,10 @@ import { useAuth } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { OnboardingLegalAccept } from "@/components/onboarding-legal-accept";
 import { useViewerRole } from "@/components/providers/app-providers";
 import { cn } from "@/lib/cn";
+import type { LegalAcceptancePayload } from "@/lib/legal/documents";
 import { lobWoodPrimaryButtonClass } from "@/lib/lob-button-styles";
 import {
   LOB_ONBOARDING_INTENT_KEY,
@@ -58,6 +60,9 @@ export function OnboardingForms() {
   const [message, setMessage] = useState("");
   const [intent, setIntent] = useState<LobOnboardingIntent | null>(null);
   const [intentReady, setIntentReady] = useState(false);
+  const [shipperLegal, setShipperLegal] = useState<LegalAcceptancePayload[] | null>(null);
+  const [carrierLegal, setCarrierLegal] = useState<LegalAcceptancePayload[] | null>(null);
+  const [legalEpoch, setLegalEpoch] = useState(0);
 
   const isAdminTester = realRole === "ADMIN";
   const showShipperForm = isAdminTester || intent === "shipper";
@@ -124,6 +129,10 @@ export function OnboardingForms() {
       setMessage("Enter a 2–3 letter company acronym for load references (e.g. NRL).");
       return;
     }
+    if (!shipperLegal) {
+      setMessage("Accept the Terms, Privacy Policy, and Supplier Agreement to continue.");
+      return;
+    }
     if (!isSignedIn && !shipper.userName.trim()) {
       setMessage("Your name is required when you are not signed in.");
       return;
@@ -143,11 +152,12 @@ export function OnboardingForms() {
         userEmail: shipper.userEmail,
         role: "SHIPPER",
         supplierKind: shipper.supplierKind,
+        legalAcceptances: shipperLegal,
       }),
     });
     const data = await res.json();
     if (!res.ok) {
-      setMessage(data.error ? JSON.stringify(data.error) : "Could not create supplier account.");
+      setMessage(typeof data.error === "string" ? data.error : data.error ? JSON.stringify(data.error) : "Could not create supplier account.");
       return;
     }
     const approved = data.data?.verificationStatus === "APPROVED";
@@ -157,6 +167,8 @@ export function OnboardingForms() {
         : `Supplier account created: ${data.data.legalName}. LOB must approve your company before you can post loads — we'll review your registration soon.`,
     );
     setShipper(emptyShipper);
+    setShipperLegal(null);
+    setLegalEpoch((n) => n + 1);
     refreshViewerRole();
     router.refresh();
   }
@@ -172,6 +184,10 @@ export function OnboardingForms() {
     }
     if (!carrier.mcNumber.trim()) {
       setMessage("MC number is required for carriers.");
+      return;
+    }
+    if (!carrierLegal) {
+      setMessage("Accept the Terms, Privacy Policy, and Carrier Agreement to continue.");
       return;
     }
     if (!isSignedIn && !carrier.userName.trim()) {
@@ -195,15 +211,18 @@ export function OnboardingForms() {
         carrierType: carrier.carrierType,
         isOwnerOperator: carrier.isOwnerOperator,
         role: "DISPATCHER",
+        legalAcceptances: carrierLegal,
       }),
     });
     const data = await res.json();
     if (!res.ok) {
-      setMessage(data.error ? JSON.stringify(data.error) : "Carrier onboarding failed.");
+      setMessage(typeof data.error === "string" ? data.error : data.error ? JSON.stringify(data.error) : "Carrier onboarding failed.");
       return;
     }
     setMessage(`Carrier submitted for review: ${data.data.legalName}`);
     setCarrier(emptyState);
+    setCarrierLegal(null);
+    setLegalEpoch((n) => n + 1);
     refreshViewerRole();
     router.refresh();
   }
@@ -344,10 +363,12 @@ export function OnboardingForms() {
                 onChange={(e) => setShipper((s) => ({ ...s, userEmail: e.target.value }))}
                 required={!isSignedIn}
               />
+              <OnboardingLegalAccept key={`shipper-legal-${legalEpoch}`} role="SHIPPER" onChange={setShipperLegal} />
               <button
                 className={`${lobWoodPrimaryButtonClass} w-full justify-center sm:w-auto`}
                 type="button"
                 onClick={submitShipper}
+                disabled={!shipperLegal}
               >
                 Create supplier account
               </button>
@@ -445,10 +466,16 @@ export function OnboardingForms() {
                   </span>
                 </span>
               </label>
+              <OnboardingLegalAccept
+                key={`carrier-legal-${legalEpoch}`}
+                role="DISPATCHER"
+                onChange={setCarrierLegal}
+              />
               <button
                 className={`${lobWoodPrimaryButtonClass} w-full justify-center sm:w-auto`}
                 type="button"
                 onClick={submitCarrier}
+                disabled={!carrierLegal}
               >
                 Submit carrier application
               </button>

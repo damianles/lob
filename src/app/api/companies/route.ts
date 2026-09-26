@@ -1,7 +1,9 @@
 import { auth } from "@clerk/nextjs/server";
-import { UserRole, VerificationStatus } from "@prisma/client";
+import { LegalDocumentKey, UserRole, VerificationStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
+import { headers } from "next/headers";
 
+import { validateLegalAcceptances } from "@/lib/legal/documents";
 import { prisma } from "@/lib/prisma";
 import { companyOnboardingSchema } from "@/lib/validation";
 
@@ -13,6 +15,11 @@ export async function POST(req: Request) {
   }
 
   const payload = parsed.data;
+  const legalCheck = validateLegalAcceptances(payload.role, payload.legalAcceptances);
+  if (!legalCheck.ok) {
+    return NextResponse.json({ error: legalCheck.error }, { status: 400 });
+  }
+
   const { userId: clerkUserId } = await auth();
   const signedInUser = clerkUserId
     ? await prisma.user.findUnique({
@@ -86,50 +93,72 @@ export async function POST(req: Request) {
   const autoApproveCarriers = process.env.LOB_AUTO_APPROVE_CARRIERS === "true";
   const autoApproveSuppliers = process.env.LOB_AUTO_APPROVE_SUPPLIERS === "true";
 
-  const company = await prisma.company.create({
-    data: {
-      legalName: payload.legalName,
-      acronym: payload.role === "SHIPPER" ? payload.acronym : undefined,
-      dotNumber: payload.dotNumber,
-      mcNumber: payload.mcNumber,
-      carrierType: payload.carrierType,
-      isOwnerOperator: payload.role === "DISPATCHER" ? Boolean(payload.isOwnerOperator) : false,
-      supplierKind: payload.role === "SHIPPER" ? payload.supplierKind : undefined,
-      verificationStatus:
-        payload.role === "SHIPPER"
-          ? autoApproveSuppliers
-            ? VerificationStatus.APPROVED
-            : VerificationStatus.PENDING
-          : autoApproveCarriers
-            ? VerificationStatus.APPROVED
-            : VerificationStatus.PENDING,
-    },
-  });
+  const hdrs = await headers();
+  const ipAddress =
+    hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    hdrs.get("x-real-ip") ||
+    null;
+  const userAgent = hdrs.get("user-agent");
 
-  if (signedInUser) {
-    await prisma.user.update({
-      where: { id: signedInUser.id },
+  const companyWithUsers = await prisma.$transaction(async (tx) => {
+    const company = await tx.company.create({
       data: {
-        role: payload.role,
-        companyId: company.id,
+        legalName: payload.legalName,
+        acronym: payload.role === "SHIPPER" ? payload.acronym : undefined,
+        dotNumber: payload.dotNumber,
+        mcNumber: payload.mcNumber,
+        carrierType: payload.carrierType,
+        isOwnerOperator: payload.role === "DISPATCHER" ? Boolean(payload.isOwnerOperator) : false,
+        supplierKind: payload.role === "SHIPPER" ? payload.supplierKind : undefined,
+        verificationStatus:
+          payload.role === "SHIPPER"
+            ? autoApproveSuppliers
+              ? VerificationStatus.APPROVED
+              : VerificationStatus.PENDING
+            : autoApproveCarriers
+              ? VerificationStatus.APPROVED
+              : VerificationStatus.PENDING,
       },
     });
-  } else {
-    await prisma.user.create({
-      data: {
-        email: payload.userEmail!,
-        name: payload.userName!,
-        role: payload.role,
-        companyId: company.id,
-      },
-    });
-  }
 
-  const companyWithUsers = await prisma.company.findUnique({
-    where: { id: company.id },
-    include: { users: true },
+    let userId: string;
+    if (signedInUser) {
+      const updated = await tx.user.update({
+        where: { id: signedInUser.id },
+        data: {
+          role: payload.role,
+          companyId: company.id,
+        },
+      });
+      userId = updated.id;
+    } else {
+      const created = await tx.user.create({
+        data: {
+          email: payload.userEmail!,
+          name: payload.userName!,
+          role: payload.role,
+          companyId: company.id,
+        },
+      });
+      userId = created.id;
+    }
+
+    await tx.legalAcceptance.createMany({
+      data: legalCheck.accepted.map((a) => ({
+        userId,
+        companyId: company.id,
+        documentKey: a.documentKey as LegalDocumentKey,
+        documentVersion: a.documentVersion,
+        ipAddress,
+        userAgent,
+      })),
+    });
+
+    return tx.company.findUnique({
+      where: { id: company.id },
+      include: { users: true },
+    });
   });
 
   return NextResponse.json({ data: companyWithUsers }, { status: 201 });
 }
-

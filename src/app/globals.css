@@ -149,6 +149,46 @@ a {
   animation: scaleIn 0.2s ease-out;
 }
 
+/* Supplier: loads that need Accept/Decline — light amber glow so they lift off the page. */
+@keyframes lob-needs-repost-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.12);
+  }
+  50% {
+    box-shadow: 0 0 18px 4px rgba(217, 119, 6, 0.42);
+  }
+}
+
+@keyframes lob-needs-repost-row {
+  0%,
+  100% {
+    background-color: rgb(255 251 235);
+  }
+  50% {
+    background-color: rgb(254 243 199);
+  }
+}
+
+.lob-needs-repost-glow {
+  animation: lob-needs-repost-glow 2.4s ease-in-out infinite;
+}
+
+tr.lob-needs-repost-glow {
+  animation: lob-needs-repost-row 2.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lob-needs-repost-glow,
+  tr.lob-needs-repost-glow {
+    animation: none;
+    box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.35);
+  }
+  tr.lob-needs-repost-glow {
+    background-color: rgb(255 251 235);
+  }
+}
+
 /* Glass morphism utility */
 .glass {
   background: rgba(255, 255, 255, 0.8);

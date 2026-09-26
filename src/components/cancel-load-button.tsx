@@ -24,7 +24,7 @@ export function CancelLoadButton({
 
   async function cancel() {
     const ok = window.confirm(
-      `Cancel ${referenceNumber}? Carriers will no longer see or book this load.`,
+      `Cancel ${referenceNumber}? Your team is notified in-app. If this load is booked, the carrier is notified too.`,
     );
     if (!ok) return;
     setBusy(true);

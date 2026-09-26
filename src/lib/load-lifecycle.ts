@@ -10,6 +10,7 @@ import {
 import { BID_ACCEPT_HOURS, MAX_BID_WINDOW_HOURS, MAX_OPEN_BID_CYCLES, boardCutoffForRateMode } from "@/lib/board-visibility";
 import { prisma } from "@/lib/prisma";
 import { parseRequestedPickupAt } from "@/lib/parse-pickup-date";
+import { queueShipperLoadAlerts } from "@/lib/platform-notices";
 
 export class LoadLifecycleError extends Error {
   constructor(
@@ -29,39 +30,7 @@ async function createShipperAlerts(args: {
   title: string;
   body: string;
 }) {
-  const users = await args.tx.user.findMany({
-    where: { companyId: args.companyId, role: "SHIPPER" },
-    select: { id: true },
-    take: 20,
-  });
-  const recipientIds: (string | null)[] = users.length ? users.map((u) => u.id) : [null];
-
-  for (const recipientUserId of recipientIds) {
-    await args.tx.shipperLoadAlert.create({
-      data: {
-        loadId: args.loadId,
-        companyId: args.companyId,
-        recipientUserId,
-        kind: args.kind,
-        title: args.title,
-        body: args.body,
-        channel: LoadNoticeChannel.IN_APP,
-        status: LoadNoticeStatus.DELIVERED,
-      },
-    });
-    await args.tx.shipperLoadAlert.create({
-      data: {
-        loadId: args.loadId,
-        companyId: args.companyId,
-        recipientUserId,
-        kind: args.kind,
-        title: args.title,
-        body: args.body,
-        channel: LoadNoticeChannel.EMAIL,
-        status: LoadNoticeStatus.PENDING,
-      },
-    });
-  }
+  await queueShipperLoadAlerts(args.tx, args);
 }
 
 /**

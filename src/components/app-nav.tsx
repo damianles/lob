@@ -4,6 +4,7 @@ import { UserButton, useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 import { startTransition, useEffect, useState } from "react";
 
+import { AppNotifications } from "@/components/app-notifications";
 import { useViewerRole } from "@/components/providers/app-providers";
 import { cn } from "@/lib/cn";
 import { shouldShowGlobalAdminBar } from "@/lib/actor-permissions";
@@ -91,7 +92,10 @@ export function AppNav() {
             </span>
           )}
           {signedIn ? (
-            <UserButton />
+            <>
+              <AppNotifications />
+              <UserButton />
+            </>
           ) : (
             <Link
               href={signInUrlForAppPath("/")}

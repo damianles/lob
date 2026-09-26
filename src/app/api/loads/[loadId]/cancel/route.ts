@@ -1,6 +1,7 @@
 import { LoadStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 
+import { queueLoadCancellationNotices } from "@/lib/load-cancellation-notices";
 import { prisma } from "@/lib/prisma";
 import { getActorContext } from "@/lib/request-context";
 import { isSupplierActor } from "@/lib/simulated-actor-company";
@@ -13,6 +14,7 @@ const CANCELLABLE: LoadStatus[] = [
 
 /**
  * Supplier cancels their own load (POSTED / BOOKED / ASSIGNED only).
+ * Queues in-app notices for the mill and booked carrier; EMAIL rows stay pending.
  */
 export async function POST(_req: Request, ctx: { params: Promise<{ loadId: string }> }) {
   const { loadId } = await ctx.params;
@@ -29,6 +31,11 @@ export async function POST(_req: Request, ctx: { params: Promise<{ loadId: strin
       status: true,
       shipperCompanyId: true,
       referenceNumber: true,
+      originCity: true,
+      originState: true,
+      destinationCity: true,
+      destinationState: true,
+      booking: { select: { carrierCompanyId: true } },
     },
   });
 
@@ -36,8 +43,7 @@ export async function POST(_req: Request, ctx: { params: Promise<{ loadId: strin
     return NextResponse.json({ error: "Load not found." }, { status: 404 });
   }
 
-  const isOwner =
-    isSupplierActor(actor) && load.shipperCompanyId === actor.companyId;
+  const isOwner = isSupplierActor(actor) && load.shipperCompanyId === actor.companyId;
   const isRealAdmin = actor.realRole === "ADMIN" && !actor.simulated;
 
   if (!isOwner && !isRealAdmin) {
@@ -59,10 +65,14 @@ export async function POST(_req: Request, ctx: { params: Promise<{ loadId: strin
     return NextResponse.json({ error: `Cannot cancel load in status ${load.status}.` }, { status: 409 });
   }
 
-  const updated = await prisma.load.update({
-    where: { id: load.id },
-    data: { status: LoadStatus.CANCELLED },
-    select: { id: true, status: true, referenceNumber: true },
+  const updated = await prisma.$transaction(async (tx) => {
+    const row = await tx.load.update({
+      where: { id: load.id },
+      data: { status: LoadStatus.CANCELLED },
+      select: { id: true, status: true, referenceNumber: true },
+    });
+    await queueLoadCancellationNotices(tx, load);
+    return row;
   });
 
   return NextResponse.json({ data: updated });

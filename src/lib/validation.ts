@@ -258,6 +258,19 @@ export const companyOnboardingSchema = z
     isOwnerOperator: z.boolean().optional(),
     role: z.enum(["SHIPPER", "DISPATCHER"]),
     supplierKind: z.enum(["MILL", "WHOLESALER", "OTHER"]).optional(),
+    legalAcceptances: z
+      .array(
+        z.object({
+          documentKey: z.enum([
+            "PLATFORM_TERMS",
+            "PRIVACY_POLICY",
+            "SUPPLIER_AGREEMENT",
+            "CARRIER_AGREEMENT",
+          ]),
+          documentVersion: z.string().min(1).max(64),
+        }),
+      )
+      .optional(),
   })
   .superRefine((d, ctx) => {
     if (d.role === "SHIPPER" && !d.acronym) {

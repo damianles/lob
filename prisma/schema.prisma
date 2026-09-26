@@ -36,6 +36,13 @@ enum VerificationStatus {
   REJECTED
 }
 
+enum LegalDocumentKey {
+  PLATFORM_TERMS
+  PRIVACY_POLICY
+  SUPPLIER_AGREEMENT
+  CARRIER_AGREEMENT
+}
+
 enum LoadStatus {
   POSTED
   BOOKED
@@ -198,6 +205,7 @@ model Company {
   savedLanes            SavedLane[]               @relation("CompanySavedLanes")
   loadBids              LoadBid[]                 @relation("CarrierLoadBids")
   shipperLoadAlerts     ShipperLoadAlert[]        @relation("CompanyShipperAlerts")
+  legalAcceptances      LegalAcceptance[]
 }
 
 /**
@@ -263,6 +271,28 @@ model User {
   shipperLoadAlerts   ShipperLoadAlert[]      @relation("ShipperAlertRecipient")
   capacityInterestsCreated CapacityInterest[] @relation("CapacityInterestCreator")
   capacityInterestsReviewed CapacityInterest[] @relation("CapacityInterestReviewer")
+  legalAcceptances     LegalAcceptance[]
+}
+
+/**
+ * Clickwrap acceptance of a versioned legal document (terms, privacy, role agreements).
+ */
+model LegalAcceptance {
+  id              String           @id @default(cuid())
+  userId          String
+  companyId       String?
+  documentKey     LegalDocumentKey
+  documentVersion String
+  acceptedAt      DateTime         @default(now())
+  ipAddress       String?
+  userAgent       String?
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, documentKey, documentVersion])
+  @@index([companyId, documentKey])
+  @@index([documentKey, documentVersion])
 }
 
 model Load {
@@ -567,6 +597,10 @@ model LoadChangeNotice {
   changes            Json?
   channel            LoadNoticeChannel @default(EMAIL)
   status             LoadNoticeStatus  @default(PENDING)
+  /**
+   * When the recipient dismissed / read an IN_APP notice. EMAIL rows stay null.
+   */
+  readAt             DateTime?
   createdAt          DateTime          @default(now())
 
   load             Load     @relation(fields: [loadId], references: [id], onDelete: Cascade)

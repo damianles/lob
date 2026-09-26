@@ -25,6 +25,17 @@ export default function Page() {
               <SignUpWithRedirect />
             </Suspense>
           </div>
+          <p className="border-t border-stone-100 px-4 py-3 text-center text-[11px] text-stone-500">
+            By continuing you will accept LOB’s{" "}
+            <a href="/legal/terms" className="underline">
+              Terms
+            </a>
+            ,{" "}
+            <a href="/legal/privacy" className="underline">
+              Privacy Policy
+            </a>
+            , and role agreement at account setup.
+          </p>
         </div>
       </div>
     </main>

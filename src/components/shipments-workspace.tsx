@@ -478,7 +478,14 @@ export function ShipmentsWorkspace({
           </thead>
           <tbody>
             {sorted.map((r) => (
-              <tr key={r.id} className="border-b border-zinc-100 hover:bg-zinc-50/50">
+              <tr
+                key={r.id}
+                className={
+                  r.status === "NEEDS_REPOST"
+                    ? "lob-needs-repost-glow border-b border-amber-200/70"
+                    : "border-b border-zinc-100 hover:bg-zinc-50/50"
+                }
+              >
                 <td className="px-3 py-2 font-medium">
                   <Link href={`/loads/${r.id}`} className="text-lob-navy underline">
                     {r.referenceNumber}

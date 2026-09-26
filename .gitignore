@@ -45,3 +45,8 @@ next-env.d.ts
 
 # clerk configuration (can include secrets)
 /.clerk/
+
+# Internal corporate legal (not app platform terms)
+/docs/legal/Lumber-One-Board-Unanimous-Shareholders-Agreement.*
+/docs/legal/unanimous-shareholders-agreement-draft.md
+/docs/legal/generate_usa_docx.py
