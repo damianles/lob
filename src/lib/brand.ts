@@ -7,7 +7,8 @@
  * Currently shipped:
  * - lob-app-icon.png            — square dark-navy mark (1024×1024) — favicons, sidebar, social avatar
  * - lob-brand-lockup.png        — horizontal "LOB | Lumber One Board" (1024×799 canvas, content centered)
- * - lob-dark-lockup.png         — navy field, white LOB + “Lumber One Board” (1024×799) — global masthead
+ * - lob-dark-lockup.png         — navy field, white LOB + “Lumber One Board” (1024×799) — sidebar / other chrome
+ * - lob-dark-wordmark.png       — navy field, “Lumber One Board” only (847×110) — global masthead
  * - lob-mark-compact.png        — same horizontal lockup at compact size (1024×799)
  * - lob-brand-hero.png          — split panel: logo + "The #1 Lumber Load Board" + URL (1024×540)
  * - lob-concept-primary.png     — alt wide concept (currently mirrors hero — 1024×540)
@@ -36,10 +37,15 @@ export const LOB_BRAND_LOCKUP_SRC = "/brand/lob-brand-lockup.png";
 export const LOB_BRAND_LOCKUP_WIDTH = 1024;
 export const LOB_BRAND_LOCKUP_HEIGHT = 799;
 
-/** Dark navy lockup (white LOB + Lumber One Board) — global top masthead. */
+/** Dark navy lockup (white LOB + Lumber One Board) — sidebar / other chrome. */
 export const LOB_DARK_LOCKUP_SRC = "/brand/lob-dark-lockup.png";
 export const LOB_DARK_LOCKUP_WIDTH = 1024;
 export const LOB_DARK_LOCKUP_HEIGHT = 799;
+
+/** Dark navy wordmark only (“Lumber One Board”) — global top masthead. */
+export const LOB_DARK_WORDMARK_SRC = "/brand/lob-dark-wordmark.png";
+export const LOB_DARK_WORDMARK_WIDTH = 847;
+export const LOB_DARK_WORDMARK_HEIGHT = 110;
 
 /** Compact horizontal mark (currently shares the lockup PNG). */
 export const LOB_MARK_COMPACT_SRC = "/brand/lob-mark-compact.png";
