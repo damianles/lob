@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useMemo } from "react";
 
-import { LobWoodOIcon } from "@/components/lob-wood-o-icon";
 import { OpenBidsCountBadge, useOpenBidsInboxCount } from "@/components/open-bids-inbox-count";
 import { useViewerRole } from "@/components/providers/app-providers";
 import { BRAND_POSITIONING, BRAND_PRODUCT_NAME } from "@/lib/brand-marketing";
@@ -32,16 +31,13 @@ export function LobSidebar({
       <div className="border-b border-stone-200/50 px-4 pb-4 pt-6">
         <Link
           href={viewer.kind === "SHIPPER" ? "/shipments" : "/"}
-          className="flex min-w-0 items-start gap-2.5 rounded-xl p-1.5 transition hover:bg-white/70"
+          className="block min-w-0 rounded-xl p-1.5 transition hover:bg-white/70"
           aria-label={`${BRAND_PRODUCT_NAME} — home`}
         >
-          <LobWoodOIcon className="h-11 w-11 shrink-0 drop-shadow-sm" decorative />
-          <div className="min-w-0 flex-1 pt-0.5">
-            <p className="text-[13px] font-semibold leading-tight tracking-tight text-lob-navy">{BRAND_PRODUCT_NAME}</p>
-            <p className="mt-1 text-[9px] font-bold uppercase leading-snug tracking-[0.12em] text-lob-gold-muted">
-              {BRAND_POSITIONING}
-            </p>
-          </div>
+          <p className="text-[13px] font-semibold leading-tight tracking-tight text-lob-navy">{BRAND_PRODUCT_NAME}</p>
+          <p className="mt-1 text-[9px] font-bold uppercase leading-snug tracking-[0.12em] text-lob-gold-muted">
+            {BRAND_POSITIONING}
+          </p>
         </Link>
       </div>
       <div className="px-5 pb-2 pt-4">

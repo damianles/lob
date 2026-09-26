@@ -10,6 +10,7 @@ type Props = {
   decorative?: boolean;
   /** Shown as `alt` when `decorative` is false. */
   accessibilityTitle?: string;
+  sizes?: string;
 };
 
 /**
@@ -21,6 +22,7 @@ export function LobAppIconMark({
   priority,
   decorative = false,
   accessibilityTitle = BRAND_PRODUCT_NAME,
+  sizes = "(max-width: 640px) 44px, 48px",
 }: Props) {
   return (
     <Image
@@ -30,7 +32,7 @@ export function LobAppIconMark({
       height={LOB_APP_ICON_SIZE}
       priority={priority}
       className={className ? `${className} object-contain` : "object-contain"}
-      sizes="(max-width: 640px) 44px, 48px"
+      sizes={sizes}
       aria-hidden={decorative ? true : undefined}
     />
   );

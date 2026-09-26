@@ -14,13 +14,13 @@ Apply when editing shell layout, brand marks, nav, or page chrome. Prefer existi
 |-------|-----------|------|
 | Global wordmark | `LobBrandMasthead` in `src/app/layout.tsx` | Sole full-bleed top brand bar |
 | Primary nav | `AppNav` | Links + auth only — **no** LOB mark / wood-O |
-| In-app sidebar | `LobSidebar` | Compact mark + product name inside workspace |
+| In-app sidebar | `LobSidebar` | Text only: product name + positioning — **no** LOB mark |
 | Status chrome | `RoleRibbon`, `AdminViewAsBar`, `DemoBanner` | Role/admin/demo — not brand logos |
 
 - **One global masthead** — do not add a second wordmark above/beside `AppNav`.
-- **Masthead lockup** — dark navy bar (`bg-lob-navy`) with a **vector** “Lumber One Board” wordmark (white + gold “One”, Nunito 800). Do not put a scaled raster crop in the masthead — it pixelates. No LOB acronym and no `#1` tagline. Full `LOB_DARK_LOCKUP_SRC` stays for sidebar / other chrome.
+- **Masthead lockup** — dark navy bar (`bg-lob-navy`) with the square `LobAppIconMark` to the **left** of a **vector** “Lumber One Board” wordmark (white + gold “One”, Nunito 800). No `#1` tagline in the masthead. Do not put a scaled raster wordmark crop in the masthead — it pixelates.
 - **Masthead is full-bleed** — `w-full` edge-to-edge; do not re-introduce `max-w-[1680px]` on the masthead shell (content pages may still use that max width).
-- **No logo in `AppNav`** — home is the masthead (and sidebar on large screens).
+- **No logo in `AppNav` or `LobSidebar`** — the square mark lives in the masthead only.
 - Reuse `@/components/lob-brand-*`, `LobWoodOIcon`, `@/lib/brand`, `@/lib/brand-marketing` — do not invent new lockups.
 
 ## UX defaults
