@@ -58,9 +58,20 @@ type SortKey =
   | "weight"
   | "reference";
 
+type StatusFilter =
+  | "ALL"
+  | "ACTIVE"
+  | "NEEDS_REPOST"
+  | "POSTED"
+  | "BOOKED"
+  | "IN_TRANSIT"
+  | "DELIVERED"
+  | "UNLISTED"
+  | "CANCELLED";
+
 type FiltersState = {
   q: string;
-  status: "ALL" | "ACTIVE" | "DELIVERED" | "POSTED" | "CANCELLED";
+  status: StatusFilter;
   origin: string;
   destination: string;
   carrier: string;
@@ -89,8 +100,9 @@ const DEFAULT_FILTERS: FiltersState = {
 function statusLabel(s: ShipmentRow["status"]): string {
   switch (s) {
     case "POSTED": return "Posted";
-    case "BOOKED": return "Booked";
-    case "ASSIGNED": return "Driver assigned";
+    case "BOOKED":
+    case "ASSIGNED":
+      return "Booked";
     case "IN_TRANSIT": return "In transit";
     case "DELIVERED": return "Delivered";
     case "NEEDS_REPOST": return "Needs repost";
@@ -102,14 +114,36 @@ function statusLabel(s: ShipmentRow["status"]): string {
 function statusBadge(s: ShipmentRow["status"]): string {
   switch (s) {
     case "POSTED": return "bg-stone-100 text-stone-700 ring-stone-200";
-    case "BOOKED": return "bg-blue-50 text-blue-900 ring-blue-200";
-    case "ASSIGNED": return "bg-indigo-50 text-indigo-900 ring-indigo-200";
+    case "BOOKED":
+    case "ASSIGNED":
+      return "bg-blue-50 text-blue-900 ring-blue-200";
     case "IN_TRANSIT": return "bg-amber-50 text-amber-900 ring-amber-200";
     case "DELIVERED": return "bg-emerald-50 text-emerald-900 ring-emerald-200";
     case "NEEDS_REPOST": return "bg-amber-50 text-amber-950 ring-amber-200";
     case "UNLISTED": return "bg-zinc-100 text-zinc-600 ring-zinc-200";
     case "CANCELLED": return "bg-rose-50 text-rose-900 ring-rose-200";
   }
+}
+
+const STATUS_FILTER_OPTIONS: { value: StatusFilter; label: string }[] = [
+  { value: "ALL", label: "All" },
+  { value: "ACTIVE", label: "Active" },
+  { value: "NEEDS_REPOST", label: "Needs repost" },
+  { value: "POSTED", label: "Posted" },
+  { value: "BOOKED", label: "Booked" },
+  { value: "IN_TRANSIT", label: "In transit" },
+  { value: "DELIVERED", label: "Delivered" },
+  { value: "UNLISTED", label: "Unlisted" },
+  { value: "CANCELLED", label: "Cancelled" },
+];
+
+function matchesStatusFilter(r: ShipmentRow, filter: StatusFilter): boolean {
+  if (filter === "ALL") return true;
+  if (filter === "ACTIVE") {
+    return r.status !== "DELIVERED" && r.status !== "CANCELLED" && r.status !== "UNLISTED";
+  }
+  if (filter === "BOOKED") return r.status === "BOOKED" || r.status === "ASSIGNED";
+  return r.status === filter;
 }
 
 function csvEscape(v: unknown): string {
@@ -173,10 +207,7 @@ export function ShipmentsWorkspace({
       : Infinity;
 
     return shipments.filter((r) => {
-      if (filters.status === "ACTIVE" && (r.status === "DELIVERED" || r.status === "CANCELLED" || r.status === "UNLISTED")) return false;
-      if (filters.status === "DELIVERED" && r.status !== "DELIVERED") return false;
-      if (filters.status === "POSTED" && r.status !== "POSTED") return false;
-      if (filters.status === "CANCELLED" && r.status !== "CANCELLED") return false;
+      if (!matchesStatusFilter(r, filters.status)) return false;
 
       if (filters.rushOnly && !r.isRush) return false;
       if (filters.hideBrokers && r.carrierType === "BROKER") return false;
@@ -229,7 +260,7 @@ export function ShipmentsWorkspace({
           case "lane":
             return `${a.originState}${a.destinationState}`.localeCompare(`${b.originState}${b.destinationState}`);
           case "status":
-            return a.status.localeCompare(b.status);
+            return statusLabel(a.status).localeCompare(statusLabel(b.status));
           case "carrier":
             return (a.carrierName ?? "").localeCompare(b.carrierName ?? "");
           case "shipper":
@@ -251,7 +282,7 @@ export function ShipmentsWorkspace({
       "Status",
       "Posted",
       "Pickup date",
-      "Expected delivery",
+      "Delivery",
       "Booked date",
       "Origin city",
       "Origin state",
@@ -270,7 +301,7 @@ export function ShipmentsWorkspace({
     for (const r of sorted) {
       rows.push([
         r.referenceNumber,
-        r.status,
+        statusLabel(r.status),
         r.postedAt,
         new Date(r.requestedPickupAt).toISOString(),
         r.requestedDeliveryAt ?? "",
@@ -321,14 +352,14 @@ export function ShipmentsWorkspace({
             <span className="font-semibold uppercase tracking-wide text-stone-500">Status</span>
             <select
               value={filters.status}
-              onChange={(e) => update("status", e.target.value as FiltersState["status"])}
+              onChange={(e) => update("status", e.target.value as StatusFilter)}
               className="mt-1 rounded border border-stone-300 px-2 py-1.5 text-sm"
             >
-              <option value="ALL">All</option>
-              <option value="ACTIVE">Active (booked → in-transit)</option>
-              <option value="POSTED">Posted (no booking yet)</option>
-              <option value="DELIVERED">Delivered</option>
-              <option value="CANCELLED">Cancelled</option>
+              {STATUS_FILTER_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
             </select>
           </label>
           <div className="min-w-[10rem] max-w-[14rem]">
@@ -452,8 +483,8 @@ export function ShipmentsWorkspace({
       </div>
 
       <p className="mt-3 text-xs text-stone-600">
-        Showing <span className="font-semibold">{sorted.length}</span> of {shipments.length} shipments. Click any column
-        header to sort.
+        Showing <span className="font-semibold">{sorted.length}</span> of {shipments.length} shipments. Use Status to
+        filter the list. Click other headers to sort.
       </p>
 
       <div className="mt-3 overflow-x-auto rounded-lg border border-zinc-200 bg-white">
@@ -464,8 +495,8 @@ export function ShipmentsWorkspace({
               <SortableTh label="Lane" k="lane" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
               <SortableTh label="Posted" k="postedAt" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
               <SortableTh label="Pickup" k="pickupAt" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
-              <SortableTh label="Expected Delivery" k="deliveryAt" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
-              <th className="px-3 py-2">Status</th>
+              <SortableTh label="Delivery" k="deliveryAt" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
+              <StatusFilterTh value={filters.status} onChange={(v) => update("status", v)} />
               <SortableTh label="Equipment" k="weight" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
               <SortableTh label="Rate" k="rate" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} align="right" />
               {showShipperColumn && (
@@ -506,7 +537,9 @@ export function ShipmentsWorkspace({
                 </td>
                 <td className="px-3 py-2">
                   <span
-                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${statusBadge(r.status)}`}
+                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${statusBadge(r.status)} ${
+                      r.status === "NEEDS_REPOST" ? "lob-needs-repost-badge" : ""
+                    }`}
                   >
                     {statusLabel(r.status)}
                   </span>
@@ -559,6 +592,34 @@ export function ShipmentsWorkspace({
         )}
       </div>
     </div>
+  );
+}
+
+function StatusFilterTh({
+  value,
+  onChange,
+}: {
+  value: StatusFilter;
+  onChange: (value: StatusFilter) => void;
+}) {
+  return (
+    <th className="px-3 py-2">
+      <label className="flex flex-col gap-0.5">
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-600">Status</span>
+        <select
+          aria-label="Filter by status"
+          value={value}
+          onChange={(e) => onChange(e.target.value as StatusFilter)}
+          className="max-w-[9.5rem] rounded border border-stone-300 bg-white px-1.5 py-1 text-[11px] font-semibold normal-case text-zinc-800"
+        >
+          {STATUS_FILTER_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      </label>
+    </th>
   );
 }
 

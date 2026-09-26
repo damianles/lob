@@ -301,7 +301,15 @@ async function renderLoadDetailPage({ params }: { params: Promise<{ loadId: stri
             <div className="mt-4 flex flex-wrap gap-4 rounded-lg border border-zinc-200 bg-white p-4 text-sm">
               <div>
                 <p className="text-xs font-semibold uppercase text-zinc-500">Status</p>
-                <p className="mt-1 font-semibold text-zinc-900">{load.status}</p>
+                <p className="mt-1 font-semibold text-zinc-900">
+                  {load.status === "ASSIGNED" || load.status === "BOOKED"
+                    ? "Booked"
+                    : load.status === "NEEDS_REPOST"
+                      ? "Needs repost"
+                      : load.status === "IN_TRANSIT"
+                        ? "In transit"
+                        : load.status.charAt(0) + load.status.slice(1).toLowerCase().replace(/_/g, " ")}
+                </p>
               </div>
               <div>
                 <p className="text-xs font-semibold uppercase text-zinc-500">Rate</p>
@@ -433,7 +441,7 @@ async function renderLoadDetailPage({ params }: { params: Promise<{ loadId: stri
                     Edit load
                   </Link>
                 )}
-                {load.status === LoadStatus.BOOKED && (
+                {(load.status === LoadStatus.BOOKED || load.status === LoadStatus.ASSIGNED) && (
                   <Link
                     href={`/loads/${load.id}/rate-con`}
                     className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-50"
@@ -522,7 +530,7 @@ async function renderLoadDetailPage({ params }: { params: Promise<{ loadId: stri
             <div className="mt-6">
               <h2 className="text-sm font-semibold text-zinc-900">Shipment progress</h2>
               <p className="mt-1 text-xs text-zinc-500">
-                Same steps your team sees in tools like Samsara or a TMS: post → book → driver → pickup → delivery.
+                Same steps your team sees in tools like Samsara or a TMS: post → book → pickup → delivery.
               </p>
               <LoadTimeline
                 load={{
