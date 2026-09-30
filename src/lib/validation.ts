@@ -240,6 +240,17 @@ export const podUploadSchema = z
     message: "Provide a POD file URL or set receiverAcknowledged to true.",
   });
 
+const httpsUrl = z
+  .string()
+  .url()
+  .refine((v) => {
+    try {
+      return new URL(v).protocol === "https:";
+    } catch {
+      return false;
+    }
+  }, "Must be a full https:// link");
+
 export const companyOnboardingSchema = z
   .object({
     legalName: z.string().min(2),
@@ -252,12 +263,24 @@ export const companyOnboardingSchema = z
       .optional(),
     userName: z.string().min(2).optional(),
     userEmail: z.string().email().optional(),
+    businessPhone: z
+      .string()
+      .trim()
+      .min(7, "Enter a reachable business phone")
+      .max(40)
+      .optional(),
+    billingAddress: z.string().trim().max(500).optional(),
     dotNumber: z.string().min(2).optional(),
     mcNumber: z.string().min(2).optional(),
     carrierType: z.enum(["ASSET_BASED", "BROKER"]).optional(),
     isOwnerOperator: z.boolean().optional(),
     role: z.enum(["SHIPPER", "DISPATCHER"]),
     supplierKind: z.enum(["MILL", "WHOLESALER", "OTHER"]).optional(),
+    w9Url: httpsUrl.optional(),
+    creditReferenceUrl: httpsUrl,
+    creditReviewAuthorized: z.literal(true),
+    insuranceUrl: httpsUrl.optional(),
+    insuranceExpiresAt: z.string().datetime().optional(),
     legalAcceptances: z
       .array(
         z.object({
@@ -280,10 +303,54 @@ export const companyOnboardingSchema = z
         path: ["acronym"],
       });
     }
+    if (d.role === "SHIPPER" && !d.businessPhone?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Business phone is required for suppliers.",
+        path: ["businessPhone"],
+      });
+    }
+    if (d.role === "SHIPPER" && !d.w9Url) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "W-9 https link is required for suppliers.",
+        path: ["w9Url"],
+      });
+    }
+    if (d.role === "DISPATCHER") {
+      if (!d.businessPhone?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Business phone is required for carriers.",
+          path: ["businessPhone"],
+        });
+      }
+      if (!d.w9Url) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "W-9 https link is required for carriers.",
+          path: ["w9Url"],
+        });
+      }
+      if (!d.insuranceUrl) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Certificate of insurance is required for carriers.",
+          path: ["insuranceUrl"],
+        });
+      }
+      if (!d.insuranceExpiresAt) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Insurance expiry is required for carriers.",
+          path: ["insuranceExpiresAt"],
+        });
+      }
+    }
   });
 
 export const insuranceUploadSchema = z.object({
-  fileUrl: z.string().url(),
+  fileUrl: httpsUrl,
   expiresAt: z.string().datetime(),
 });
 

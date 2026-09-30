@@ -6,6 +6,10 @@ import { LobSidebar } from "@/components/lob-sidebar";
 import { LobWoodOIcon } from "@/components/lob-wood-o-icon";
 import { getDatabaseErrorGuidance } from "@/lib/db-connection-hints";
 import { isAdminPersonaSwitchEnabled } from "@/lib/admin-test-personas";
+import {
+  autoApproveCarriersEnabled,
+  autoApproveSuppliersEnabled,
+} from "@/lib/marketplace-gates";
 import { syncClerkUserToDatabase } from "@/lib/sync-clerk-user";
 
 import { OnboardingForms } from "./ui";
@@ -29,8 +33,8 @@ export default async function OnboardingPage() {
     console.error("[onboarding] profile sync error:", e);
   }
 
-  const carrierAutoApprove = process.env.LOB_AUTO_APPROVE_CARRIERS === "true";
-  const supplierAutoApprove = process.env.LOB_AUTO_APPROVE_SUPPLIERS === "true";
+  const carrierAutoApprove = autoApproveCarriersEnabled();
+  const supplierAutoApprove = autoApproveSuppliersEnabled();
   const personaSwitch = isAdminPersonaSwitchEnabled();
 
   return (
@@ -44,8 +48,7 @@ export default async function OnboardingPage() {
               <div className="min-w-0">
                 <h1 className="text-3xl font-semibold tracking-tight text-lob-navy sm:text-4xl">Account Setup</h1>
                 <p className="mt-3 max-w-xl text-base leading-relaxed text-stone-500">
-                  Link your company to LOB. You will only see the registration form for the side you chose at sign-up
-                  (supplier or carrier). LOB reviews new companies before posting or booking goes live.
+                  File your company and the documents the other side will read after a booking. Carriers also file insurance.
                 </p>
               </div>
             </div>

@@ -1,0 +1,71 @@
+# LOB — where we are
+
+**As of:** 30 Sep 2026  
+**This file is the product snapshot.** `AGENTS.md` is the code map. Do not treat chat history as current.
+
+Update this file when something **material** changes (shipped feature, explicit deferral, launch blocker). Skip drive-by session notes.
+
+---
+
+## What it is
+
+**Lumber One Board** is a B2B load board for forest products freight. Suppliers (mills / wholesalers) post loads. Carriers (asset-based, brokers, owner-ops) book or bid. Ops then run **dispatch → facility pickup → delivery / POD**.
+
+Signup collects a W-9 and credit reference (insurance for carriers), business phone, optional billing address, and clickwrap legal acceptances. After a booking, each side can open the other’s credit file. LOB does not score credit. Admin must mark credit docs verified before Approve.
+
+**Core lifecycle:** post load → book (or accept a bid) → dispatch packet → facility pickup confirm → POD / delivery confirm.
+
+---
+
+## Who uses it
+
+| Persona | App role | What they do |
+|---------|----------|----------------|
+| Mill / wholesaler | `SHIPPER` | Post loads (Firm Rate or Open bid), review bids/counters, track own shipments, exclude/tier carriers, facility QR for yard and receiver |
+| Carrier dispatcher | `DISPATCHER` | Browse open loads, book Firm Rate or bid, post capacity, dispatch drivers, carrier profile (DOT/MC/fleet) |
+| Driver / yard / receiver | token links, no account | Driver packet; facility pickup and delivery pages (rates never shown) |
+| Damia / ops | `ADMIN` | Approve carriers and suppliers (docs-verified gate), companies, Test Lab persona preview |
+
+Onboarding is at `/onboarding` after Clerk sign-up. Production company create requires a signed-in Clerk user.
+
+Production topology: **Vercel** (`lob`) + **Supabase Postgres** + **Clerk** (`app_3B0GZBYUj2l8zOryfv6HA27cfQh`). Local: native Postgres `lob` on `localhost:5432`, **no Docker**.
+
+---
+
+## Legal (clickwrap)
+
+Platform Terms, Privacy Policy, Supplier Agreement, and Carrier Agreement ship as version **`2026.09.30-draft`** (`isDraft: true`) in `src/lib/legal/documents.ts`. Acceptances store document key, version, IP, and user agent. **Counsel review is still pending** — bump version and clear `isDraft` when counsel signs off.
+
+---
+
+## Marketplace safety gates
+
+| Gate | Behavior |
+|------|----------|
+| Auto-approve | `LOB_AUTO_APPROVE_*` ignored on Vercel Production (unless preview-admin tools explicitly allowed). Prod project currently has these vars unset. |
+| Admin approve | Requires `creditDocsVerifiedAt` after opening W-9 / credit (and insurance for carriers). |
+| Post / book | Company `verificationStatus === APPROVED`. |
+| Credit file | Counterparty only after a shared booking; HTTPS links required. |
+| Unsigned create | Blocked outside local/dev (`allowUnsignedCompanyCreate`). |
+
+---
+
+## Explicitly deferred
+
+| Item | Rule |
+|------|------|
+| In-app email / SMTP / Resend | Deferred. Outlook-manual PDF attach. |
+| Insights product (nav) | Hidden until privacy/product review. |
+| Docker on this machine | Virtualization disabled. Native Postgres. |
+
+---
+
+## How a new chat should use this
+
+```
+Read AGENTS.md and docs/STATUS.md.
+Task: [one sentence — what + where]
+Do not change: [auth / schema / unrelated files]
+```
+
+If this file disagrees with the code, **the code and `git status` win**. Then update this file.

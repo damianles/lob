@@ -4,6 +4,11 @@ import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 
 import { validateLegalAcceptances } from "@/lib/legal/documents";
+import {
+  allowUnsignedCompanyCreate,
+  autoApproveCarriersEnabled,
+  autoApproveSuppliersEnabled,
+} from "@/lib/marketplace-gates";
 import { prisma } from "@/lib/prisma";
 import { companyOnboardingSchema } from "@/lib/validation";
 
@@ -26,6 +31,13 @@ export async function POST(req: Request) {
         where: { authProviderId: clerkUserId },
       })
     : null;
+
+  if (!signedInUser && !allowUnsignedCompanyCreate()) {
+    return NextResponse.json(
+      { error: "Sign in with Clerk before creating a company account." },
+      { status: 401 },
+    );
+  }
 
   if (signedInUser?.companyId && signedInUser.role !== UserRole.ADMIN) {
     return NextResponse.json({ error: "This user is already linked to a company." }, { status: 409 });
@@ -90,8 +102,8 @@ export async function POST(req: Request) {
     }
   }
 
-  const autoApproveCarriers = process.env.LOB_AUTO_APPROVE_CARRIERS === "true";
-  const autoApproveSuppliers = process.env.LOB_AUTO_APPROVE_SUPPLIERS === "true";
+  const autoApproveCarriers = autoApproveCarriersEnabled();
+  const autoApproveSuppliers = autoApproveSuppliersEnabled();
 
   const hdrs = await headers();
   const ipAddress =
@@ -105,6 +117,8 @@ export async function POST(req: Request) {
       data: {
         legalName: payload.legalName,
         acronym: payload.role === "SHIPPER" ? payload.acronym : undefined,
+        businessPhone: payload.businessPhone?.trim() || null,
+        billingAddress: payload.billingAddress?.trim() || null,
         dotNumber: payload.dotNumber,
         mcNumber: payload.mcNumber,
         carrierType: payload.carrierType,
@@ -118,8 +132,35 @@ export async function POST(req: Request) {
             : autoApproveCarriers
               ? VerificationStatus.APPROVED
               : VerificationStatus.PENDING,
+        creditReviewAuthorized: true,
+        creditDocsVerifiedAt:
+          (payload.role === "SHIPPER" && autoApproveSuppliers) ||
+          (payload.role === "DISPATCHER" && autoApproveCarriers)
+            ? new Date()
+            : null,
       },
     });
+
+    const docs: { companyId: string; kind: string; fileUrl: string; expiresAt?: Date }[] = [
+      {
+        companyId: company.id,
+        kind: "CREDIT_REFERENCE",
+        fileUrl: payload.creditReferenceUrl,
+      },
+    ];
+    if (payload.w9Url) {
+      docs.push({ companyId: company.id, kind: "W9", fileUrl: payload.w9Url });
+    }
+    if (payload.role === "DISPATCHER" && payload.insuranceUrl && payload.insuranceExpiresAt) {
+      docs.push({
+        companyId: company.id,
+        kind: "INSURANCE",
+        fileUrl: payload.insuranceUrl,
+        expiresAt: new Date(payload.insuranceExpiresAt),
+      });
+    }
+
+    await tx.document.createMany({ data: docs });
 
     let userId: string;
     if (signedInUser) {

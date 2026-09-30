@@ -10,6 +10,7 @@ import { LaneDecisionStats } from "@/components/lane-decision-stats";
 import { RateModeBadge } from "@/components/rate-mode-badge";
 import { ShipperBidReviewList } from "@/components/shipper-bid-review-list";
 import { CarrierScorecard } from "@/components/carrier-scorecard";
+import { CreditFilePanel } from "@/components/credit-file-panel";
 import { CarrierTypeTag } from "@/components/carrier-type-tag";
 import { CreateDispatchForm } from "@/components/create-dispatch-form";
 import { DriverLinkPanel } from "@/components/driver-link-panel";
@@ -37,6 +38,7 @@ import {
   supplierKindLabel,
 } from "@/lib/shipper-visibility";
 import { carrierMayViewPostedLoad } from "@/lib/carrier-load-access";
+import { getCreditFileView } from "@/lib/credit-file";
 import { syncClerkUserToDatabase } from "@/lib/sync-clerk-user";
 import { getActorContext } from "@/lib/request-context";
 import { DbWarmingBanner } from "@/components/db-warming-banner";
@@ -195,6 +197,57 @@ async function renderLoadDetailPage({ params }: { params: Promise<{ loadId: stri
           select: { kind: true, expiresAt: true },
         })
       : [];
+
+  const creditPanels: {
+    subjectCompanyId: string;
+    partyLabel: string;
+    file: NonNullable<Awaited<ReturnType<typeof getCreditFileView>>>;
+    canMarkReviewed: boolean;
+  }[] = [];
+  if (load.booking && effectiveCompanyId && isShipperOwner) {
+    const file = await getCreditFileView(load.booking.carrierCompanyId, effectiveCompanyId);
+    if (file) {
+      creditPanels.push({
+        subjectCompanyId: load.booking.carrierCompanyId,
+        partyLabel: "Carrier",
+        file,
+        canMarkReviewed: true,
+      });
+    }
+  }
+  if (load.booking && effectiveCompanyId && isBookedCarrier) {
+    const file = await getCreditFileView(load.shipperCompanyId, effectiveCompanyId);
+    if (file) {
+      creditPanels.push({
+        subjectCompanyId: load.shipperCompanyId,
+        partyLabel: "Mill",
+        file,
+        canMarkReviewed: true,
+      });
+    }
+  }
+  if (load.booking && isRealAdmin) {
+    const [carrierFile, millFile] = await Promise.all([
+      getCreditFileView(load.booking.carrierCompanyId, null),
+      getCreditFileView(load.shipperCompanyId, null),
+    ]);
+    if (carrierFile) {
+      creditPanels.push({
+        subjectCompanyId: load.booking.carrierCompanyId,
+        partyLabel: "Carrier",
+        file: carrierFile,
+        canMarkReviewed: false,
+      });
+    }
+    if (millFile) {
+      creditPanels.push({
+        subjectCompanyId: load.shipperCompanyId,
+        partyLabel: "Mill",
+        file: millFile,
+        canMarkReviewed: false,
+      });
+    }
+  }
 
   const decisionCompanyId = isShipperOwner || isRealAdmin ? load.shipperCompanyId : effectiveCompanyId;
   const [decision, repeats] = await Promise.all([
@@ -462,6 +515,16 @@ async function renderLoadDetailPage({ params }: { params: Promise<{ loadId: stri
               const lumber = extractLumberSpec(load.extendedPosting);
               return lumber ? <LumberSpecPanel spec={lumber} className="mt-4" /> : null;
             })()}
+
+            {creditPanels.map((panel) => (
+              <CreditFilePanel
+                key={`${panel.partyLabel}-${panel.subjectCompanyId}`}
+                subjectCompanyId={panel.subjectCompanyId}
+                partyLabel={panel.partyLabel}
+                file={panel.file}
+                canMarkReviewed={panel.canMarkReviewed}
+              />
+            ))}
 
             {load.booking && (isShipperOwner || isRealAdmin) && (
               <div className="mt-6">

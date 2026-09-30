@@ -63,13 +63,16 @@ Set these for **Production** (and **Preview** if you use preview URLs):
 | `CLERK_SECRET_KEY` | Clerk dashboard | Server-side auth. |
 | `CLERK_WEBHOOK_SIGNING_SECRET` | Clerk → Webhooks (optional but good) | Auto-sync users; **sign-in still works without it** thanks to in-app sync. |
 
-**Optional for demos / partner testing (turn off for real customers):**
+**Optional for demos / partner testing (never set on Vercel Production for real customers):**
 
 | Variable | Effect |
 |----------|--------|
-| `LOB_AUTO_APPROVE_CARRIERS=true` | New trucking companies are approved immediately (no admin queue). |
-| `LOB_AUTO_APPROVE_SUPPLIERS=true` | New supplier companies are approved immediately (no admin queue). |
+| `LOB_AUTO_APPROVE_CARRIERS=true` | Preview only: new carriers approved immediately. **Hard-ignored on Vercel Production** unless `LOB_ALLOW_PREVIEW_ADMIN_TOOLS=true`. |
+| `LOB_AUTO_APPROVE_SUPPLIERS=true` | Preview only: new suppliers approved immediately. **Hard-ignored on Vercel Production** unless `LOB_ALLOW_PREVIEW_ADMIN_TOOLS=true`. |
 | `NEXT_PUBLIC_LOB_DEMO_MODE=true` | Yellow **Demo / preview** banner at the top of every page. |
+| `LOB_ALLOW_UNSIGNED_COMPANY_CREATE=true` | Local/dev only: allow company create without Clerk. Ignored on Production without preview-admin tools. |
+
+**Production check (2026-09-30):** Vercel project `lob` has **no** `LOB_AUTO_APPROVE_*` env vars — approval queues stay on. Admins must open credit links, **Mark docs verified**, then **Approve** on `/admin/suppliers` and `/admin/carriers`.
 
 After changing env vars, **redeploy** so the new values apply.
 

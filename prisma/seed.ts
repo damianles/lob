@@ -69,6 +69,8 @@ async function main() {
       supplierKind: SupplierKind.MILL,
       verificationStatus: VerificationStatus.APPROVED,
       acronym: "NRL",
+      businessPhone: "250-555-0100",
+      creditDocsVerifiedAt: new Date(),
     },
     create: {
       legalName: "North Ridge Lumber",
@@ -76,6 +78,8 @@ async function main() {
       verificationStatus: VerificationStatus.APPROVED,
       analyticsSubscriber: true,
       supplierKind: SupplierKind.MILL,
+      businessPhone: "250-555-0100",
+      creditDocsVerifiedAt: new Date(),
     },
   });
 
@@ -85,6 +89,8 @@ async function main() {
       analyticsSubscriber: true,
       verificationStatus: VerificationStatus.APPROVED,
       carrierType: CarrierType.ASSET_BASED,
+      businessPhone: "503-555-0199",
+      creditDocsVerifiedAt: new Date(),
     },
     create: {
       legalName: "Blue Ox Transport",
@@ -93,6 +99,8 @@ async function main() {
       reliabilityScore: 96,
       factoringEligible: true,
       analyticsSubscriber: true,
+      businessPhone: "503-555-0199",
+      creditDocsVerifiedAt: new Date(),
     },
   });
 

@@ -3,6 +3,7 @@
 This is **your** reference. Bookmark it. Use it at the start of every new chat.
 
 For deep project context (agents): **`AGENTS.md`** at the repo root.  
+For “where we are” (product snapshot): **`docs/STATUS.md`** (marketplace gates, legal versions, deferrals).  
 For always-on agent behavior: **`.cursor/rules/lob-core.mdc`**.
 
 ---
@@ -36,6 +37,14 @@ Do not change: [auth / schema / unrelated files]
 Files: @[paths if you know them]
 ```
 
+After a **long break** (days/weeks), add `docs/STATUS.md` so the agent does not reconstruct product state from old chats:
+
+```
+Read AGENTS.md and docs/STATUS.md.
+Task: [one sentence — what + where]
+Do not change: [auth / schema / unrelated files]
+```
+
 ### Agent (what you should get back)
 
 - A short **checklist recap** (from the section above)
@@ -53,6 +62,7 @@ Files: @[paths if you know them]
 | 3. Build | Review diffs; test in browser | Minimal diff, match existing style |
 | 4. Verify | Click through the flow you changed | Run commands you ask for; don't commit unless asked |
 | 5. Ship | When ready: commit, push, Vercel redeploy | Follow `SHIP.md` only when you request it |
+| 6. Snapshot | If product state changed (shipped, deferred, or blocked) | Update `docs/STATUS.md` — current truth only, not a chat log |
 
 ---
 
@@ -63,7 +73,7 @@ Files: @[paths if you know them]
 | New feature | Tiny fix on what you just built |
 | New bug in a different area | "Change the button label we added" |
 | Agent seems confused or repetitive | Follow-up with one clarifying answer |
-| After a long break | — |
+| After a long break | Start a new chat and `@docs/STATUS.md` |
 
 ---
 
@@ -94,6 +104,7 @@ npm run dev
 3. **Do** say "read AGENTS.md first" once per chat — not the whole codebase
 4. **Don't** mix three features in one chat
 5. **Pin memories** only for lasting decisions (e.g. "no Docker locally") — not code details
+6. After a long break, `@docs/STATUS.md` — do not ask the agent to reconstruct product state from old chats
 
 ---
 
@@ -102,6 +113,7 @@ npm run dev
 | File | Purpose |
 |------|---------|
 | `docs/WORKFLOW.md` | **This file** — your process |
+| `docs/STATUS.md` | **Where we are** — product snapshot for new chats |
 | `AGENTS.md` | Project map for agents |
 | `README.md` | Setup overview |
 | `DEPLOY.md` | Vercel, Supabase, Clerk production |

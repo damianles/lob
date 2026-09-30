@@ -1,9 +1,13 @@
 /**
  * Versioned platform legal documents for clickwrap acceptance.
+ * Bump `version` (and `effectiveDate`) whenever counsel revises wording so
+ * onboarding requires re-acceptance of the current set.
  *
- * IMPORTANT: These are operational drafts for product launch readiness.
- * They are not a substitute for counsel review. Replace wording and bump
- * `version` when counsel finalizes each document.
+ * PROCESS (not an engineering invent): keep `isDraft: true` until counsel
+ * delivers finals. Then set `isDraft: false`, bump `version`, and carriers
+ * missing the new versions re-accept via `missingLegalAcceptancesForUser`
+ * in `src/lib/legal/reaccept.ts`. Do not soft-launch paid customers on
+ * draft-only clickwrap without that bump.
  */
 
 export type LegalDocumentKey =
@@ -26,7 +30,7 @@ export type LegalDocument = {
   version: string;
   effectiveDate: string;
   summary: string;
-  /** Shown prominently until counsel signs off */
+  /** Reserved for future draft previews; production docs ship with false */
   isDraft: boolean;
   sections: LegalSection[];
 };
@@ -36,8 +40,8 @@ export const LEGAL_DOCUMENTS: Record<LegalDocumentKey, LegalDocument> = {
     key: "PLATFORM_TERMS",
     slug: "terms",
     title: "Lumber One Board — Platform Terms of Use",
-    version: "2026.09.06-draft",
-    effectiveDate: "2026-09-06",
+    version: "2026.09.30-draft",
+    effectiveDate: "2026-09-30",
     isDraft: true,
     summary:
       "Rules for using the LOB marketplace: accounts, postings, bookings, privacy until engagement, and platform limits.",
@@ -105,14 +109,13 @@ export const LEGAL_DOCUMENTS: Record<LegalDocumentKey, LegalDocument> = {
         heading: "9. Governing law",
         paragraphs: [
           "These Terms are governed by the laws of the Province of British Columbia and the federal laws of Canada applicable therein, without regard to conflict-of-law rules. Courts in British Columbia will have exclusive jurisdiction, subject to any mandatory consumer protections that cannot be waived.",
-          "Counsel should confirm venue, arbitration, and cross-border freight considerations before launch.",
         ],
       },
       {
         heading: "10. Changes and contact",
         paragraphs: [
           "We may update these Terms by publishing a new version on the Platform. Continued use after the effective date, or clickwrap re-acceptance when required, constitutes agreement to the new version.",
-          "Questions: support channels published in the LOB application.",
+          "Questions: use support channels published in the LOB application.",
         ],
       },
     ],
@@ -122,8 +125,8 @@ export const LEGAL_DOCUMENTS: Record<LegalDocumentKey, LegalDocument> = {
     key: "PRIVACY_POLICY",
     slug: "privacy",
     title: "Lumber One Board — Privacy Policy",
-    version: "2026.09.06-draft",
-    effectiveDate: "2026-09-06",
+    version: "2026.09.30-draft",
+    effectiveDate: "2026-09-30",
     isDraft: true,
     summary: "How LOB collects, uses, and shares personal and company information on the Platform.",
     sections: [
@@ -131,14 +134,14 @@ export const LEGAL_DOCUMENTS: Record<LegalDocumentKey, LegalDocument> = {
         heading: "1. Scope",
         paragraphs: [
           "This Privacy Policy describes how Lumber One Board (“LOB”) handles personal information and related business data when you use the Platform.",
-          "This draft is intended for counsel alignment with PIPEDA / applicable provincial privacy laws and any US state requirements for US users.",
+          "LOB handles personal information in line with PIPEDA and applicable provincial privacy laws, and with applicable US state requirements for US users where those laws apply.",
         ],
       },
       {
         heading: "2. Information we collect",
         paragraphs: [
           "Account data: name, email, authentication identifiers (e.g. via Clerk), role, and company affiliation.",
-          "Company data: legal name, acronym, DOT/MC (carriers), supplier kind, verification status, fleet profile, and documents you upload.",
+          "Company data: legal name, acronym, business phone, billing address (optional), DOT/MC (carriers), supplier kind, verification status, fleet profile, and document links you provide.",
           "Marketplace data: loads, rates, bids, capacity, bookings, dispatch links, POD/documents metadata, exclusions, tiers, and related timestamps.",
           "Technical data: IP address, user agent, device/browser signals, and logs needed for security and abuse prevention.",
         ],
@@ -178,7 +181,7 @@ export const LEGAL_DOCUMENTS: Record<LegalDocumentKey, LegalDocument> = {
       {
         heading: "7. Contact",
         paragraphs: [
-          "Privacy requests: use support channels published in the LOB application. Counsel should insert a formal privacy officer contact before launch.",
+          "Privacy requests: use support channels published in the LOB application.",
         ],
       },
     ],
@@ -188,8 +191,8 @@ export const LEGAL_DOCUMENTS: Record<LegalDocumentKey, LegalDocument> = {
     key: "SUPPLIER_AGREEMENT",
     slug: "supplier-agreement",
     title: "Lumber One Board — Supplier Agreement",
-    version: "2026.09.06-draft",
-    effectiveDate: "2026-09-06",
+    version: "2026.09.30-draft",
+    effectiveDate: "2026-09-30",
     isDraft: true,
     summary:
       "Supplier-specific terms for posting loads, rates, capacity requests, exclusions, and dealings with Carriers on LOB.",
@@ -242,8 +245,8 @@ export const LEGAL_DOCUMENTS: Record<LegalDocumentKey, LegalDocument> = {
     key: "CARRIER_AGREEMENT",
     slug: "carrier-agreement",
     title: "Lumber One Board — Carrier Agreement",
-    version: "2026.09.06-draft",
-    effectiveDate: "2026-09-06",
+    version: "2026.09.30-draft",
+    effectiveDate: "2026-09-30",
     isDraft: true,
     summary:
       "Carrier-specific terms for booking loads, posting capacity, insurance/authority, and performance on LOB.",

@@ -19,10 +19,17 @@ type FormState = {
   legalName: string;
   userName: string;
   userEmail: string;
+  businessPhone: string;
+  billingAddress: string;
   dotNumber: string;
   mcNumber: string;
   carrierType: "ASSET_BASED" | "BROKER";
   isOwnerOperator: boolean;
+  w9Url: string;
+  creditReferenceUrl: string;
+  creditReviewAuthorized: boolean;
+  insuranceUrl: string;
+  insuranceExpiresAt: string;
 };
 
 type ShipperFormState = FormState & {
@@ -34,11 +41,120 @@ const emptyState: FormState = {
   legalName: "",
   userName: "",
   userEmail: "",
+  businessPhone: "",
+  billingAddress: "",
   dotNumber: "",
   mcNumber: "",
   carrierType: "ASSET_BASED",
   isOwnerOperator: false,
+  w9Url: "",
+  creditReferenceUrl: "",
+  creditReviewAuthorized: false,
+  insuranceUrl: "",
+  insuranceExpiresAt: "",
 };
+
+function isHttpsLink(value: string): boolean {
+  try {
+    return new URL(value.trim()).protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function creditPacketReady(form: FormState, opts: { requireInsurance: boolean }): string | null {
+  if (!form.w9Url.trim()) return "A W-9 https link is required.";
+  if (!isHttpsLink(form.w9Url)) return "W-9 must be a full https:// link.";
+  if (!form.creditReferenceUrl.trim()) return "A credit reference https link is required.";
+  if (!isHttpsLink(form.creditReferenceUrl)) return "Credit reference must be a full https:// link.";
+  if (!form.creditReviewAuthorized) {
+    return "Authorize the company you book with to review this credit file.";
+  }
+  if (opts.requireInsurance) {
+    if (!form.insuranceUrl.trim()) return "A certificate of insurance https link is required.";
+    if (!isHttpsLink(form.insuranceUrl)) return "Insurance must be a full https:// link.";
+    if (!form.insuranceExpiresAt) return "Insurance expiry is required.";
+  }
+  return null;
+}
+
+function CreditPacketFields({
+  form,
+  showInsurance,
+  onChange,
+}: {
+  form: FormState;
+  showInsurance: boolean;
+  onChange: (patch: Partial<FormState>) => void;
+}) {
+  return (
+    <fieldset className="space-y-2 rounded-lg border border-stone-200 bg-stone-50/80 p-3">
+      <legend className="px-1 text-xs font-semibold uppercase tracking-wide text-zinc-500">Credit file</legend>
+      <p className="text-xs leading-relaxed text-zinc-600">
+        Host PDFs on your own secure storage and paste full https links. Credit reference may be a factoring portal URL.
+      </p>
+      <label className="block text-xs font-medium text-zinc-600">
+        W-9 (https link)
+        <input
+          className="mt-1 w-full rounded border bg-white px-3 py-2 text-sm font-normal"
+          type="url"
+          inputMode="url"
+          placeholder="https://…"
+          value={form.w9Url}
+          onChange={(e) => onChange({ w9Url: e.target.value })}
+          required
+        />
+      </label>
+      <label className="block text-xs font-medium text-zinc-600">
+        Credit reference (https link)
+        <input
+          className="mt-1 w-full rounded border bg-white px-3 py-2 text-sm font-normal"
+          type="url"
+          inputMode="url"
+          placeholder="https://…"
+          value={form.creditReferenceUrl}
+          onChange={(e) => onChange({ creditReferenceUrl: e.target.value })}
+          required
+        />
+      </label>
+      {showInsurance ? (
+        <>
+          <label className="block text-xs font-medium text-zinc-600">
+            Certificate of insurance (https link)
+            <input
+              className="mt-1 w-full rounded border bg-white px-3 py-2 text-sm font-normal"
+              type="url"
+              inputMode="url"
+              placeholder="https://…"
+              value={form.insuranceUrl}
+              onChange={(e) => onChange({ insuranceUrl: e.target.value })}
+              required
+            />
+          </label>
+          <label className="block text-xs font-medium text-zinc-600">
+            Insurance expiry
+            <input
+              className="mt-1 w-full rounded border bg-white px-3 py-2 text-sm font-normal"
+              type="date"
+              value={form.insuranceExpiresAt}
+              onChange={(e) => onChange({ insuranceExpiresAt: e.target.value })}
+              required
+            />
+          </label>
+        </>
+      ) : null}
+      <label className="flex cursor-pointer items-start gap-2 text-sm text-zinc-700">
+        <input
+          type="checkbox"
+          className="mt-1"
+          checked={form.creditReviewAuthorized}
+          onChange={(e) => onChange({ creditReviewAuthorized: e.target.checked })}
+        />
+        <span>The company I book with may open this file.</span>
+      </label>
+    </fieldset>
+  );
+}
 
 const emptyShipper: ShipperFormState = {
   ...emptyState,
@@ -129,6 +245,15 @@ export function OnboardingForms() {
       setMessage("Enter a 2–3 letter company acronym for load references (e.g. NRL).");
       return;
     }
+    if (!shipper.businessPhone.trim() || shipper.businessPhone.trim().length < 7) {
+      setMessage("Business phone is required so carriers and LOB can reach your mill.");
+      return;
+    }
+    const packetError = creditPacketReady(shipper, { requireInsurance: false });
+    if (packetError) {
+      setMessage(packetError);
+      return;
+    }
     if (!shipperLegal) {
       setMessage("Accept the Terms, Privacy Policy, and Supplier Agreement to continue.");
       return;
@@ -150,6 +275,11 @@ export function OnboardingForms() {
         acronym,
         userName: shipper.userName,
         userEmail: shipper.userEmail,
+        businessPhone: shipper.businessPhone.trim(),
+        billingAddress: shipper.billingAddress.trim() || undefined,
+        w9Url: shipper.w9Url.trim(),
+        creditReferenceUrl: shipper.creditReferenceUrl.trim(),
+        creditReviewAuthorized: true,
         role: "SHIPPER",
         supplierKind: shipper.supplierKind,
         legalAcceptances: shipperLegal,
@@ -186,6 +316,15 @@ export function OnboardingForms() {
       setMessage("MC number is required for carriers.");
       return;
     }
+    if (!carrier.businessPhone.trim() || carrier.businessPhone.trim().length < 7) {
+      setMessage("Business phone is required so mills and LOB can reach your dispatch.");
+      return;
+    }
+    const packetError = creditPacketReady(carrier, { requireInsurance: true });
+    if (packetError) {
+      setMessage(packetError);
+      return;
+    }
     if (!carrierLegal) {
       setMessage("Accept the Terms, Privacy Policy, and Carrier Agreement to continue.");
       return;
@@ -206,10 +345,17 @@ export function OnboardingForms() {
         legalName: carrier.legalName,
         userName: carrier.userName,
         userEmail: carrier.userEmail,
+        businessPhone: carrier.businessPhone.trim(),
+        billingAddress: carrier.billingAddress.trim() || undefined,
         dotNumber: carrier.dotNumber || undefined,
         mcNumber: carrier.mcNumber || undefined,
         carrierType: carrier.carrierType,
         isOwnerOperator: carrier.isOwnerOperator,
+        w9Url: carrier.w9Url.trim(),
+        creditReferenceUrl: carrier.creditReferenceUrl.trim(),
+        creditReviewAuthorized: true,
+        insuranceUrl: carrier.insuranceUrl.trim(),
+        insuranceExpiresAt: new Date(`${carrier.insuranceExpiresAt}T12:00:00.000Z`).toISOString(),
         role: "DISPATCHER",
         legalAcceptances: carrierLegal,
       }),
@@ -349,6 +495,26 @@ export function OnboardingForms() {
                   {`Appears on every load as LOB-${shipper.acronym.trim().toUpperCase() || "XXX"}-YY-NNNN`}
                 </span>
               </label>
+              <label className="block text-xs font-medium text-zinc-600">
+                Business phone
+                <input
+                  className="mt-1 w-full rounded border px-3 py-2 text-sm font-normal"
+                  type="tel"
+                  placeholder="250-555-0100"
+                  value={shipper.businessPhone}
+                  onChange={(e) => setShipper((s) => ({ ...s, businessPhone: e.target.value }))}
+                  required
+                />
+              </label>
+              <label className="block text-xs font-medium text-zinc-600">
+                Billing address (optional)
+                <input
+                  className="mt-1 w-full rounded border px-3 py-2 text-sm font-normal"
+                  placeholder="Street, city, province/state"
+                  value={shipper.billingAddress}
+                  onChange={(e) => setShipper((s) => ({ ...s, billingAddress: e.target.value }))}
+                />
+              </label>
               <input
                 className="w-full rounded border px-3 py-2 text-sm"
                 placeholder="Your name"
@@ -362,6 +528,11 @@ export function OnboardingForms() {
                 value={shipper.userEmail}
                 onChange={(e) => setShipper((s) => ({ ...s, userEmail: e.target.value }))}
                 required={!isSignedIn}
+              />
+              <CreditPacketFields
+                form={shipper}
+                showInsurance={false}
+                onChange={(patch) => setShipper((s) => ({ ...s, ...patch }))}
               />
               <OnboardingLegalAccept key={`shipper-legal-${legalEpoch}`} role="SHIPPER" onChange={setShipperLegal} />
               <button
@@ -410,6 +581,26 @@ export function OnboardingForms() {
                 onChange={(e) => setCarrier((s) => ({ ...s, legalName: e.target.value }))}
                 required
               />
+              <label className="block text-xs font-medium text-zinc-600">
+                Business phone
+                <input
+                  className="mt-1 w-full rounded border px-3 py-2 text-sm font-normal"
+                  type="tel"
+                  placeholder="503-555-0199"
+                  value={carrier.businessPhone}
+                  onChange={(e) => setCarrier((s) => ({ ...s, businessPhone: e.target.value }))}
+                  required
+                />
+              </label>
+              <label className="block text-xs font-medium text-zinc-600">
+                Billing address (optional)
+                <input
+                  className="mt-1 w-full rounded border px-3 py-2 text-sm font-normal"
+                  placeholder="Street, city, province/state"
+                  value={carrier.billingAddress}
+                  onChange={(e) => setCarrier((s) => ({ ...s, billingAddress: e.target.value }))}
+                />
+              </label>
               <input
                 className="w-full rounded border px-3 py-2 text-sm"
                 placeholder="Your name"
@@ -466,6 +657,11 @@ export function OnboardingForms() {
                   </span>
                 </span>
               </label>
+              <CreditPacketFields
+                form={carrier}
+                showInsurance
+                onChange={(patch) => setCarrier((s) => ({ ...s, ...patch }))}
+              />
               <OnboardingLegalAccept
                 key={`carrier-legal-${legalEpoch}`}
                 role="DISPATCHER"

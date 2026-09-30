@@ -42,7 +42,7 @@ export function OnboardingLegalAccept({
         Legal agreements
       </legend>
       <p className="text-xs text-zinc-600">
-        Required to create your account. Documents are draft until counsel finalizes — versions are recorded when you
+        Required to create your account. Documents remain draft until counsel finalizes — versions are recorded when you
         accept.
       </p>
       {keys.map((key) => {

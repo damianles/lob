@@ -8,6 +8,7 @@ import { getActorContext } from "@/lib/request-context";
 
 import { CarrierProfileForm } from "./carrier-profile-form";
 import { InsuranceUploadForm } from "./upload-form";
+import { CreditFileForm } from "@/components/credit-file-form";
 import { DistanceUnitProfilePreference } from "@/components/distance-unit-profile-preference";
 import { DisplayCurrencyPreference } from "@/components/display-currency-preference";
 
@@ -114,6 +115,7 @@ export default async function CarrierCompliancePage() {
                 </p>
               </section>
 
+              <CreditFileForm showInsurance />
               <InsuranceUploadForm />
 
               <CarrierProfileForm

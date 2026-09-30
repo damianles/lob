@@ -51,7 +51,7 @@ enum LoadStatus {
   DELIVERED
   CANCELLED
   /**
-   * Firm Rate past 7-day grace, or Open bid window ended (cycle 1) — shipper must resolve.
+   * Firm Rate past 7-day grace, or Open bid window ended (cycle 1) â shipper must resolve.
    * Hidden from the carrier board until resolved.
    */
   NEEDS_REPOST
@@ -82,7 +82,7 @@ enum OfferCurrency {
 enum RateObservationSource {
   APP
   IMPORT
-  /** Supplier posted rate (Firm Rate or Open bid target) — not a booked move. */
+  /** Supplier posted rate (Firm Rate or Open bid target) â not a booked move. */
   POSTED
   /** Agreed booked rate on this load. */
   BOOKED
@@ -151,7 +151,7 @@ model Company {
   id                    String             @id @default(cuid())
   legalName             String             @unique
   /**
-   * 2–3 letter tracking acronym for LOB load refs (e.g. NRL for North Ridge Lumber).
+   * 2â3 letter tracking acronym for LOB load refs (e.g. NRL for North Ridge Lumber).
    */
   acronym               String?            @unique @db.VarChar(3)
   dotNumber             String?            @unique
@@ -163,7 +163,7 @@ model Company {
   analyticsSubscriber   Boolean            @default(false)
   supplierKind          SupplierKind?
   /**
-   * Fleet & capabilities — shown to shippers after a load is booked.
+   * Fleet & capabilities â shown to shippers after a load is booked.
    */
   fleetTruckCount       Int?
   fleetTrailerCount     Int?
@@ -179,6 +179,23 @@ model Company {
    * Single-truck operators; admin verification still uses verificationStatus.
    */
   isOwnerOperator       Boolean            @default(false)
+  /**
+   * Company allows a booked counterparty to open the credit file collected at signup.
+   * LOB does not pull a bureau score.
+   */
+  creditReviewAuthorized Boolean          @default(false)
+  /**
+   * Admin confirmed signup credit links (W-9 / credit ref / insurance) before approval.
+   */
+  creditDocsVerifiedAt  DateTime?
+  /**
+   * Primary business phone for ops and post-book counterparty contact.
+   */
+  businessPhone         String?
+  /**
+   * Optional billing / mailing address collected at onboarding.
+   */
+  billingAddress        String?
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt
 
@@ -206,6 +223,25 @@ model Company {
   loadBids              LoadBid[]                 @relation("CarrierLoadBids")
   shipperLoadAlerts     ShipperLoadAlert[]        @relation("CompanyShipperAlerts")
   legalAcceptances      LegalAcceptance[]
+  creditReviewsGiven    CreditFileReview[]        @relation("CreditReviewer")
+  creditReviewsReceived CreditFileReview[]        @relation("CreditSubject")
+}
+
+/**
+ * A company records that it reviewed the counterparty credit file.
+ * This is the reviewer’s acknowledgment, not a LOB credit score.
+ */
+model CreditFileReview {
+  id                String   @id @default(cuid())
+  reviewerCompanyId String
+  subjectCompanyId  String
+  createdAt         DateTime @default(now())
+
+  reviewerCompany Company @relation("CreditReviewer", fields: [reviewerCompanyId], references: [id], onDelete: Cascade)
+  subjectCompany  Company @relation("CreditSubject", fields: [subjectCompanyId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewerCompanyId, subjectCompanyId])
+  @@index([subjectCompanyId])
 }
 
 /**
@@ -234,7 +270,7 @@ model ShipperCarrierTier {
   shipperCompanyId String
   carrierCompanyId String
   /**
-   * 1 = primary / preferred; 2–3 = backup groups.
+   * 1 = primary / preferred; 2â3 = backup groups.
    */
   tier             Int
   createdAt        DateTime @default(now())
@@ -300,7 +336,7 @@ model Load {
   referenceNumber       String                    @unique
   /**
    * Shipper-supplied external identifier (TMS load id, mill ticket, PO, etc.).
-   * Optional, but unique per shipper company when present — gives bulk
+   * Optional, but unique per shipper company when present â gives bulk
    * uploads safe idempotency: re-running the same CSV won't double-post,
    * and integrators can use it as an upsert key.
    */
@@ -332,8 +368,8 @@ model Load {
    */
   bidWindowExpiresAt    DateTime?
   /**
-   * Open bid cycles on this same load id (max 2). Cycle 1 ends → shipper may reopen;
-   * cycle 2 ends without accept → UNLISTED.
+   * Open bid cycles on this same load id (max 2). Cycle 1 ends â shipper may reopen;
+   * cycle 2 ends without accept â UNLISTED.
    */
   bidCycleCount         Int                       @default(1)
   /**
@@ -471,7 +507,7 @@ model LoadBid {
 
 /**
  * Reusable post-load template owned by a shipper company. Power-user mills
- * stamp out the same 2x4 lane × spec week after week — saving as a template
+ * stamp out the same 2x4 lane Ã spec week after week â saving as a template
  * lets them re-post in 2 clicks.
  */
 model LoadTemplate {
@@ -480,7 +516,7 @@ model LoadTemplate {
   createdByUserId String
   name            String
   /**
-   * Optional shorthand displayed in the picker (e.g. "PG → Boise · Tri · 2x4-8").
+   * Optional shorthand displayed in the picker (e.g. "PG â Boise Â· Tri Â· 2x4-8").
    */
   shortLabel      String?
 
@@ -514,8 +550,8 @@ model LoadTemplate {
 }
 
 /**
- * Address-only saved lane. Lighter than a LoadTemplate — just pickup +
- * delivery endpoints — so a mill can quickly fill route fields without
+ * Address-only saved lane. Lighter than a LoadTemplate â just pickup +
+ * delivery endpoints â so a mill can quickly fill route fields without
  * inheriting product/rate/equipment from a snapshot. Re-using a saved lane
  * bumps useCount + lastUsedAt so the picker can sort by "what you actually
  * use".
@@ -525,7 +561,7 @@ model SavedLane {
   companyId       String
   createdByUserId String
   /**
-   * User-supplied friendly name (e.g. "PG Mill → Boise yard"). Optional.
+   * User-supplied friendly name (e.g. "PG Mill â Boise yard"). Optional.
    */
   label           String?
 
