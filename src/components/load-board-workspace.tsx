@@ -632,7 +632,7 @@ export function LoadBoardWorkspace({
 
           <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
             <p className="text-xs text-zinc-600">
-              Click a column header to sort. Showing {filteredLoads.length} load
+              Showing {filteredLoads.length} load
               {filteredLoads.length !== 1 ? "s" : ""}.
             </p>
             {canExportBoardCsv && (
@@ -640,7 +640,7 @@ export function LoadBoardWorkspace({
                 type="button"
                 onClick={exportCsv}
                 disabled={filteredLoads.length === 0}
-                className="rounded-md bg-emerald-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-md border border-stone-300 bg-white px-3 py-1.5 text-xs font-semibold text-lob-navy hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Export CSV ({filteredLoads.length})
               </button>
@@ -649,42 +649,24 @@ export function LoadBoardWorkspace({
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
             <div className="grid min-w-0 flex-1 gap-3 sm:grid-cols-2">
-              <div className="space-y-2">
-                <PlaceAutocomplete
-                  mode="geocode"
-                  className="[&_label]:text-zinc-600"
-                  label="From — search (places)"
-                  placeholder="Type a city, address, or postal code…"
-                  onResolved={(p) => setOriginQ(laneQueryTokenString(p))}
-                />
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-zinc-600">From — filter text</label>
-                  <input
-                    value={originQ}
-                    onChange={(e) => setOriginQ(e.target.value)}
-                    placeholder="City, state/province, postal or ZIP"
-                    className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <PlaceAutocomplete
-                  mode="geocode"
-                  className="[&_label]:text-zinc-600"
-                  label="To — search (places)"
-                  placeholder="Type a city, address, or postal code…"
-                  onResolved={(p) => setDestQ(laneQueryTokenString(p))}
-                />
-                <div>
-                  <label className="mb-1 block text-xs font-medium text-zinc-600">To — filter text</label>
-                  <input
-                    value={destQ}
-                    onChange={(e) => setDestQ(e.target.value)}
-                    placeholder="City, state/province, postal or ZIP"
-                    className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm"
-                  />
-                </div>
-              </div>
+              <PlaceAutocomplete
+                mode="geocode"
+                className="[&_label]:text-zinc-600"
+                label="From"
+                placeholder="City, state, or postal code"
+                value={originQ}
+                onValueChange={setOriginQ}
+                onResolved={(p) => setOriginQ(laneQueryTokenString(p))}
+              />
+              <PlaceAutocomplete
+                mode="geocode"
+                className="[&_label]:text-zinc-600"
+                label="To"
+                placeholder="City, state, or postal code"
+                value={destQ}
+                onValueChange={setDestQ}
+                onResolved={(p) => setDestQ(laneQueryTokenString(p))}
+              />
             </div>
             <button
               type="button"
@@ -908,7 +890,7 @@ export function LoadBoardWorkspace({
             <button
               type="button"
               onClick={() => router.refresh()}
-              className="rounded-lg bg-lob-navy px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-lob-navy-hover"
+              className="text-sm font-semibold text-lob-navy underline underline-offset-2"
             >
               Refresh list
             </button>
@@ -1025,7 +1007,7 @@ export function LoadBoardWorkspace({
                             <span className="tabular-nums">{displayRate != null ? formatMoney(displayRate, rateCurrency) : "—"}</span>
                           )}
                           {load.pendingBidCount > 0 && (load.rateMode === "OPEN_BID" || load.allowCounterOffers) ? (
-                            <span className="text-[10px] text-violet-800">{load.pendingBidCount} bid{load.pendingBidCount === 1 ? "" : "s"}</span>
+                            <span className="text-[10px] text-stone-600">{load.pendingBidCount} bid{load.pendingBidCount === 1 ? "" : "s"}</span>
                           ) : null}
                         </div>
                       </td>
