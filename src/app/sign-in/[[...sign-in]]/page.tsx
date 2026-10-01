@@ -9,7 +9,7 @@ export default function Page() {
       <Suspense fallback={null}>
         <ClerkIntentBridge />
       </Suspense>
-      <div className="mx-auto w-full max-w-md overflow-hidden rounded-2xl border border-stone-200 bg-white">
+      <div className="mx-auto w-full max-w-md">
         <Suspense fallback={<div className="p-6 text-center text-sm text-stone-500">Loading…</div>}>
           <SignInWithRedirect />
         </Suspense>

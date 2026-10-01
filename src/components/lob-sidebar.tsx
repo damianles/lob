@@ -25,7 +25,7 @@ export function LobSidebar({
   active: LobNavId;
   stats?: LobSidebarStats;
 }) {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "";
   const { viewer, loading } = useViewerRole();
   const inboxCount = useOpenBidsInboxCount();
   const navItems = useMemo(() => {

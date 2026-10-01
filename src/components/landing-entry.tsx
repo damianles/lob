@@ -53,15 +53,15 @@ export function LandingEntry() {
         </Link>
       </p>
 
-      <section className="mx-auto mt-16 max-w-5xl">
+      <section className="mx-auto mt-16 max-w-2xl">
         <h2 className="text-center text-sm font-semibold uppercase tracking-wider text-stone-500">
           Why {BRAND_PRODUCT_NAME}
         </h2>
-        <div className="mt-8 grid gap-5 sm:grid-cols-2">
+        <div className="mt-8 space-y-8 border-t border-stone-200 pt-8">
           {BRAND_VALUE_PROPS.map((item) => (
-            <article key={item.title} className="rounded-2xl border border-stone-200 bg-white p-6">
-              <h3 className="text-base font-semibold text-lob-navy">{item.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-stone-600">{item.body}</p>
+            <article key={item.title} className="border-l-2 border-lob-gold/60 pl-5">
+              <h3 className="text-lg font-semibold tracking-tight text-lob-navy">{item.title}</h3>
+              <p className="mt-2 max-w-xl text-sm leading-relaxed text-stone-600">{item.body}</p>
             </article>
           ))}
         </div>

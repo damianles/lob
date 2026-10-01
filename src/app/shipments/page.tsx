@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { signInUrlForAppPath } from "@/lib/guest-auth-routes";
 import { getActorContext } from "@/lib/request-context";
 import { sweepLoadLifecycle } from "@/lib/load-lifecycle";
+import { lobWoodOutlineButtonClass, lobWoodPrimaryButtonClass } from "@/lib/lob-button-styles";
 
 export const dynamic = "force-dynamic";
 
@@ -175,7 +176,7 @@ export default async function ShipmentsPage({
                 <Link
                   href="/post"
                   scroll
-                  className="rounded-lg bg-emerald-700 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-800"
+                  className={`${lobWoodPrimaryButtonClass} px-5 py-2.5`}
                 >
                   Post a Load
                 </Link>
@@ -184,13 +185,13 @@ export default async function ShipmentsPage({
                 <div className="flex flex-wrap gap-2">
                   <Link
                     href="/driver"
-                    className="rounded-lg border border-emerald-700 bg-white px-4 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-50"
+                    className={`${lobWoodOutlineButtonClass} min-h-10 px-4 py-2`}
                   >
                     Driver Dispatch
                   </Link>
                   <Link
                     href="/carrier/compliance"
-                    className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800"
+                    className={`${lobWoodPrimaryButtonClass} min-h-10 px-4 py-2`}
                   >
                     Carrier Profile
                   </Link>

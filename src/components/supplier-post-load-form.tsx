@@ -14,6 +14,7 @@ import { RecentPostsPicker } from "@/components/recent-posts-picker";
 import { SavedLanesPanel, type SavedLane } from "@/components/saved-lanes-panel";
 import { useViewerRole } from "@/components/providers/app-providers";
 import { RadioChoice } from "@/components/ui/radio-choice";
+import { lobWoodPrimaryButtonClass } from "@/lib/lob-button-styles";
 import { LUMBER_EQUIPMENT } from "@/lib/lumber-equipment";
 import { inferOfferCurrency } from "@/lib/lane-currency";
 import { bandSide } from "@/lib/lane-decision-types";
@@ -1408,7 +1409,7 @@ export function SupplierPostLoadForm({
         </section>
 
         <div className="flex flex-wrap items-center gap-2 border-t border-stone-100 pt-4">
-          <button type="submit" disabled={busy} className="rounded-lg bg-emerald-700 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
+          <button type="submit" disabled={busy} className={`${lobWoodPrimaryButtonClass} disabled:opacity-50`}>
             {busy ? "Publishing…" : "Publish to board"}
           </button>
           <SavedLanesPanel

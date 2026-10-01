@@ -27,6 +27,28 @@ function isCurrentPath(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+/** Desktop product links live in the sidebar. These routes render that sidebar. */
+function workspaceHasSidebar(pathname: string): boolean {
+  if (
+    pathname === "/" ||
+    pathname === "/shipments" ||
+    pathname === "/bids" ||
+    pathname === "/capacity" ||
+    pathname === "/driver" ||
+    pathname === "/onboarding" ||
+    pathname === "/post"
+  ) {
+    return true;
+  }
+  if (pathname.startsWith("/carrier/compliance") || pathname.startsWith("/shipper/carrier-preferences")) {
+    return true;
+  }
+  if (pathname.startsWith("/loads/")) {
+    return !pathname.includes("/rate-con") && !pathname.includes("/invoice") && !pathname.includes("/bol");
+  }
+  return false;
+}
+
 export function AppNav() {
   const pathname = usePathname() ?? "/";
   const { isSignedIn, isLoaded } = useAuth();
@@ -58,13 +80,17 @@ export function AppNav() {
     ...lobTopNavLinksForViewer(viewer.kind),
     ...(isAdmin ? adminLinks : []),
   ];
+  const showMobileLinksOnly = signedIn && workspaceHasSidebar(pathname);
 
   return (
     <header className="relative z-50 border-b border-stone-200/50 bg-white/75 backdrop-blur-xl supports-[backdrop-filter]:bg-white/60 lg:sticky lg:top-0">
       <div className="mx-auto flex max-w-[1680px] items-center justify-between gap-3 px-3 py-2 sm:px-8 sm:py-3">
         {signedIn ? (
           <nav
-            className="hide-scrollbar -mx-1 flex min-w-0 flex-1 items-center gap-x-1 overflow-x-auto px-1 lg:hidden"
+            className={cn(
+              "hide-scrollbar -mx-1 flex min-w-0 flex-1 items-center gap-x-1 overflow-x-auto px-1",
+              showMobileLinksOnly && "lg:hidden",
+            )}
             aria-label="Primary"
           >
             {signedInLinks.map((l) => {

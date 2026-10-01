@@ -28,6 +28,18 @@ import { convertMoney, formatMoney } from "@/lib/money";
 import { parseRadiusToMiles } from "@/lib/units";
 import { milesBetweenPlaces } from "@/lib/zip-distance";
 
+function lumberBoardHint(spec: SerializableLoad["lumberSpec"]): string | null {
+  if (!spec) return null;
+  const species = spec.species?.replaceAll("_", " ");
+  const size = spec.nominalSize?.trim();
+  const treat =
+    spec.treatment && spec.treatment !== "NONE"
+      ? (LUMBER_TREATMENT_OPTIONS.find((o) => o.value === spec.treatment)?.label ?? spec.treatment)
+      : null;
+  const parts = [size, species, treat].filter((p): p is string => Boolean(p && p.length > 0));
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
+
 function toDisplayEquivalent(l: SerializableLoad, display: "USD" | "CAD"): number {
   if (l.booking) {
     return convertMoney(l.booking.agreedRateUsd, l.booking.agreedCurrency, display);
@@ -923,12 +935,18 @@ export function LoadBoardWorkspace({
 
         <div className="p-4 sm:p-6">
           <div className="overflow-x-auto rounded-lg border border-zinc-200 bg-white">
-            <table className="w-full min-w-[1100px] text-left text-sm">
-              <thead className="border-b bg-zinc-50 text-xs font-semibold uppercase text-zinc-600">
+            <table className="w-full min-w-[860px] border-separate border-spacing-0 text-left text-sm">
+              <thead className="text-xs font-semibold uppercase text-zinc-600">
                 <tr>
-                  <BoardSortableTh label="Reference" k="reference" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
-                  <BoardSortableTh label="Lane" k="lane" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
-                  <BoardSortableTh label="Posted" k="postedAt" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
+                  <BoardSortableTh
+                    label="Lane"
+                    k="lane"
+                    sortKey={sortKey}
+                    sortDir={sortDir}
+                    onClick={toggleSort}
+                    className={pinHeadLeft}
+                  />
+                  <th className="border-b border-zinc-200 bg-zinc-50 px-3 py-2">Equipment</th>
                   <BoardSortableTh label="Pickup" k="pickupAt" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
                   <BoardSortableTh
                     label="Delivery"
@@ -938,7 +956,8 @@ export function LoadBoardWorkspace({
                     onClick={toggleSort}
                   />
                   <BoardSortableTh label="Status" k="status" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
-                  <th className="px-3 py-2">Equipment</th>
+                  <BoardSortableTh label="Posted" k="postedAt" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
+                  <BoardSortableTh label="Reference" k="reference" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
                   <BoardSortableTh
                     label="Rate"
                     k="rate"
@@ -946,8 +965,9 @@ export function LoadBoardWorkspace({
                     sortDir={sortDir}
                     onClick={toggleSort}
                     align="right"
+                    className={isDispatcher ? pinHeadRate : pinHeadRight}
                   />
-                  {isDispatcher ? <th className="px-3 py-2">Actions</th> : null}
+                  {isDispatcher ? <th className={`px-3 py-2 ${pinHeadRight}`}>Actions</th> : null}
                 </tr>
               </thead>
               <tbody>
@@ -955,11 +975,12 @@ export function LoadBoardWorkspace({
                   const displayRate = load.offeredRateUsd;
                   const rateCurrency = load.offerCurrency;
                   const canBook = isDispatcher && load.status === "POSTED";
+                  const specHint = lumberBoardHint(load.lumberSpec);
                   return (
-                    <tr key={load.id} className="border-b border-zinc-100 align-top hover:bg-zinc-50/50">
-                      <td className="px-3 py-2 font-medium">
-                        <Link href={`/loads/${load.id}`} className="text-lob-navy underline">
-                          {load.referenceNumber}
+                    <tr key={load.id} className="group align-top">
+                      <td className={`px-3 py-2 text-zinc-700 ${pinCellLeft}`}>
+                        <Link href={`/loads/${load.id}`} className="font-medium text-lob-navy underline">
+                          {load.originCity}, {load.originState} → {load.destinationCity}, {load.destinationState}
                         </Link>
                         {load.isRush && (
                           <span className="ml-1.5 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-amber-900">
@@ -967,32 +988,37 @@ export function LoadBoardWorkspace({
                           </span>
                         )}
                       </td>
-                      <td className="px-3 py-2 text-zinc-700">
-                        {load.originCity}, {load.originState} → {load.destinationCity}, {load.destinationState}
+                      <td className="border-b border-zinc-100 px-3 py-2 text-zinc-700 group-hover:bg-zinc-50/50">
+                        <div className="flex flex-col">
+                          <span>{load.equipmentType}</span>
+                          <span className="text-[11px] text-zinc-500 tabular-nums">
+                            {load.weightLbs.toLocaleString()} lbs
+                          </span>
+                          {specHint ? <span className="text-[11px] text-zinc-500">{specHint}</span> : null}
+                        </div>
                       </td>
-                      <td className="px-3 py-2 text-zinc-700 tabular-nums">{formatDisplayDate(load.createdAt)}</td>
-                      <td className="px-3 py-2 text-zinc-700 tabular-nums">
+                      <td className="border-b border-zinc-100 px-3 py-2 text-zinc-700 tabular-nums group-hover:bg-zinc-50/50">
                         {formatDisplayDate(load.requestedPickupAt)}
                       </td>
-                      <td className="px-3 py-2 text-zinc-700 tabular-nums">
+                      <td className="border-b border-zinc-100 px-3 py-2 text-zinc-700 tabular-nums group-hover:bg-zinc-50/50">
                         {load.requestedDeliveryAt ? formatDisplayDate(load.requestedDeliveryAt) : "—"}
                       </td>
-                      <td className="px-3 py-2">
+                      <td className="border-b border-zinc-100 px-3 py-2 group-hover:bg-zinc-50/50">
                         <span
                           className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${statusBadgeClass(load.status)}`}
                         >
                           {statusLabel(load.status)}
                         </span>
                       </td>
-                      <td className="px-3 py-2 text-zinc-700">
-                        <div className="flex flex-col">
-                          <span>{load.equipmentType}</span>
-                          <span className="text-[11px] text-zinc-500 tabular-nums">
-                            {load.weightLbs.toLocaleString()} lbs
-                          </span>
-                        </div>
+                      <td className="border-b border-zinc-100 px-3 py-2 text-zinc-700 tabular-nums group-hover:bg-zinc-50/50">
+                        {formatDisplayDate(load.createdAt)}
                       </td>
-                      <td className="px-3 py-2 text-right">
+                      <td className="border-b border-zinc-100 px-3 py-2 font-medium group-hover:bg-zinc-50/50">
+                        <Link href={`/loads/${load.id}`} className="text-lob-navy underline">
+                          {load.referenceNumber}
+                        </Link>
+                      </td>
+                      <td className={`px-3 py-2 text-right ${isDispatcher ? pinCellRate : pinCellRight}`}>
                         <div className="flex flex-col items-end gap-1">
                           <RateModeBadge
                             rateMode={load.rateMode}
@@ -1012,7 +1038,7 @@ export function LoadBoardWorkspace({
                         </div>
                       </td>
                       {isDispatcher ? (
-                        <td className="px-3 py-2">
+                        <td className={`px-3 py-2 ${pinCellRight}`}>
                           {canBook && actor.carrierApproved ? (
                             <CarrierRateActions
                               loadId={load.id}
@@ -1067,6 +1093,7 @@ function BoardSortableTh({
   sortDir,
   onClick,
   align = "left",
+  className = "",
 }: {
   label: string;
   k: BoardSortKey;
@@ -1074,10 +1101,11 @@ function BoardSortableTh({
   sortDir: "asc" | "desc";
   onClick: (k: BoardSortKey) => void;
   align?: "left" | "right";
+  className?: string;
 }) {
   const active = sortKey === k;
   return (
-    <th className={`px-3 py-2 ${align === "right" ? "text-right" : ""}`}>
+    <th className={`border-b border-zinc-200 bg-zinc-50 px-3 py-2 ${align === "right" ? "text-right" : ""} ${className}`}>
       <button
         type="button"
         onClick={() => onClick(k)}
@@ -1089,3 +1117,13 @@ function BoardSortableTh({
     </th>
   );
 }
+
+const pinHeadLeft = "sticky left-0 z-20 min-w-[14rem] border-r border-zinc-200";
+const pinHeadRight = "sticky right-0 z-20 min-w-[11rem] border-l border-zinc-200";
+const pinHeadRate = "sticky right-[11rem] z-20 min-w-[8.5rem] border-l border-zinc-200";
+const pinCellLeft =
+  "sticky left-0 z-10 min-w-[14rem] border-b border-r border-zinc-200 bg-white group-hover:bg-zinc-50";
+const pinCellRight =
+  "sticky right-0 z-10 min-w-[11rem] border-b border-l border-zinc-200 bg-white group-hover:bg-zinc-50";
+const pinCellRate =
+  "sticky right-[11rem] z-10 min-w-[8.5rem] border-b border-l border-zinc-200 bg-white group-hover:bg-zinc-50";
