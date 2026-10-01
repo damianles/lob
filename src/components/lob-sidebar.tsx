@@ -6,6 +6,7 @@ import { useMemo } from "react";
 
 import { OpenBidsCountBadge, useOpenBidsInboxCount } from "@/components/open-bids-inbox-count";
 import { useViewerRole } from "@/components/providers/app-providers";
+import { BRAND_POSITIONING, BRAND_PRODUCT_NAME } from "@/lib/brand-marketing";
 import { lobNavItemsForViewer, type LobNavId } from "@/lib/lob-nav";
 
 const ADMIN_LINKS = [
@@ -34,10 +35,29 @@ export function LobSidebar({
     return lobNavItemsForViewer(viewer.kind, { showOnboarding });
   }, [loading, viewer.kind, viewer.companyId]);
 
+  const homeHref = viewer.kind === "SHIPPER" ? "/shipments" : "/";
+
   return (
     <aside className="hidden w-[15.5rem] shrink-0 flex-col border-r border-stone-200/50 bg-stone-50/30 lg:flex">
+      <div className="border-b border-stone-200/50 px-4 pb-4 pt-6">
+        <Link
+          href={homeHref}
+          className="block min-w-0 rounded-xl p-1.5 transition hover:bg-white/70"
+          aria-label={`${BRAND_PRODUCT_NAME} — home`}
+        >
+          <p className="whitespace-nowrap text-[20px] font-semibold leading-tight tracking-tight text-lob-navy">
+            {BRAND_PRODUCT_NAME}
+          </p>
+          <p className="mt-1 whitespace-nowrap text-[11px] font-bold uppercase leading-snug tracking-[0.06em] text-lob-gold-muted">
+            {BRAND_POSITIONING}
+          </p>
+        </Link>
+      </div>
+      <div className="px-5 pb-2 pt-4">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-stone-400">Navigate</p>
+      </div>
       <nav
-        className="flex max-h-[calc(100vh-8rem)] flex-col gap-1 overflow-y-auto px-3 pb-4 pt-4 text-[13px]"
+        className="flex max-h-[calc(100vh-12rem)] flex-col gap-1 overflow-y-auto px-3 pb-4 text-[13px]"
         aria-label="Main"
       >
         {navItems.map((item) => {

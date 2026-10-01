@@ -1032,7 +1032,14 @@ export function LoadBoardWorkspace({
                     sortDir={sortDir}
                     onClick={toggleSort}
                   />
-                  <BoardSortableTh label="Status" k="status" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
+                  <BoardSortableTh
+                    label="Status"
+                    k="status"
+                    sortKey={sortKey}
+                    sortDir={sortDir}
+                    onClick={toggleSort}
+                    className="min-w-[8.5rem]"
+                  />
                   <BoardSortableTh label="Posted" k="postedAt" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
                   <BoardSortableTh label="Reference" k="reference" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
                   <BoardSortableTh

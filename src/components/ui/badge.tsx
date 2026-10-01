@@ -3,6 +3,7 @@ import { LoadStatus } from "@prisma/client";
 
 import { LoadStatusBadge } from "@/components/load-status-badge";
 import { cn } from "@/lib/cn";
+import { LOB_PILL } from "@/lib/lob-pill";
 
 export type BadgeVariant =
   | "default"
@@ -43,9 +44,8 @@ export function Badge({ children, variant = "default", className = "", pulse = f
   return (
     <span
       className={cn(
-        "relative inline-flex shrink-0 items-center justify-center gap-1.5",
-        "whitespace-nowrap rounded-full px-2.5 py-1",
-        "text-center text-xs font-semibold leading-none tracking-tight ring-1 ring-inset",
+        "relative gap-1.5 text-xs",
+        LOB_PILL,
         variantClasses[variant],
         className,
       )}

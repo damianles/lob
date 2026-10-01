@@ -16,16 +16,16 @@ const mastheadWordmark = Nunito({
 });
 
 /**
- * Navy bar. Knockout LOB stays on the left. “Lumber One Board” is centered
- * and twice the previous app size (2.5rem from the small breakpoint up).
- * Phones use a smaller centered size so the words do not run into the mark.
+ * Full-bleed navy bar. Inner lockup is capped to the same content rail as the
+ * app (`max-w-[1680px]`) so the LOB mark sits on the page edge, not the
+ * ultrawide viewport edge. Wordmark stays centered in that rail.
  */
 export function LobBrandMasthead() {
   return (
     <div className="w-full bg-lob-navy">
       <Link
         href="/"
-        className="relative flex h-[4.25rem] w-full items-center justify-center px-4 sm:h-[5.25rem] sm:px-8"
+        className="relative mx-auto flex h-[4.25rem] w-full max-w-[1680px] items-center justify-center px-4 sm:h-[5.25rem] sm:px-8"
         aria-label={`${BRAND_PRODUCT_NAME} — home`}
       >
         <LobAppIconMark

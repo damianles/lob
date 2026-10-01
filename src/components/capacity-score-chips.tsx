@@ -1,5 +1,6 @@
 import type { CapacityScoreBand, CapacityScorecardPublic } from "@/lib/capacity-scorecard-shared";
 import { formatRespondHours } from "@/lib/capacity-scorecard-shared";
+import { LOB_PILL_COMPACT } from "@/lib/lob-pill";
 
 function bandStyles(band: CapacityScoreBand) {
   switch (band) {
@@ -55,19 +56,17 @@ export function CapacityScoreChips({
 
   return (
     <div className={`flex flex-wrap items-center gap-1 ${className ?? ""}`} title={title}>
-      <span
-        className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold ring-1 ${bandStyles(score.band)}`}
-      >
+      <span className={`${LOB_PILL_COMPACT} text-[10px] ${bandStyles(score.band)}`}>
         {bandLabel(score.band)}
         {score.acceptRatePct != null ? ` · ${score.acceptRatePct}% accept` : ""}
       </span>
       {respond ? (
-        <span className="inline-flex items-center rounded-full bg-stone-50 px-1.5 py-0.5 text-[10px] font-medium text-stone-700 ring-1 ring-stone-200">
+        <span className={`${LOB_PILL_COMPACT} bg-stone-50 text-[10px] font-medium text-stone-700 ring-stone-200`}>
           ~{respond} reply
         </span>
       ) : null}
       {score.completionRatePct != null ? (
-        <span className="inline-flex items-center rounded-full bg-stone-50 px-1.5 py-0.5 text-[10px] font-medium text-stone-700 ring-1 ring-stone-200">
+        <span className={`${LOB_PILL_COMPACT} bg-stone-50 text-[10px] font-medium text-stone-700 ring-stone-200`}>
           {score.completionRatePct}% finish
         </span>
       ) : null}

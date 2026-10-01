@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>LOB Go-to-Market, Pricing, and Risk</title>
+  <style>
+    @page { size: letter; margin: 0.6in; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: "Segoe UI", Calibri, Arial, sans-serif;
+      color: #1a1a1a;
+      line-height: 1.45;
+      font-size: 11px;
+      margin: 0;
+      padding: 0;
+      background: #fff;
+    }
+    .wrap { max-width: 8.5in; margin: 0 auto; }
+    h1 { font-size: 22px; margin: 8px 0 6px; font-weight: 700; }
+    h2 { font-size: 15px; margin: 22px 0 8px; border-top: 1px solid #d0d0d0; padding-top: 14px; }
+    h3 { font-size: 12.5px; margin: 14px 0 6px; font-weight: 650; }
+    p { margin: 0 0 8px; }
+    .muted { color: #555; }
+    .small { font-size: 10px; color: #666; }
+    .pills { display: flex; gap: 8px; margin-bottom: 4px; }
+    .pill {
+      display: inline-block;
+      border: 1px solid #ccc;
+      border-radius: 999px;
+      padding: 2px 10px;
+      font-size: 10px;
+      background: #f4f4f4;
+    }
+    .pill.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+    .callout {
+      border: 1px solid #c9a227;
+      background: #fffbeb;
+      padding: 10px 12px;
+      margin: 12px 0;
+      border-radius: 4px;
+    }
+    .callout.info {
+      border-color: #3b82c4;
+      background: #f0f7ff;
+    }
+    .callout strong { display: block; margin-bottom: 6px; }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin: 12px 0;
+    }
+    .stat {
+      border: 1px solid #ddd;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    .stat .v { font-size: 14px; font-weight: 700; }
+    .stat .l { font-size: 10px; color: #666; margin-top: 2px; }
+    .stat.warn .v { color: #a16207; }
+    .stat.info .v { color: #1d4ed8; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .card {
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      overflow: hidden;
+      break-inside: avoid;
+      margin-bottom: 10px;
+    }
+    .card-h {
+      background: #f6f6f6;
+      padding: 7px 10px;
+      font-weight: 650;
+      font-size: 11px;
+      border-bottom: 1px solid #ddd;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-b { padding: 10px; }
+    .card-b ul { margin: 0; padding-left: 16px; }
+    .card-b li { margin-bottom: 4px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 8px 0 12px;
+      font-size: 10px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 6px 7px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: #f3f3f3; font-weight: 650; }
+    tr.critical td:first-child,
+    tr.high td:first-child { font-weight: 650; }
+    .rank { font-weight: 700; color: #166534; }
+    .avoid { color: #991b1b; }
+    @media print {
+      .card, .callout, table, .stat { break-inside: avoid; }
+      h2 { break-after: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="pills">
+      <span class="pill active">CEO strategy brief</span>
+      <span class="pill">As of product status 30 Sep 2026</span>
+    </div>
+    <h1>LOB go-to-market, pricing, and risk</h1>
+    <p class="muted">
+      Lumber One Board is a vetted B2B marketplace for forest-products freight:
+      post → book/bid → dispatch → pickup/delivery check-in → mutual close →
+      completion docs. This brief ranks monetization choices against cold-start
+      reality, not against DAT feature parity.
+    </p>
+
+    <div class="callout">
+      <strong>Three assumptions that will kill this if wrong</strong>
+      <p>1. Suppliers will not keep posting into an empty carrier pool. Carrier density on a few PNW / mill lanes must come before any paid plan that taxes carriers.</p>
+      <p>2. Charging like a general load board (DAT/Truckstop seat fees) makes LOB a worse, thinner DAT. The wedge is niche trust plus ops lifecycle, not search volume.</p>
+      <p style="margin-bottom:0">3. Taking a cut of freight money without broker authority, payment rails, and claims process turns a software product into a regulated brokerage. Do not stumble into that.</p>
+    </div>
+
+    <div class="stats">
+      <div class="stat info"><div class="v">Niche board</div><div class="l">Positioning</div></div>
+      <div class="stat"><div class="v">Supply-first</div><div class="l">Liquidity strategy</div></div>
+      <div class="stat warn"><div class="v">No billing yet</div><div class="l">Monetization readiness</div></div>
+      <div class="stat warn"><div class="v">Legal draft</div><div class="l">Counsel status</div></div>
+    </div>
+
+    <h2>Product offering (what we sell today)</h2>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-h">Shipped core</div>
+        <div class="card-b">
+          <ul>
+            <li>Firm Rate and Open bid posting for mills / wholesalers (SHIPPER).</li>
+            <li>Carrier browse, book, bid, capacity offers, DOT/MC/fleet profile (DISPATCHER).</li>
+            <li>Dispatch packet, driver haul sheet (rates hidden), carrier pickup/delivery check-in, supplier confirm delivered.</li>
+            <li>W-9 / credit reference / insurance intake, admin docs-verified gate, counterparty credit file after shared booking.</li>
+            <li>Clickwrap Terms, Privacy, Supplier Agreement, Carrier Agreement (version 2026.09.30-draft).</li>
+          </ul>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-h">Explicitly not selling yet</div>
+        <div class="card-b">
+          <ul>
+            <li>Customer-facing Insights / market-rate chips (hidden; privacy review).</li>
+            <li>In-app email / SMTP (Outlook-manual PDF attach).</li>
+            <li>Facility yard QR check-in (deferred; carrier check-in remains).</li>
+            <li>Stripe/billing, invoices for platform fees, subscription plans.</li>
+            <li>Payments, factoring, or LOB-held freight funds.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <p class="small">Source: docs/STATUS.md · Competitor fee context: public 2026 DAT/Truckstop plan listings (approx. $42–$449/user/mo subscription; typically no freight commission).</p>
+
+    <h2>Go-to-market strategy</h2>
+    <p>Win a dense vertical beachhead, then expand. Do not open a national empty board.</p>
+
+    <h3>Beachhead</h3>
+    <table>
+      <thead>
+        <tr><th>Phase</th><th>Focus</th><th>Success metric</th><th>Duration</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>0 — Soft launch</td>
+          <td>3–5 known mills/wholesalers + 15–30 vetted flatbed/Conestoga carriers on overlapping lanes</td>
+          <td>≥20 completed mutual-close loads / 30 days with &lt;10% no-shows</td>
+          <td>6–10 weeks</td>
+        </tr>
+        <tr>
+          <td>1 — Lane density</td>
+          <td>One corridor cluster (e.g. PNW mill → Midwest / California receivers)</td>
+          <td>Median time-to-cover under target; repeat carriers on same lanes</td>
+          <td>Q1–Q2</td>
+        </tr>
+        <tr>
+          <td>2 — Paid conversion</td>
+          <td>Convert active suppliers to paid seats after they feel coverage; keep carriers free or lightly paid</td>
+          <td>Paid suppliers covering ≥70% of platform GMV</td>
+          <td>After Phase 0 proof</td>
+        </tr>
+        <tr>
+          <td>3 — Expand</td>
+          <td>Adjacent regions / product types (panels, engineered wood) using referral from covered mills</td>
+          <td>Second corridor with same ops quality</td>
+          <td>After paid retention ≥2 cycles</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Who we sell to first</h3>
+    <div class="grid3">
+      <div class="card">
+        <div class="card-h">Mid-size mills &amp; wholesalers <span class="pill active">Primary</span></div>
+        <div class="card-b">Enough volume to need a board, not so large that Princeton TMX / private carrier portals already solved tendering. They feel Excel + phone pain.</div>
+      </div>
+      <div class="card">
+        <div class="card-h">Asset flatbed fleets <span class="pill">Secondary</span></div>
+        <div class="card-b">Carriers already hauling lumber who hate ghost loads and double brokers. Sell trust + clean dispatch docs, not another $149 rate tool.</div>
+      </div>
+      <div class="card">
+        <div class="card-h">Mega mills &amp; owner-ops only <span class="pill">Defer</span></div>
+        <div class="card-b">Mega mills want ERP/EDI tender engines. Solo O/Os churn unless lane density is already high. Both are phase 3+.</div>
+      </div>
+    </div>
+
+    <h3>Motion</h3>
+    <table>
+      <thead><tr><th>Motion</th><th>Do</th><th>Do not</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Sales</td>
+          <td>Founder-led, account-based: mill traffic managers + 2–3 preferred carriers per mill</td>
+          <td>Self-serve national ads promising "loads nationwide"</td>
+        </tr>
+        <tr>
+          <td>Onboarding</td>
+          <td>White-glove approve after real docs; seed first loads with ops help</td>
+          <td>Auto-approve on production to inflate vanity users</td>
+        </tr>
+        <tr>
+          <td>Product narrative</td>
+          <td>Trusted forest-products board with dispatch-to-close workflow</td>
+          <td>Cheaper DAT / better rate analytics (Insights still hidden)</td>
+        </tr>
+        <tr>
+          <td>Distribution</td>
+          <td>Associations, mill networks, Hibernia-style partner intros, lane intel CLI for targeting</td>
+          <td>Pay-to-post spam to fill the board</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>Pricing strategies (ranked)</h2>
+    <p class="muted">Ranked for a pre-liquidity niche marketplace with no billing product and draft legal. Dollar bands are directional planning figures, not published offers.</p>
+
+    <div class="card">
+      <div class="card-h">
+        <span><span class="rank">#1 recommended</span> — Supplier SaaS + free carriers (density phase)</span>
+        <span class="pill active">Ship now path</span>
+      </div>
+      <div class="card-b">
+        <p>Charge the scarce, value-capturing side: mills/wholesalers pay for posting seats, bid management, shipment lifecycle, credit exchange. Carriers free until corridor density is proven.</p>
+        <table>
+          <thead><tr><th>Plan</th><th>Indicative price</th><th>Includes</th></tr></thead>
+          <tbody>
+            <tr><td>Supplier Starter</td><td>$299–$499 / company / mo</td><td>Post + book workflow, limited seats, credit file, basic shipments</td></tr>
+            <tr><td>Supplier Ops</td><td>$799–$1,200 / company / mo</td><td>Multi-user, exclusions/tiers, capacity inbox, priority support</td></tr>
+            <tr><td>Carrier</td><td>$0 during Phase 0–1</td><td>Browse, book/bid, capacity, dispatch, check-in</td></tr>
+          </tbody>
+        </table>
+        <p class="small" style="margin:0">Why #1: Matches who feels pain, avoids DAT seat competition, does not require freight-fund handling. Failure mode: suppliers refuse to pay before coverage exists — so keep free pilot seats until Phase 0 metrics hit.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">#2 — Hybrid: free pilot → supplier SaaS + per-completed-load fee</div>
+      <div class="card-b">
+        <p>After mutual close, bill shipper a flat success fee ($35–$75/load) or small capped % of linehaul (1–1.5%, cap ~$150). SaaS covers platform; fee aligns with covered freight.</p>
+        <p class="small" style="margin:0">Stronger unit economics if volume grows. Needs invoicing, dispute rules, and counsel on whether the fee is a software transaction fee (preferred) vs brokerage compensation. Do not collect carrier pay.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">#3 — Dual subscription (DAT-like)</div>
+      <div class="card-b">
+        <p>Suppliers ~$300–$800/mo; carriers ~$49–$129/mo once density exists. Familiar to the industry.</p>
+        <p class="small" style="margin:0">Premature carrier fees shrink supply of trucks when LOB has less freight than DAT. Only introduce after carriers already get weekly booked miles from LOB.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">#4 later — Insights / rate-data add-on</div>
+      <div class="card-b">
+        <p>Paid monthly analytics (STATUS already flags this as future). DAT proves data monetizes, but LOB’s customer Insights are deliberately hidden pending privacy review. Internal lane intel stays admin-only.</p>
+        <p class="small" style="margin:0">Good year-2 ARPU lever. Bad launch wedge. Selling thin-sample rates damages trust permanently.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><span class="avoid">#5 avoid</span> — Freight commission / LOB-as-broker</div>
+      <div class="card-b">
+        <p>Taking 5–15% of linehaul or holding shipper/carrier funds. Forces broker authority, bonding, claims, double-broker exposure, and redefines the company.</p>
+        <p class="small" style="margin:0">Only revisit if LOB deliberately becomes a licensed brokerage with ops headcount. That is a different company.</p>
+      </div>
+    </div>
+
+    <h2>Risk register and mitigations</h2>
+    <table>
+      <thead>
+        <tr><th>Risk</th><th>Severity</th><th>Why it is real here</th><th>Mitigation</th></tr>
+      </thead>
+      <tbody>
+        <tr class="critical"><td>Cold-start / empty board</td><td>Critical</td><td>Two-sided marketplace; forest-products capacity is specialized flatbed</td><td>Invite-only beachhead; seed both sides per corridor; free carriers; kill vanity signup marketing</td></tr>
+        <tr class="high"><td>Ghost loads &amp; no-shows</td><td>High</td><td>Industry-wide board failure mode; kills carrier trust fast</td><td>Require mutual close discipline; penalize stale posts; admin cull; track cover-to-complete ratio</td></tr>
+        <tr class="high"><td>Double brokerage / identity fraud</td><td>High</td><td>Load boards are primary attack surface; LOB has docs but not FMCSA automation depth of Truckstop</td><td>Keep production auto-approve off; insurance + credit docs verified; prefer asset carriers early</td></tr>
+        <tr><td>Legal documents still draft</td><td>High</td><td>Clickwrap isDraft; counsel pending — monetization and disputes are exposed</td><td>Counsel sign-off before paid plans; bump version; clear isDraft; freeze material product claims until then</td></tr>
+        <tr><td>Accidental brokerage</td><td>High</td><td>Success fees + dispatch UX can look like arranging transportation for compensation</td><td>Structure as software access fee; no holding funds; counsel memo; clear party-of-record language</td></tr>
+        <tr><td>Admin verification bottleneck</td><td>Medium</td><td>Approve gate is manual; sales can outrun ops</td><td>SLA for docs review; checklist templates; do not loosen gates for growth vanity</td></tr>
+        <tr><td>No notifications product</td><td>Medium</td><td>Email deferred; users miss bids/books without Outlook discipline</td><td>Keep PDF/Outlook workflow honest; add minimal transactional email or SMS before paid scale</td></tr>
+        <tr><td>No billing plumbing</td><td>Medium</td><td>STATUS: do not build Insights billing; there is still no fee collection path</td><td>Implement Stripe (or invoice-net-30 for mills) only after Phase 0 proof and counsel OK</td></tr>
+        <tr><td>Seasonality / soft lumber market</td><td>Medium</td><td>Volume swings with housing and mill schedules; fire/mud seasons shift lanes</td><td>Price annually with quarterly reviews; sell ops reliability over spot volume</td></tr>
+        <tr><td>Large-mill displacement</td><td>Medium</td><td>Roseburg-class shippers automate tendering via TMX/ERP, not public boards</td><td>Target mid-market; partner as overflow board, not RFP replacement</td></tr>
+        <tr><td>Data/privacy for Insights</td><td>Medium</td><td>Lane observations already written; customer Insights deferred for a reason</td><td>Keep market chips off until legal/product decision; use admin intel for GTM targeting only</td></tr>
+        <tr><td>Facility process gap</td><td>Low–Med</td><td>Yard QR deferred; mill check-in may still be phone/gatehouse</td><td>Revisit QR only after carrier check-in proves value; do not block GTM on yard hardware</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Product gaps and path forward</h2>
+    <p>Gaps ranked by whether they block revenue or only block scale. Fix blockers before polishing.</p>
+    <table>
+      <thead><tr><th>Gap</th><th>Blocks</th><th>Path forward</th><th>Order</th></tr></thead>
+      <tbody>
+        <tr><td>Counsel-approved legal (clear draft)</td><td>Paid launch / disputes</td><td>External review of Terms, Supplier, Carrier, Privacy; version bump; isDraft false</td><td>1</td></tr>
+        <tr><td>Liquidity playbook (ops, not code)</td><td>Any GTM</td><td>Named beachhead accounts, weekly cover report, marketplace-intel targeting</td><td>1</td></tr>
+        <tr><td>Transactional alerts (email/SMS)</td><td>Paid retention</td><td>Minimal Resend/SMS for book/bid/dispatch events; keep Outlook PDF for docs</td><td>2</td></tr>
+        <tr><td>Billing (SaaS invoices)</td><td>Pricing #1–#2</td><td>Stripe subscriptions for supplier plans; optional net-30 for mills; no freight wallets</td><td>2</td></tr>
+        <tr><td>Trust score / stale-load hygiene</td><td>Carrier retention</td><td>Auto-expire posts; completion rate on company; faster admin tools</td><td>3</td></tr>
+        <tr><td>Customer Insights</td><td>Upsell only</td><td>Privacy review + minimum sample thresholds before any paid analytics</td><td>4</td></tr>
+        <tr><td>Facility QR</td><td>Nice-to-have</td><td>Validate with 1–2 mills after carrier check-in habit exists</td><td>5</td></tr>
+        <tr><td>EDI / TMS integrations</td><td>Enterprise only</td><td>Ignore until mid-market SaaS retains; integrations are a trap before density</td><td>6</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout info">
+      <strong>90-day operating plan</strong>
+      <p>Weeks 1–2: counsel kickoff; lock beachhead list; freeze any public Insights claims.</p>
+      <p>Weeks 3–8: run Phase 0 free for both sides; instrument cover time, completion rate, no-shows; founder sales only.</p>
+      <p>Weeks 9–12: if Phase 0 metrics hit, pilot Supplier Starter pricing with 2–3 paying mills; carriers stay free; ship billing + minimal alerts.</p>
+      <p style="margin-bottom:0">Kill criteria: if loads do not complete with mutual close, do not monetize. Fix trust and density first.</p>
+    </div>
+
+    <h2>CEO verdict</h2>
+    <p>LOB should not price like DAT. Sell a vetted forest-products ops board to mid-size suppliers, give carriers free access until lanes are dense, and refuse brokerage economics until counsel and liquidity say otherwise.</p>
+    <p class="muted">Top pricing choice: Supplier SaaS + free carriers, with free pilots until Phase 0 completion metrics are real. Hybrid success fees are the scale-up lever. Dual subscriptions and Insights are later. Freight commissions are a strategic fork, not a tweak.</p>
+    <p class="small">Competitor pricing cited from public 2026 secondary summaries of DAT One and Truckstop plan pages; confirm live quotes before external use. Product facts from docs/STATUS.md.</p>
+  </div>
+</body>
+</html>

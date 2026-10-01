@@ -1,5 +1,6 @@
 import { CarrierTypeTag } from "@/components/carrier-type-tag";
 import { formatDisplayDate } from "@/lib/format-display-date";
+import { LOB_PILL_COMPACT } from "@/lib/lob-pill";
 
 type DocSummary = { kind: string; expiresAt: Date | null };
 
@@ -50,7 +51,7 @@ function reliabilityChip(score: number | null | undefined) {
     label = "At-risk";
   }
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${cls}`}>
+    <span className={`${LOB_PILL_COMPACT} gap-1 text-[11px] ${cls}`}>
       <span className="font-mono">{score}</span> · {label}
     </span>
   );
@@ -76,7 +77,7 @@ export function CarrierScorecard({ carrier, documents = [], className }: Props) 
           <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-zinc-600">
             <CarrierTypeTag carrierType={carrier.carrierType} isOwnerOperator={carrier.isOwnerOperator} />
             <span
-              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${
+              className={`${LOB_PILL_COMPACT} gap-1 text-[11px] ${
                 carrier.verificationStatus === "APPROVED"
                   ? "bg-emerald-50 text-emerald-900 ring-emerald-200"
                   : carrier.verificationStatus === "PENDING"
@@ -88,7 +89,7 @@ export function CarrierScorecard({ carrier, documents = [], className }: Props) 
             </span>
             {reliabilityChip(carrier.reliabilityScore ?? null)}
             {carrier.factoringEligible && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-900 ring-1 ring-indigo-200">
+              <span className={`${LOB_PILL_COMPACT} gap-1 bg-indigo-50 text-[11px] text-indigo-900 ring-indigo-200`}>
                 Factoring
               </span>
             )}
@@ -122,7 +123,7 @@ export function CarrierScorecard({ carrier, documents = [], className }: Props) 
             {trailers.map((t) => (
               <span
                 key={t}
-                className="inline-flex items-center rounded-full bg-stone-100 px-2 py-0.5 text-[11px] font-medium text-stone-700 ring-1 ring-stone-200"
+                className={`${LOB_PILL_COMPACT} bg-stone-100 text-[11px] font-medium text-stone-700 ring-stone-200`}
               >
                 {t}
               </span>

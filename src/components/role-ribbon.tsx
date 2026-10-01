@@ -28,7 +28,7 @@ export function RoleRibbon() {
       role="status"
       aria-live="polite"
     >
-      <div className="mx-auto flex max-w-[1680px] items-center justify-between gap-3 px-5 py-1.5 text-[11px] sm:px-8 sm:text-xs">
+      <div className="mx-auto flex max-w-[1680px] items-center justify-between gap-3 px-4 py-1.5 text-[11px] sm:px-8 sm:text-xs">
         <div className={`flex min-w-0 items-center gap-2 ${accents.ribbonText}`}>
           {viewer.companyName && (
             <span className="truncate font-semibold">{viewer.companyName}</span>
@@ -39,19 +39,23 @@ export function RoleRibbon() {
             </span>
           )}
           {viewer.verified && (
-            <span className="hidden items-center gap-1 text-[10px] font-medium opacity-80 sm:inline-flex">
+            <span className="inline-flex items-center gap-1 text-[10px] font-medium opacity-80">
               <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                  clipRule="evenodd"
+                />
               </svg>
               Verified
             </span>
           )}
         </div>
-        <div className="flex shrink-0 items-center gap-3">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           {viewer.kind === "SETUP" && (
             <Link
               href="/onboarding"
-              className="hidden font-semibold underline-offset-2 hover:underline sm:inline"
+              className="font-semibold underline-offset-2 hover:underline"
             >
               Finish registration →
             </Link>
@@ -61,14 +65,14 @@ export function RoleRibbon() {
               <span className="hidden font-semibold opacity-90 sm:inline">Awaiting LOB approval</span>
               <Link
                 href="/carrier/compliance"
-                className="hidden font-semibold underline-offset-2 hover:underline sm:inline"
+                className="font-semibold underline-offset-2 hover:underline"
               >
                 Carrier profile →
               </Link>
             </>
           )}
           {showSupplierPending && (
-            <span className="hidden font-semibold opacity-90 sm:inline">Awaiting LOB approval</span>
+            <span className="font-semibold opacity-90">Awaiting LOB approval</span>
           )}
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { cn } from "@/lib/cn";
+import { LOB_PILL_COMPACT } from "@/lib/lob-pill";
 
 type CarrierTypeTagProps = {
   carrierType?: "ASSET_BASED" | "BROKER" | null;
@@ -25,12 +26,13 @@ export function CarrierTypeTag({
     return (
       <span
         className={cn(
-          "inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-slate-700 ring-1 ring-slate-300",
+          LOB_PILL_COMPACT,
+          "gap-1 bg-slate-100 text-[10px] uppercase tracking-wider text-slate-700 ring-slate-300",
           className,
         )}
         title="Owner-operator: independent driver running their own truck"
       >
-        <span className="h-1.5 w-1.5 rounded-full bg-slate-500" aria-hidden />
+        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-slate-500" aria-hidden />
         {compact ? "Owner-op" : "Owner-operator"}
       </span>
     );
@@ -40,12 +42,13 @@ export function CarrierTypeTag({
     return (
       <span
         className={cn(
-          "inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-900 ring-1 ring-amber-300",
+          LOB_PILL_COMPACT,
+          "gap-1 bg-amber-50 text-[10px] uppercase tracking-wider text-amber-900 ring-amber-300",
           className,
         )}
         title="Broker: arranges transport via a third-party asset carrier"
       >
-        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden />
+        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" aria-hidden />
         Broker
       </span>
     );
@@ -55,12 +58,13 @@ export function CarrierTypeTag({
     return (
       <span
         className={cn(
-          "inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-900 ring-1 ring-emerald-300",
+          LOB_PILL_COMPACT,
+          "gap-1 bg-emerald-50 text-[10px] uppercase tracking-wider text-emerald-900 ring-emerald-300",
           className,
         )}
         title="Asset-based: runs their own trucks/trailers"
       >
-        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden />
+        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" aria-hidden />
         {compact ? "Asset" : "Asset-based"}
       </span>
     );

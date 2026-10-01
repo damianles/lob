@@ -12,15 +12,16 @@ Apply when editing shell layout, brand marks, nav, or page chrome. Prefer existi
 
 | Layer | Component | Role |
 |-------|-----------|------|
-| Global wordmark | `LobBrandMasthead` in `src/app/layout.tsx` | Full-bleed navy bar. Knockout LOB letters pinned left. “Lumber One Board” centered at `2.5rem` from the `sm` breakpoint (about twice the old app size, not the old 5.25rem billboard). No `#1` line. |
-| Primary nav | `AppNav` | Desktop: role pill and account only. Mobile: product links, because the sidebar is hidden. Guests: Create account and Sign in only. **No** LOB mark. |
-| In-app sidebar | `LobSidebar` | Navigation only. Admin links live here for `ADMIN`. **No** wordmark or `#1` line. |
+| Global wordmark | `LobBrandMasthead` in `src/app/layout.tsx` | Full-bleed navy bar. Inner row `max-w-[1680px] mx-auto` so the knockout LOB mark aligns with the content rail (not the ultrawide viewport edge). “Lumber One Board” centered in that rail at up to `2.5rem`. No `#1` line in the masthead. |
+| Primary nav | `AppNav` | Desktop: product link row + role pill + account. Mobile: account chrome only (product pages in bottom tabs). Guests: Create account and Sign in. **No** LOB mark in AppNav. |
+| In-app sidebar | `LobSidebar` | Desktop: product name + slogan (`BRAND_POSITIONING`) above Navigate, then nav links. Admin links for `ADMIN`. |
 | Status chrome | `RoleRibbon`, `AdminViewAsBar`, `DemoBanner` | Company and approval. Role pill stays in `AppNav` only. |
 
-- **One global masthead** — do not add a second wordmark above/beside `AppNav`, on sign-in, or in the sidebar.
-- **Masthead lockup** — dark navy bar (`bg-lob-navy`). Knockout LOB letters (`LOB_APP_ICON_KNOCKOUT_SRC`, no navy box) are **absolutely left**. The vector “Lumber One Board” wordmark (white + gold “One”, Nunito 800) is **centered** in the bar at `sm:text-[2.5rem]`. Do not restore the old `clamp` up to 5.25rem. On phones, keep the wordmark smaller than 2.5rem so it does not collide with the left mark. Do not use the boxed `lob-app-icon.png` on the navy bar.
-- **Masthead background is full-bleed** — `w-full` edge-to-edge. The lockup row may use `max-w-[1680px]` so it lines up with page content.
-- **No logo in `AppNav` or `LobSidebar`**.
+- **Global masthead** — one navy bar. Do not add another full-bleed wordmark above/beside `AppNav` or on sign-in.
+- **Sidebar brand block** — keep “Lumber One Board” + “The #1 Lumber Load Board” above Navigate on desktop. That is intentional local wayfinding, not a second masthead.
+- **Masthead lockup** — knockout LOB (`LOB_APP_ICON_KNOCKOUT_SRC`) absolutely left **inside** the `max-w-[1680px]` rail. Wordmark centered in that rail. Do not pin the mark to the raw viewport left on ultrawide. Do not use the boxed `lob-app-icon.png` on the navy bar.
+- **Masthead background is full-bleed** — `w-full` edge-to-edge navy; content lockup is rail-aligned.
+- **No logo in `AppNav`**.
 - **Commit buttons** use `lobWoodPrimaryButtonClass` (navy). Gold is an accent, not a gradient fill. Do not use emerald for Post, Book, or Export.
 - **Do not** paint the page background by persona. `data-persona` may exist. The paper color stays shared.
 - Reuse `@/components/lob-brand-*`, `LobWoodOIcon`, `@/lib/brand`, `@/lib/brand-marketing` — do not invent new lockups.

@@ -508,7 +508,14 @@ export function ShipmentsWorkspace({
               <SortableTh label="Posted" k="postedAt" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
               <SortableTh label="Pickup" k="pickupAt" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
               <SortableTh label="Delivery" k="deliveryAt" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
-              <SortableTh label="Status" k="status" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
+              <SortableTh
+                label="Status"
+                k="status"
+                sortKey={sortKey}
+                sortDir={sortDir}
+                onClick={toggleSort}
+                className="min-w-[8.5rem]"
+              />
               <SortableTh label="Equipment" k="weight" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
               <SortableTh label="Rate" k="rate" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} align="right" />
               {showShipperColumn && (
@@ -608,6 +615,7 @@ function SortableTh({
   sortDir,
   onClick,
   align = "left",
+  className,
 }: {
   label: string;
   k: SortKey;
@@ -615,10 +623,11 @@ function SortableTh({
   sortDir: "asc" | "desc";
   onClick: (k: SortKey) => void;
   align?: "left" | "right";
+  className?: string;
 }) {
   const active = sortKey === k;
   return (
-    <th className={`px-3 py-2 ${align === "right" ? "text-right" : ""}`}>
+    <th className={`px-3 py-2 ${align === "right" ? "text-right" : ""} ${className ?? ""}`}>
       <button
         type="button"
         onClick={() => onClick(k)}
