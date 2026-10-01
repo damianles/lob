@@ -35,4 +35,4 @@ export const BRAND_VALUE_PROPS = [
 
 /** Closing line under the value props. */
 export const BRAND_CLOSING =
-  "Create your account, complete Account Setup, and bring your company onto a board built for forest products freight. The documents you file help the other side decide with confidence when you work together.";
+  "Create your account and complete Account Setup for forest products freight. We don't onboard every carrier. Authority to haul is required, and we review it before they book.";
