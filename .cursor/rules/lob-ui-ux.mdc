@@ -12,22 +12,25 @@ Apply when editing shell layout, brand marks, nav, or page chrome. Prefer existi
 
 | Layer | Component | Role |
 |-------|-----------|------|
-| Global wordmark | `LobBrandMasthead` in `src/app/layout.tsx` | Sole full-bleed top brand bar |
-| Primary nav | `AppNav` | Links + auth only — **no** LOB mark / wood-O |
-| In-app sidebar | `LobSidebar` | Text only: product name + positioning — **no** LOB mark |
-| Status chrome | `RoleRibbon`, `AdminViewAsBar`, `DemoBanner` | Role/admin/demo — not brand logos |
+| Global wordmark | `LobBrandMasthead` in `src/app/layout.tsx` | Compact full-bleed navy bar (about 56px). Knockout LOB letters plus “Lumber One Board”. No `#1` line. |
+| Primary nav | `AppNav` | Desktop: role pill and account only. Mobile: product links, because the sidebar is hidden. Guests: Create account and Sign in only. **No** LOB mark. |
+| In-app sidebar | `LobSidebar` | Navigation only. Admin links live here for `ADMIN`. **No** wordmark or `#1` line. |
+| Status chrome | `RoleRibbon`, `AdminViewAsBar`, `DemoBanner` | Company and approval. Role pill stays in `AppNav` only. |
 
-- **One global masthead** — do not add a second wordmark above/beside `AppNav`.
-- **Masthead lockup** — dark navy bar (`bg-lob-navy`) with the **knockout** LOB letters (`LOB_APP_ICON_KNOCKOUT_SRC`, no navy box) to the **left** of a **vector** “Lumber One Board” wordmark (white + gold “One”, Nunito 800). No `#1` tagline. Do not use the boxed `lob-app-icon.png` on the navy bar — the field color does not match.
-- **Masthead is full-bleed** — `w-full` edge-to-edge; do not re-introduce `max-w-[1680px]` on the masthead shell (content pages may still use that max width).
-- **No logo in `AppNav` or `LobSidebar`** — the square mark lives in the masthead only.
+- **One global masthead** — do not add a second wordmark above/beside `AppNav`, on sign-in, or in the sidebar.
+- **Masthead lockup** — dark navy bar (`bg-lob-navy`) with the **knockout** LOB letters (`LOB_APP_ICON_KNOCKOUT_SRC`, no navy box) to the **left** of a **vector** “Lumber One Board” wordmark (white + gold “One”, Nunito 800) at `text-lg` / `text-xl`. Do not restore the display-size wordmark (the old `clamp` up to 5.25rem). Do not use the boxed `lob-app-icon.png` on the navy bar.
+- **Masthead background is full-bleed** — `w-full` edge-to-edge. The lockup row may use `max-w-[1680px]` so it lines up with page content.
+- **No logo in `AppNav` or `LobSidebar`**.
+- **Commit buttons** use `lobWoodPrimaryButtonClass` (navy). Gold is an accent, not a gradient fill. Do not use emerald for Post, Book, or Export.
+- **Do not** paint the page background by persona. `data-persona` may exist. The paper color stays shared.
 - Reuse `@/components/lob-brand-*`, `LobWoodOIcon`, `@/lib/brand`, `@/lib/brand-marketing` — do not invent new lockups.
 
 ## UX defaults
 
 - Match neighboring Tailwind patterns (stone/navy/gold tokens in `globals.css`).
-- Preserve persona body tints (`PersonaBodyTint`) — do not override with one-off page backgrounds unless the task asks.
-- Mobile: same centered lockup at a smaller size; do not force a second brand treatment on phones.
+- Public landing may show one example load row. Do not put the hero logo card back under the masthead.
+- Account creation is one button, then Supplier or Carrier. Do not put four peer sign-in and sign-up buttons on the landing page.
+- Mobile: the same compact lockup. Product links stay in the top scroller and the bottom bar.
 - Minimal diffs — no drive-by redesign of unrelated surfaces.
 
 ## Ship
