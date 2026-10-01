@@ -30,11 +30,6 @@ export function RoleRibbon() {
     >
       <div className="mx-auto flex max-w-[1680px] items-center justify-between gap-3 px-5 py-1.5 text-[11px] sm:px-8 sm:text-xs">
         <div className={`flex min-w-0 items-center gap-2 ${accents.ribbonText}`}>
-          <span
-            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] ring-1 ring-inset ${accents.pillBg} ${accents.pillText} ${accents.pillRing} sm:text-[10px]`}
-          >
-            {viewer.shortLabel}
-          </span>
           {viewer.companyName && (
             <span className="truncate font-semibold">{viewer.companyName}</span>
           )}

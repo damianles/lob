@@ -19,7 +19,10 @@ type BolPickupStripProps = {
   inApp?: boolean;
 };
 
-/** Print-friendly haul sheet for the driver — route and freight only, no confirm QR. */
+/**
+ * Legacy compact strip — prefer DispatchSheetPrint for the full driver haul sheet.
+ * Kept for any remaining callers; labels say haul sheet, not BOL.
+ */
 export function BolPickupStrip({
   referenceNumber,
   originLine,
@@ -45,10 +48,10 @@ export function BolPickupStrip({
   return (
     <div className={shell}>
       <div className="mx-auto max-w-md print:max-w-none print:px-0">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500">Lumber on Board</p>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight text-stone-900">Driver haul sheet · {referenceNumber}</h1>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-500">Driver haul sheet</p>
+        <h1 className="mt-1 text-2xl font-bold tracking-tight text-stone-900">{referenceNumber}</h1>
         <p className="mt-1 text-sm text-stone-600">
-          Attach to paperwork for the driver. Pickup and delivery confirmation use yard/receiver links — not this sheet.
+          Not a bill of lading. Prefer the full haul sheet print for yard addresses and phones.
         </p>
 
         <div className="mt-6 space-y-1.5 text-sm text-stone-800 print:text-[12px]">
