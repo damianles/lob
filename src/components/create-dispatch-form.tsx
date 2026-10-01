@@ -44,8 +44,9 @@ export function CreateDispatchForm({ loadId }: { loadId: string }) {
     <div className="mt-6 max-w-lg space-y-3 rounded-lg border border-sky-200 bg-sky-50/70 p-4">
       <h2 className="text-sm font-semibold text-zinc-900">Create driver dispatch</h2>
       <p className="text-xs text-zinc-600">
-        The haul sheet always includes the mill&apos;s load number, lane, full pickup/delivery addresses and phones,
-        dates, equipment, weight, product, and booking. No rates. Add the driver, then print or save as PDF.
+        The haul sheet (not a bill of lading) includes the mill load number, lane, pickup/delivery addresses and phones,
+        dates, equipment, weight, product, and booking. No rates. Add the driver, then print or save as PDF. Use the
+        mill&apos;s signed BOL at the yard.
       </p>
       {error ? <p className="text-sm text-red-700">{error}</p> : null}
       <input

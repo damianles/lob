@@ -36,25 +36,8 @@ export function LobSidebar({
 
   return (
     <aside className="hidden w-[15.5rem] shrink-0 flex-col border-r border-stone-200/50 bg-stone-50/30 lg:flex">
-      <div className="border-b border-stone-200/50 px-4 pb-4 pt-6">
-        <Link
-          href={viewer.kind === "SHIPPER" ? "/shipments" : "/"}
-          className="block min-w-0 rounded-xl p-1.5 transition hover:bg-white/70"
-          aria-label={`${BRAND_PRODUCT_NAME} — home`}
-        >
-          <p className="whitespace-nowrap text-[20px] font-semibold leading-tight tracking-tight text-lob-navy">
-            {BRAND_PRODUCT_NAME}
-          </p>
-          <p className="mt-1 whitespace-nowrap text-[11px] font-bold uppercase leading-snug tracking-[0.06em] text-lob-gold-muted">
-            {BRAND_POSITIONING}
-          </p>
-        </Link>
-      </div>
-      <div className="px-5 pb-2 pt-4">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-stone-400">Navigate</p>
-      </div>
       <nav
-        className="flex max-h-[calc(100vh-10rem)] flex-col gap-1 overflow-y-auto px-3 pb-4 text-[13px]"
+        className="flex max-h-[calc(100vh-8rem)] flex-col gap-1 overflow-y-auto px-3 pb-4 pt-4 text-[13px]"
         aria-label="Main"
       >
         {navItems.map((item) => {
@@ -76,6 +59,30 @@ export function LobSidebar({
             </Link>
           );
         })}
+        {viewer.kind === "ADMIN" ? (
+          <div className="mt-4 border-t border-stone-200/80 pt-3">
+            <p className="px-4 pb-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-stone-400">
+              Admin
+            </p>
+            {ADMIN_LINKS.map((item) => {
+              const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  prefetch={false}
+                  className={
+                    isActive
+                      ? "block rounded-xl bg-white px-4 py-2.5 font-semibold text-lob-navy shadow-sm shadow-stone-900/5 ring-1 ring-stone-200/80"
+                      : "block rounded-xl px-4 py-2.5 text-stone-600 transition hover:bg-white/80 hover:text-lob-navy"
+                  }
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+        ) : null}
       </nav>
       <div className="mt-auto border-t border-stone-200/50 px-5 py-4 text-[11px] leading-relaxed text-stone-400">
         {stats ? (

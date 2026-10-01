@@ -36,10 +36,10 @@ export function DriverLinkPanel({
 
   return (
     <section className="mt-6 rounded-lg border border-violet-200 bg-violet-50/70 p-4">
-      <h2 className="text-sm font-semibold text-zinc-900">Driver dispatch</h2>
+      <h2 className="text-sm font-semibold text-zinc-900">Driver haul sheet</h2>
       <p className="mt-1 text-xs text-zinc-600">
-        Send this link to {driverName} for the haul sheet. Print / Save as PDF and attach in Outlook if you are
-        emailing it. Pickup and delivery confirmation stay on the yard/receiver links above — not on this driver QR.
+        Send this link to {driverName} for the haul sheet (not a bill of lading). Print / Save as PDF and attach in
+        Outlook if you are emailing it. Pickup and delivery confirmation stay on the yard/receiver links above.
       </p>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {driverUrl ? (
@@ -51,12 +51,12 @@ export function DriverLinkPanel({
           {copied ? "Copied" : "Copy link"}
         </Button>
         <a href={bolStripHref} className="text-xs font-medium text-lob-navy underline">
-          Open dispatch sheet (print / PDF)
+          Open haul sheet (print / PDF)
         </a>
       </div>
       {driverUrl ? (
         <div className="mt-4 inline-block rounded-lg border border-stone-200 bg-white p-2 text-center">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-stone-500">Driver haul sheet QR</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-stone-500">Haul sheet QR</p>
           <div className="mx-auto mt-1 flex justify-center">
             <QRCodeSVG value={driverUrl} size={120} level="M" />
           </div>

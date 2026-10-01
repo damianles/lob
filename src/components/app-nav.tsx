@@ -2,6 +2,7 @@
 
 import { UserButton, useAuth } from "@clerk/nextjs";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { startTransition, useEffect, useState } from "react";
 
 import { AppNotifications } from "@/components/app-notifications";
@@ -15,13 +16,19 @@ import type { MeApiResponse } from "@/lib/viewer-role";
 import { roleAccentClasses } from "@/lib/viewer-role";
 
 const adminLinks = [
-  { href: "/admin/test-lab", label: "Test Lab" },
   { href: "/admin/carriers", label: "Carriers" },
   { href: "/admin/suppliers", label: "Suppliers" },
   { href: "/admin/companies", label: "Companies" },
+  { href: "/admin/test-lab", label: "Test Lab" },
 ];
 
+function isCurrentPath(pathname: string, href: string): boolean {
+  if (href === "/") return pathname === "/";
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
 export function AppNav() {
+  const pathname = usePathname() ?? "/";
   const { isSignedIn, isLoaded } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
   const { viewer } = useViewerRole();
@@ -47,39 +54,40 @@ export function AppNav() {
     };
   }, [signedIn]);
 
-  const guestLinks = [
-    { href: signUpUrlForAppPath("/"), label: "Register" },
-    { href: signUpUrlForAppPath("/capacity"), label: "Capacity" },
-    { href: signInUrlForAppPath("/"), label: "Sign In" },
-  ];
-  const signedInLinks = lobTopNavLinksForViewer(viewer.kind);
-  const links = [
-    ...(signedIn ? signedInLinks : guestLinks),
-    ...(signedIn && isAdmin ? adminLinks : []),
+  const signedInLinks = [
+    ...lobTopNavLinksForViewer(viewer.kind),
+    ...(isAdmin ? adminLinks : []),
   ];
 
   return (
     <header className="relative z-50 border-b border-stone-200/50 bg-white/75 backdrop-blur-xl supports-[backdrop-filter]:bg-white/60 lg:sticky lg:top-0">
-      <div className="mx-auto flex max-w-[1680px] items-center justify-between gap-3 px-3 py-2 sm:gap-6 sm:px-8 sm:py-4">
-        <div className="flex min-w-0 flex-1 items-center">
-          <nav className="hide-scrollbar -mx-1 flex min-w-0 flex-1 items-center gap-x-1 overflow-x-auto px-1 sm:flex-wrap sm:gap-y-1.5 sm:overflow-visible" aria-label="Primary">
-            {links.map((l) => (
-              <Link
-                key={l.href}
-                href={l.href}
-                prefetch={false}
-                className={cn(
-                  "shrink-0 rounded-full px-3 py-1.5 text-[12px] font-semibold transition sm:px-4 sm:py-2 sm:text-sm",
-                  !signedIn && l.label === "Register"
-                    ? lobWoodPrimaryButtonClass
-                    : "text-stone-600 hover:bg-stone-100 hover:text-lob-navy",
-                )}
-              >
-                {l.label}
-              </Link>
-            ))}
+      <div className="mx-auto flex max-w-[1680px] items-center justify-between gap-3 px-3 py-2 sm:px-8 sm:py-3">
+        {signedIn ? (
+          <nav
+            className="hide-scrollbar -mx-1 flex min-w-0 flex-1 items-center gap-x-1 overflow-x-auto px-1 lg:hidden"
+            aria-label="Primary"
+          >
+            {signedInLinks.map((l) => {
+              const current = isCurrentPath(pathname, l.href);
+              return (
+                <Link
+                  key={l.href}
+                  href={l.href}
+                  prefetch={false}
+                  aria-current={current ? "page" : undefined}
+                  className={cn(
+                    "shrink-0 rounded-full px-3 py-1.5 text-[12px] font-semibold",
+                    current ? "bg-lob-navy text-white" : "text-stone-600 hover:bg-stone-100 hover:text-lob-navy",
+                  )}
+                >
+                  {l.label}
+                </Link>
+              );
+            })}
           </nav>
-        </div>
+        ) : (
+          <div className="min-w-0 flex-1" />
+        )}
         <div className="flex shrink-0 items-center justify-end gap-2 pl-2 sm:gap-3">
           {signedIn && viewer.kind !== "GUEST" && (
             <span
@@ -96,12 +104,20 @@ export function AppNav() {
               <UserButton />
             </>
           ) : (
-            <Link
-              href={signInUrlForAppPath("/")}
-              className={`rounded-full px-3.5 py-1.5 text-xs font-semibold transition sm:px-5 sm:py-2.5 sm:text-sm ${lobWoodOutlineButtonClass}`}
-            >
-              Sign In
-            </Link>
+            <>
+              <Link
+                href={signUpUrlForAppPath("/")}
+                className={`${lobWoodPrimaryButtonClass} min-h-9 px-3.5 py-1.5 text-xs sm:px-5 sm:text-sm`}
+              >
+                Create account
+              </Link>
+              <Link
+                href={signInUrlForAppPath("/")}
+                className={`${lobWoodOutlineButtonClass} min-h-9 px-3.5 py-1.5 text-xs sm:px-5 sm:text-sm`}
+              >
+                Sign in
+              </Link>
+            </>
           )}
         </div>
       </div>

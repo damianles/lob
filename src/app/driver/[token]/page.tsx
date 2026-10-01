@@ -19,8 +19,10 @@ export default async function DriverPage({
     include: {
       load: {
         include: {
-          shipperCompany: { select: { legalName: true } },
-          booking: { include: { carrierCompany: { select: { legalName: true } } } },
+          shipperCompany: { select: { legalName: true, businessPhone: true } },
+          booking: {
+            include: { carrierCompany: { select: { legalName: true, businessPhone: true } } },
+          },
         },
       },
       podDocument: true,
@@ -51,25 +53,19 @@ export default async function DriverPage({
         weightLbs={dispatch.load.weightLbs}
         equipmentType={dispatch.load.equipmentType}
         millLabel={millName}
+        millPhone={dispatch.load.shipperCompany.businessPhone}
         carrierName={carrierName}
+        carrierPhone={dispatch.load.booking?.carrierCompany.businessPhone ?? null}
         bookedAt={dispatch.load.booking?.bookedAt.toISOString() ?? null}
         driverName={dispatch.driverName}
         driverPhone={dispatch.driverPhone}
         pickupAt={dispatch.load.requestedPickupAt.toISOString()}
         deliveryAt={dispatch.load.requestedDeliveryAt?.toISOString() ?? null}
+        uniquePickupCode={dispatch.load.uniquePickupCode}
         lumberSpec={lumberSpec}
         packet={packet}
         extendedPosting={dispatch.load.extendedPosting}
       />
-      <section className="mx-auto max-w-[8.5in] px-6 pb-8 text-sm text-zinc-600 print:hidden">
-        <p>
-          Status: {dispatch.status}
-          {" · "}
-          Pickup confirmed: {dispatch.pickupConfirmedAt ? "Yes" : "No"}
-          {" · "}
-          Delivered: {dispatch.deliveredAt ? "Yes" : "No"}
-        </p>
-      </section>
     </main>
   );
 }

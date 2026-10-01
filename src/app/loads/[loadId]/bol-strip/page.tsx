@@ -35,9 +35,13 @@ export default async function BolStripPage({ params }: { params: Promise<{ loadI
   const load = await prisma.load.findUnique({
     where: { id: loadId },
     include: {
-      booking: { include: { carrierCompany: { select: { legalName: true } } } },
+      booking: {
+        include: {
+          carrierCompany: { select: { legalName: true, businessPhone: true } },
+        },
+      },
       dispatchLink: true,
-      shipperCompany: { select: { legalName: true } },
+      shipperCompany: { select: { legalName: true, businessPhone: true } },
     },
   });
   if (!load) {
@@ -92,7 +96,7 @@ export default async function BolStripPage({ params }: { params: Promise<{ loadI
     return (
       <main className="min-h-screen bg-stone-50 px-4 py-10 text-zinc-900">
         <div className="mx-auto max-w-md rounded-2xl border border-stone-200 bg-white p-6 text-center shadow-sm">
-          <h1 className="text-lg font-semibold">Driver Haul Sheet Not Available Yet</h1>
+          <h1 className="text-lg font-semibold">Driver haul sheet not available yet</h1>
           <p className="mt-2 text-sm text-stone-600">
             Create a driver dispatch link from the load first.
           </p>
