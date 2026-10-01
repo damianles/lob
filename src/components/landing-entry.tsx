@@ -2,9 +2,11 @@ import Link from "next/link";
 
 import { CreateAccountChoice } from "@/components/create-account-choice";
 import {
+  BRAND_CLOSING,
   BRAND_EYEBROW,
   BRAND_POSITIONING,
   BRAND_PRODUCT_NAME,
+  BRAND_PUNCH_LINES,
   BRAND_VALUE_PROPS,
 } from "@/lib/brand-marketing";
 import { signInUrlForAppPath } from "@/lib/guest-auth-routes";
@@ -12,16 +14,15 @@ import { lobWoodOutlineButtonClass } from "@/lib/lob-button-styles";
 
 export function LandingEntry() {
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10 sm:py-16">
-      <p className="text-center text-xs font-semibold uppercase tracking-[0.2em] text-lob-gold-muted">
+    <div className="mx-auto max-w-5xl px-4 pb-10 pt-8 sm:px-6 sm:py-16">
+      <p className="text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-lob-gold-muted sm:text-xs">
         {BRAND_EYEBROW}
       </p>
-      <h1 className="mt-3 text-center text-4xl font-semibold tracking-tight text-lob-navy sm:text-5xl sm:leading-[1.1]">
+      <h1 className="mt-3 text-balance text-center text-[2rem] font-semibold leading-tight tracking-tight text-lob-navy sm:text-5xl sm:leading-[1.1]">
         {BRAND_POSITIONING}
       </h1>
-      <p className="mx-auto mt-4 max-w-2xl text-center text-lg leading-relaxed text-stone-600">
-        Suppliers post loads. Carriers book a Firm Rate or place a bid. Company names stay hidden until
-        someone commits.
+      <p className="mx-auto mt-4 max-w-2xl text-pretty text-center text-base leading-relaxed text-stone-600 sm:text-lg">
+        {BRAND_PUNCH_LINES[0]}
       </p>
 
       <div className="mx-auto mt-8 max-w-3xl overflow-hidden rounded-2xl border border-stone-200 bg-white">
@@ -31,7 +32,7 @@ export function LandingEntry() {
           </p>
           <p className="text-[11px] text-stone-500">Supplier name hidden</p>
         </div>
-        <div className="grid gap-3 px-4 py-4 sm:grid-cols-[1.4fr_1fr_auto] sm:items-center">
+        <div className="flex flex-col gap-3 px-4 py-4 sm:grid sm:grid-cols-[1.4fr_1fr_auto] sm:items-center">
           <div>
             <p className="text-sm font-semibold text-lob-navy">Eugene, OR → Denver, CO</p>
             <p className="mt-1 text-xs text-stone-500">Pickup Tue · Flatbed · 46,000 lbs</p>
@@ -41,34 +42,42 @@ export function LandingEntry() {
         </div>
       </div>
 
-      <div className="mx-auto mt-8 flex max-w-xl flex-col items-center gap-3 sm:flex-row sm:justify-center">
+      <div className="mx-auto mt-8 flex w-full max-w-xl flex-col items-stretch gap-3 sm:items-center sm:flex-row sm:justify-center">
         <CreateAccountChoice />
-        <Link href={signInUrlForAppPath("/")} className={`${lobWoodOutlineButtonClass} min-h-12 px-8`}>
+        <Link
+          href={signInUrlForAppPath("/")}
+          className={`${lobWoodOutlineButtonClass} min-h-12 w-full px-8 sm:w-auto`}
+        >
           Sign in
         </Link>
       </div>
       <p className="mt-4 text-center text-sm text-stone-500">
-        <Link href="/capacity" className="font-semibold text-lob-navy underline decoration-lob-gold/50 underline-offset-2">
-          Browse capacity
+        <Link
+          href="/capacity"
+          className="font-semibold text-lob-navy underline decoration-lob-gold/50 underline-offset-2"
+        >
+          Browse Capacity
         </Link>
       </p>
 
-      <section className="mx-auto mt-16 max-w-2xl">
+      <section className="mx-auto mt-14 max-w-2xl sm:mt-16">
         <h2 className="text-center text-sm font-semibold uppercase tracking-wider text-stone-500">
           Why {BRAND_PRODUCT_NAME}
         </h2>
-        <div className="mt-8 space-y-8 border-t border-stone-200 pt-8">
+        <div className="mt-6 space-y-6 border-t border-stone-200 pt-6 sm:mt-8 sm:space-y-8 sm:pt-8">
           {BRAND_VALUE_PROPS.map((item) => (
-            <article key={item.title} className="border-l-2 border-lob-gold/60 pl-5">
-              <h3 className="text-lg font-semibold tracking-tight text-lob-navy">{item.title}</h3>
-              <p className="mt-2 max-w-xl text-sm leading-relaxed text-stone-600">{item.body}</p>
+            <article key={item.title} className="border-l-2 border-lob-gold/60 pl-4 sm:pl-5">
+              <h3 className="text-sm font-semibold uppercase tracking-[0.04em] text-lob-navy sm:text-base sm:tracking-tight">
+                {item.title}
+              </h3>
+              <p className="mt-2 text-sm leading-relaxed text-stone-600">{item.body}</p>
             </article>
           ))}
         </div>
       </section>
 
-      <p className="mx-auto mt-12 max-w-2xl text-center text-sm leading-relaxed text-stone-600">
-        After sign-in, account setup files the company and the documents the other side reads after a booking.
+      <p className="mx-auto mt-10 max-w-2xl text-pretty text-center text-sm leading-relaxed text-stone-600 sm:mt-12">
+        {BRAND_CLOSING}
       </p>
     </div>
   );

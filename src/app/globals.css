@@ -154,6 +154,15 @@ tr.lob-needs-repost-glow {
   outline-offset: 2px;
 }
 
+/* iOS zooms the page when a focused field is under 16px. Keep form controls readable on phones. */
+@media (max-width: 1023px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
 /* Improved scrollbar styling */
 ::-webkit-scrollbar {
   width: 8px;

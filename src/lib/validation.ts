@@ -132,7 +132,7 @@ export const createLoadSchema = z.object({
       if (!d.bidWindowHours || d.bidWindowHours < 1 || d.bidWindowHours > 72) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "Open bid window must be 1–72 hours.",
+          message: "Open Bid window must be 1–72 hours.",
           path: ["bidWindowHours"],
         });
       }

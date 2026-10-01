@@ -366,7 +366,7 @@ async function renderLoadDetailPage({ params }: { params: Promise<{ loadId: stri
                     : load.rateMode === "OPEN_BID"
                       ? load.offeredRateUsd != null
                         ? `Target ${formatMoney(Number(load.offeredRateUsd), load.offerCurrency)}`
-                        : "Open bid"
+                        : "Open Bid"
                       : load.offeredRateUsd != null
                         ? formatMoney(Number(load.offeredRateUsd), load.offerCurrency)
                         : "—"}

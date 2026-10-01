@@ -85,7 +85,7 @@ export function NeedsRepostPanel({ compact = false }: { compact?: boolean }) {
         {rows.length} load{rows.length === 1 ? "" : "s"} need{rows.length === 1 ? "s" : ""} your action
       </h2>
       <p className="mt-1 text-xs text-amber-900/80">
-        Firm Rate loads past 7 days after pickup, or Open bid windows that ended, stay off the board until you
+        Firm Rate loads past 7 days after pickup, or Open Bid windows that ended, stay off the board until you
         accept (new future dates) or decline (unlist). Posted prices are kept for analytics.
       </p>
       {msg ? <p className="mt-2 text-xs text-amber-950">{msg}</p> : null}
@@ -194,7 +194,7 @@ export function SoftWarnNeedsRepost({
         <h3 className="text-lg font-semibold text-zinc-900">Loads need your attention</h3>
         <p className="mt-2 text-sm text-zinc-600">
           You have <span className="font-semibold">{count}</span> load
-          {count === 1 ? "" : "s"} past the Firm Rate 7-day window or with an ended Open bid cycle. You can still
+          {count === 1 ? "" : "s"} past the Firm Rate 7-day window or with an ended Open Bid cycle. You can still
           publish this new load — resolve those when you can so dates stay accurate.
         </p>
         <p className="mt-2 text-xs text-zinc-500">

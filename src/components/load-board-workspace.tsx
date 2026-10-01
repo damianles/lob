@@ -480,7 +480,7 @@ export function LoadBoardWorkspace({
         )}
 
         {/* Search header */}
-        <div className="border-b border-stone-100 bg-stone-50/50 px-6 py-6 sm:px-8 sm:py-8">
+        <div className="border-b border-stone-100 bg-stone-50/50 px-4 py-6 sm:px-8 sm:py-8">
           <div className="mb-4">
             <h1 className="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Open Loads</h1>
             <p className="mt-1 text-sm text-zinc-600">
@@ -919,7 +919,7 @@ export function LoadBoardWorkspace({
         </div>
 
         {/* Carrier summary strip */}
-        <div className="flex flex-wrap items-center gap-4 border-b border-stone-100 bg-white px-6 py-3.5 text-sm sm:px-8">
+        <div className="flex flex-wrap items-center gap-4 border-b border-stone-100 bg-white px-4 py-3.5 text-sm sm:px-8">
               <span className="text-zinc-600">
                 Avg rate (filtered, ≈ {displayCurrency}):{" "}
                 <span className="font-semibold text-zinc-900">
@@ -934,7 +934,106 @@ export function LoadBoardWorkspace({
         </div>
 
         <div className="p-4 sm:p-6">
-          <div className="overflow-x-auto rounded-lg border border-zinc-200 bg-white">
+          <ul className="space-y-3 lg:hidden">
+            {filteredLoads.map((load) => {
+              const displayRate = load.offeredRateUsd;
+              const rateCurrency = load.offerCurrency;
+              const canBook = isDispatcher && load.status === "POSTED";
+              const specHint = lumberBoardHint(load.lumberSpec);
+              return (
+                <li
+                  key={load.id}
+                  className="rounded-xl border border-stone-200 bg-white p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <Link
+                        href={`/loads/${load.id}`}
+                        className="break-words font-semibold text-lob-navy underline"
+                      >
+                        {load.originCity}, {load.originState} → {load.destinationCity},{" "}
+                        {load.destinationState}
+                      </Link>
+                      {load.isRush ? (
+                        <span className="ml-1.5 inline-block rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-amber-900">
+                          Rush
+                        </span>
+                      ) : null}
+                      <p className="mt-1 text-xs font-medium text-stone-500">{load.referenceNumber}</p>
+                      <p className="mt-1 text-sm text-stone-600">
+                        {load.equipmentType} · {load.weightLbs.toLocaleString()} lbs
+                      </p>
+                      {specHint ? <p className="mt-0.5 text-xs text-stone-500">{specHint}</p> : null}
+                    </div>
+                    <span
+                      className={`inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${statusBadgeClass(load.status)}`}
+                    >
+                      {statusLabel(load.status)}
+                    </span>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1 text-sm text-stone-600">
+                    <p>
+                      Pickup{" "}
+                      <span className="tabular-nums text-stone-800">
+                        {formatDisplayDate(load.requestedPickupAt)}
+                      </span>
+                    </p>
+                    <p>
+                      Delivery{" "}
+                      <span className="tabular-nums text-stone-800">
+                        {load.requestedDeliveryAt
+                          ? formatDisplayDate(load.requestedDeliveryAt)
+                          : "—"}
+                      </span>
+                    </p>
+                    <p className="col-span-2 text-xs text-stone-500">
+                      Posted{" "}
+                      <span className="tabular-nums">{formatDisplayDate(load.createdAt)}</span>
+                    </p>
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
+                    <div className="inline-flex flex-col items-start gap-1">
+                      <RateModeBadge
+                        rateMode={load.rateMode}
+                        allowCounterOffers={load.allowCounterOffers}
+                        compact
+                      />
+                      {load.rateMode === "OPEN_BID" ? (
+                        <span className="text-sm tabular-nums text-zinc-700">
+                          {displayRate != null
+                            ? `Target ${formatMoney(displayRate, rateCurrency)}`
+                            : "Open Bid"}
+                        </span>
+                      ) : (
+                        <span className="text-sm font-semibold tabular-nums">
+                          {displayRate != null ? formatMoney(displayRate, rateCurrency) : "—"}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {isDispatcher ? (
+                    <div className="mt-3 min-w-0 border-t border-stone-100 pt-3">
+                      {canBook && actor.carrierApproved ? (
+                        <CarrierRateActions
+                          loadId={load.id}
+                          offerCurrency={load.offerCurrency}
+                          offeredRateUsd={load.offeredRateUsd}
+                          rateMode={load.rateMode}
+                          allowCounterOffers={load.allowCounterOffers}
+                          bidWindowExpiresAt={load.bidWindowExpiresAt}
+                          myPendingAmount={load.myPendingBidAmount}
+                        />
+                      ) : canBook && !actor.carrierApproved ? (
+                        <p className="text-xs text-zinc-500">Pending approval</p>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+
+          <div className="hidden overflow-x-auto rounded-lg border border-zinc-200 bg-white lg:block">
             <table className="w-full min-w-[860px] border-separate border-spacing-0 text-left text-sm">
               <thead className="text-xs font-semibold uppercase text-zinc-600">
                 <tr>
@@ -1019,7 +1118,7 @@ export function LoadBoardWorkspace({
                         </Link>
                       </td>
                       <td className={`px-3 py-2 text-right ${isDispatcher ? pinCellRate : pinCellRight}`}>
-                        <div className="flex flex-col items-end gap-1">
+                        <div className="inline-flex flex-col items-end gap-1">
                           <RateModeBadge
                             rateMode={load.rateMode}
                             allowCounterOffers={load.allowCounterOffers}
@@ -1027,7 +1126,7 @@ export function LoadBoardWorkspace({
                           />
                           {load.rateMode === "OPEN_BID" ? (
                             <span className="tabular-nums text-zinc-700">
-                              {displayRate != null ? `Target ${formatMoney(displayRate, rateCurrency)}` : "Open bid"}
+                              {displayRate != null ? `Target ${formatMoney(displayRate, rateCurrency)}` : "Open Bid"}
                             </span>
                           ) : (
                             <span className="tabular-nums">{displayRate != null ? formatMoney(displayRate, rateCurrency) : "—"}</span>

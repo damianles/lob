@@ -9,7 +9,6 @@ import { useAuth } from "@clerk/nextjs";
 import { useViewerRole } from "@/components/providers/app-providers";
 import { useOpenBidsInboxCount } from "@/components/open-bids-inbox-count";
 import { cn } from "@/lib/cn";
-import { signUpUrlForAppPath } from "@/lib/guest-auth-routes";
 import { lobNavItemsForViewer, type LobNavId } from "@/lib/lob-nav";
 
 interface IconProps {
@@ -56,19 +55,6 @@ function ShipmentsIcon({ className, active }: IconProps) {
   );
 }
 
-function InsightsIcon({ className, active }: IconProps) {
-  return (
-    <svg className={className} fill={active ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={active ? 0 : 2}
-        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-      />
-    </svg>
-  );
-}
-
 function BidsIcon({ className, active }: IconProps) {
   return (
     <svg className={className} fill={active ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
@@ -87,7 +73,6 @@ const ICONS: Record<string, (props: IconProps) => ReactElement> = {
   openBids: BidsIcon,
   loads: LoadsIcon,
   capacity: CapacityIcon,
-  insights: InsightsIcon,
 };
 
 const MOBILE_IDS: LobNavId[] = ["shipments", "openBids", "loads", "capacity"];
@@ -99,62 +84,66 @@ export function MobileBottomNav() {
   const inboxCount = useOpenBidsInboxCount();
 
   const items = useMemo(() => {
+    // Marketing / guest pages: no app chrome. Landing CTAs own the actions.
+    if (!isLoaded || !isSignedIn) return [];
     const kind = loading ? "GUEST" : viewer.kind;
     return lobNavItemsForViewer(kind, { showOnboarding: false }).filter((i) => MOBILE_IDS.includes(i.id));
-  }, [loading, viewer.kind]);
+  }, [isLoaded, isSignedIn, loading, viewer.kind]);
 
   if (pathname?.startsWith("/sign-in") || pathname?.startsWith("/sign-up")) {
     return null;
   }
 
-  const linkHref = (href: string) => (isLoaded && !isSignedIn ? signUpUrlForAppPath(href) : href);
+  if (items.length === 0) {
+    return null;
+  }
 
   return (
-    <nav
-      className="
-        fixed bottom-0 left-0 right-0 z-50
-        lg:hidden
-        bg-white/95 backdrop-blur-xl
-        border-t border-stone-200/80
-        shadow-[0_-4px_12px_rgba(0,0,0,0.05)]
-        pb-[max(0.5rem,env(safe-area-inset-bottom,0px))]
-      "
-      aria-label="Mobile navigation"
-    >
-      <div className="flex justify-around items-center h-16">
-        {items.map((item) => {
-          const isActive =
-            pathname === item.href || (item.href !== "/" && pathname?.startsWith(item.href));
-          const Icon = ICONS[item.id] ?? LoadsIcon;
+    <>
+      <div className="h-[calc(4.5rem+env(safe-area-inset-bottom,0px))] lg:hidden" aria-hidden />
+      <nav
+        className="
+          fixed bottom-0 left-0 right-0 z-50
+          lg:hidden
+          border-t border-stone-200/80 bg-white/95 backdrop-blur-xl
+          shadow-[0_-4px_12px_rgba(0,0,0,0.05)]
+          pb-[max(0.5rem,env(safe-area-inset-bottom,0px))]
+        "
+        aria-label="Mobile navigation"
+      >
+        <div className="flex h-16 items-center justify-around">
+          {items.map((item) => {
+            const isActive =
+              pathname === item.href || (item.href !== "/" && pathname?.startsWith(item.href));
+            const Icon = ICONS[item.id] ?? LoadsIcon;
 
-          return (
-            <Link
-              key={item.href}
-              href={linkHref(item.href)}
-              prefetch={false}
-              className={cn(
-                "flex flex-col items-center justify-center gap-1",
-                "min-w-0 flex-1 px-2 py-1.5",
-                "transition-all duration-200",
-                "active:scale-95",
-                isActive ? "text-lob-navy" : "text-stone-500 hover:text-stone-700",
-              )}
-            >
-              <div className={cn("relative transition-transform duration-200", isActive && "scale-110")}>
-                <Icon className="w-6 h-6" active={isActive} />
-                {item.id === "openBids" && inboxCount != null && inboxCount > 0 ? (
-                  <span className="absolute -right-2 -top-1 min-w-[1rem] rounded-full bg-lob-navy px-1 text-[9px] font-semibold leading-4 text-white">
-                    {inboxCount > 99 ? "99+" : inboxCount}
-                  </span>
-                ) : null}
-              </div>
-              <span className={cn("text-[10px] font-medium leading-none", isActive && "font-semibold")}>
-                {item.label}
-              </span>
-            </Link>
-          );
-        })}
-      </div>
-    </nav>
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                prefetch={false}
+                className={cn(
+                  "flex min-w-0 flex-1 flex-col items-center justify-center gap-1 px-2 py-1.5",
+                  "active:scale-95",
+                  isActive ? "text-lob-navy" : "text-stone-500",
+                )}
+              >
+                <div className="relative">
+                  <Icon className="h-6 w-6" active={isActive} />
+                  {item.id === "openBids" && inboxCount != null && inboxCount > 0 ? (
+                    <span className="absolute -right-2 -top-1 min-w-[1rem] rounded-full bg-lob-navy px-1 text-[9px] font-semibold leading-4 text-white">
+                      {inboxCount > 99 ? "99+" : inboxCount}
+                    </span>
+                  ) : null}
+                </div>
+                <span className={cn("text-[10px] font-medium leading-none", isActive && "font-semibold")}>
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+    </>
   );
 }

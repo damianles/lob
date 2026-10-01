@@ -61,7 +61,7 @@ export async function POST(
   }
   if (load.rateMode === LoadRateMode.OPEN_BID) {
     return NextResponse.json(
-      { error: "This load is Open bid — submit a bid instead of booking instantly." },
+      { error: "This load is Open Bid — submit a Bid instead of booking instantly." },
       { status: 409 },
     );
   }

@@ -15,17 +15,19 @@ export function RateModeBadge({
 
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ring-1 ${
+      className={
         mode === "OPEN_BID"
-          ? "bg-amber-50 text-amber-950 ring-amber-200"
+          ? "inline-block whitespace-nowrap rounded-full bg-amber-50 px-2.5 py-1 text-center text-[11px] font-semibold leading-none text-amber-950 ring-1 ring-amber-200"
           : counters
-            ? "bg-white text-lob-navy ring-lob-gold/50"
-            : "bg-stone-100 text-lob-navy ring-stone-200"
-      }`}
+            ? "inline-block whitespace-nowrap rounded-full bg-white px-2.5 py-1 text-center text-[11px] font-semibold leading-none text-lob-navy ring-1 ring-lob-gold/50"
+            : "inline-block whitespace-nowrap rounded-full bg-stone-100 px-2.5 py-1 text-center text-[11px] font-semibold leading-none text-lob-navy ring-1 ring-stone-200"
+      }
       title={rateModeHint(mode, counters)}
     >
       {label}
-      {!compact && counters ? <span className="font-medium normal-case tracking-normal">· counters</span> : null}
+      {!compact && counters ? (
+        <span className="font-medium"> · counters</span>
+      ) : null}
     </span>
   );
 }

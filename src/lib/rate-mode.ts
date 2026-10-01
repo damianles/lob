@@ -8,7 +8,7 @@ export const RATE_MODE_OPEN_BID = "OPEN_BID" as const;
 
 /** Customer-facing name for a firm posted rate. */
 export const TAKE_IT_LABEL = "Firm Rate";
-export const OPEN_BID_LABEL = "Open bid";
+export const OPEN_BID_LABEL = "Open Bid";
 
 export function rateModeLabel(mode: LoadRateMode | string | null | undefined): string {
   if (mode === "OPEN_BID") return OPEN_BID_LABEL;

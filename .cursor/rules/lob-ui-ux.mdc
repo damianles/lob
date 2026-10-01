@@ -12,13 +12,13 @@ Apply when editing shell layout, brand marks, nav, or page chrome. Prefer existi
 
 | Layer | Component | Role |
 |-------|-----------|------|
-| Global wordmark | `LobBrandMasthead` in `src/app/layout.tsx` | Compact full-bleed navy bar (about 56px). Knockout LOB letters plus “Lumber One Board”. No `#1` line. |
+| Global wordmark | `LobBrandMasthead` in `src/app/layout.tsx` | Full-bleed navy bar. Knockout LOB letters pinned left. “Lumber One Board” centered at `2.5rem` from the `sm` breakpoint (about twice the old app size, not the old 5.25rem billboard). No `#1` line. |
 | Primary nav | `AppNav` | Desktop: role pill and account only. Mobile: product links, because the sidebar is hidden. Guests: Create account and Sign in only. **No** LOB mark. |
 | In-app sidebar | `LobSidebar` | Navigation only. Admin links live here for `ADMIN`. **No** wordmark or `#1` line. |
 | Status chrome | `RoleRibbon`, `AdminViewAsBar`, `DemoBanner` | Company and approval. Role pill stays in `AppNav` only. |
 
 - **One global masthead** — do not add a second wordmark above/beside `AppNav`, on sign-in, or in the sidebar.
-- **Masthead lockup** — dark navy bar (`bg-lob-navy`) with the **knockout** LOB letters (`LOB_APP_ICON_KNOCKOUT_SRC`, no navy box) to the **left** of a **vector** “Lumber One Board” wordmark (white + gold “One”, Nunito 800) at `text-lg` / `text-xl`. Do not restore the display-size wordmark (the old `clamp` up to 5.25rem). Do not use the boxed `lob-app-icon.png` on the navy bar.
+- **Masthead lockup** — dark navy bar (`bg-lob-navy`). Knockout LOB letters (`LOB_APP_ICON_KNOCKOUT_SRC`, no navy box) are **absolutely left**. The vector “Lumber One Board” wordmark (white + gold “One”, Nunito 800) is **centered** in the bar at `sm:text-[2.5rem]`. Do not restore the old `clamp` up to 5.25rem. On phones, keep the wordmark smaller than 2.5rem so it does not collide with the left mark. Do not use the boxed `lob-app-icon.png` on the navy bar.
 - **Masthead background is full-bleed** — `w-full` edge-to-edge. The lockup row may use `max-w-[1680px]` so it lines up with page content.
 - **No logo in `AppNav` or `LobSidebar`**.
 - **Commit buttons** use `lobWoodPrimaryButtonClass` (navy). Gold is an accent, not a gradient fill. Do not use emerald for Post, Book, or Export.

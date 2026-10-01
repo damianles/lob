@@ -16,28 +16,29 @@ const mastheadWordmark = Nunito({
 });
 
 /**
- * Compact app bar. The large marketing lockup is not repeated here.
- * Knockout LOB letters sit on the navy field. Gold is only the word “One”.
+ * Navy bar. Knockout LOB stays on the left. “Lumber One Board” is centered
+ * and twice the previous app size (2.5rem from the small breakpoint up).
+ * Phones use a smaller centered size so the words do not run into the mark.
  */
 export function LobBrandMasthead() {
   return (
     <div className="w-full bg-lob-navy">
       <Link
         href="/"
-        className="mx-auto flex h-14 w-full max-w-[1680px] items-center gap-2.5 px-4 sm:px-8"
+        className="relative flex h-[4.25rem] w-full items-center justify-center px-4 sm:h-[5.25rem] sm:px-8"
         aria-label={`${BRAND_PRODUCT_NAME} — home`}
       >
         <LobAppIconMark
           src={LOB_APP_ICON_KNOCKOUT_SRC}
           width={LOB_APP_ICON_KNOCKOUT_WIDTH}
           height={LOB_APP_ICON_KNOCKOUT_HEIGHT}
-          className="h-7 w-auto shrink-0"
+          className="absolute left-4 h-7 w-auto sm:left-8 sm:h-9"
           decorative
           priority
-          sizes="80px"
+          sizes="(max-width: 640px) 96px, 128px"
         />
         <span
-          className={`${mastheadWordmark.className} whitespace-nowrap text-lg font-extrabold leading-none tracking-[-0.03em] sm:text-xl`}
+          className={`${mastheadWordmark.className} whitespace-nowrap text-[clamp(1.35rem,5.6vw,2.5rem)] font-extrabold leading-none tracking-[-0.03em]`}
         >
           <span className="text-white">Lumber</span>
           <span className="text-[#e4c07a]"> One </span>

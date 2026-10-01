@@ -80,7 +80,9 @@ export function AppNav() {
     ...lobTopNavLinksForViewer(viewer.kind),
     ...(isAdmin ? adminLinks : []),
   ];
-  const showMobileLinksOnly = signedIn && workspaceHasSidebar(pathname);
+  const hasWorkspaceSidebar = signedIn && workspaceHasSidebar(pathname);
+  /** Bottom tabs cover product links on phones. Keep a top scroller for admin-only routes. */
+  const showTopProductLinks = signedIn && (viewer.kind === "ADMIN" || !hasWorkspaceSidebar);
 
   return (
     <header className="relative z-50 border-b border-stone-200/50 bg-white/75 backdrop-blur-xl supports-[backdrop-filter]:bg-white/60 lg:sticky lg:top-0">
@@ -88,8 +90,8 @@ export function AppNav() {
         {signedIn ? (
           <nav
             className={cn(
-              "hide-scrollbar -mx-1 flex min-w-0 flex-1 items-center gap-x-1 overflow-x-auto px-1",
-              showMobileLinksOnly && "lg:hidden",
+              "hide-scrollbar -mx-1 min-w-0 flex-1 items-center gap-x-1 overflow-x-auto px-1",
+              showTopProductLinks ? "flex" : "hidden lg:flex",
             )}
             aria-label="Primary"
           >
@@ -130,7 +132,13 @@ export function AppNav() {
               <UserButton />
             </>
           ) : (
-            <>
+            <div
+              className={cn(
+                "items-center justify-end gap-2 sm:gap-3",
+                // Landing owns CTAs on small screens; keep header actions on other guest pages.
+                pathname === "/" ? "hidden sm:flex" : "flex",
+              )}
+            >
               <Link
                 href={signUpUrlForAppPath("/")}
                 className={`${lobWoodPrimaryButtonClass} min-h-9 px-3.5 py-1.5 text-xs sm:px-5 sm:text-sm`}
@@ -143,7 +151,7 @@ export function AppNav() {
               >
                 Sign in
               </Link>
-            </>
+            </div>
           )}
         </div>
       </div>

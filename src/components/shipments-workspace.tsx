@@ -6,7 +6,6 @@ import { useMemo, useState } from "react";
 import { CarrierTypeTag } from "@/components/carrier-type-tag";
 import { RateModeBadge } from "@/components/rate-mode-badge";
 import { PlaceAutocomplete } from "@/components/place-autocomplete";
-import { ShipmentLiveStages } from "@/components/shipment-live-stages";
 import { formatDisplayDate } from "@/lib/format-display-date";
 import { formatMoney } from "@/lib/money";
 import { displayLoadStatus, loadStatusSortRank } from "@/lib/load-status-label";
@@ -426,11 +425,72 @@ export function ShipmentsWorkspace({
       </div>
 
       <p className="mt-3 text-xs text-stone-600">
-        Showing <span className="font-semibold">{sorted.length}</span> of {shipments.length} shipments. Click any column
-        header to sort.
+        Showing <span className="font-semibold">{sorted.length}</span> of {shipments.length} shipments.
+        <span className="hidden lg:inline"> Click any column header to sort.</span>
       </p>
 
-      <div className="mt-3 overflow-x-auto rounded-lg border border-zinc-200 bg-white">
+      <ul className="mt-3 space-y-3 lg:hidden">
+        {sorted.map((r) => (
+          <li
+            key={r.id}
+            className={
+              r.status === "NEEDS_REPOST"
+                ? "lob-needs-repost-glow rounded-xl border border-amber-200/70 bg-white p-4"
+                : "rounded-xl border border-stone-200 bg-white p-4"
+            }
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <Link href={`/loads/${r.id}`} className="font-semibold text-lob-navy underline">
+                  {r.originCity}, {r.originState} → {r.destinationCity}, {r.destinationState}
+                </Link>
+                {r.isRush ? (
+                  <span className="ml-1.5 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-amber-900">
+                    Rush
+                  </span>
+                ) : null}
+                <p className="mt-1 text-sm text-stone-600">
+                  {r.equipmentType} · {r.weightLbs.toLocaleString()} lbs
+                </p>
+                <p className="mt-0.5 text-xs text-stone-500">{r.referenceNumber}</p>
+              </div>
+              <span
+                className={`inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${statusBadge(r.status)} ${
+                  r.status === "NEEDS_REPOST" ? "lob-needs-repost-badge" : ""
+                }`}
+              >
+                {statusLabel(r.status)}
+              </span>
+            </div>
+            <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
+              <p className="text-sm text-stone-600">
+                Pickup <span className="tabular-nums text-stone-800">{formatDisplayDate(r.requestedPickupAt)}</span>
+              </p>
+              <div className="inline-flex flex-col items-end gap-1">
+                {r.status === "POSTED" ? (
+                  <RateModeBadge rateMode={r.rateMode} allowCounterOffers={r.allowCounterOffers} compact />
+                ) : null}
+                <span className="text-sm font-semibold tabular-nums">
+                  {r.rateUsd != null ? formatMoney(r.rateUsd, r.rateCurrency) : r.rateMode === "OPEN_BID" ? "Open Bid" : "—"}
+                </span>
+              </div>
+            </div>
+            {showCarrierColumn && r.carrierName ? (
+              <p className="mt-2 truncate text-xs text-stone-500">{r.carrierName}</p>
+            ) : null}
+            {showShipperColumn ? (
+              <p className="mt-2 truncate text-xs text-stone-500">{r.shipperName}</p>
+            ) : null}
+          </li>
+        ))}
+        {sorted.length === 0 ? (
+          <li className="rounded-xl border border-stone-200 bg-white p-8 text-center text-sm text-zinc-500">
+            No shipments match these filters. Try clearing them, or post your first load.
+          </li>
+        ) : null}
+      </ul>
+
+      <div className="mt-3 hidden overflow-x-auto rounded-lg border border-zinc-200 bg-white lg:block">
         <table className="w-full min-w-[1100px] text-left text-sm">
           <thead className="border-b bg-zinc-50 text-xs font-semibold uppercase text-zinc-600">
             <tr>
@@ -479,34 +539,13 @@ export function ShipmentsWorkspace({
                   {r.requestedDeliveryAt ? formatDisplayDate(r.requestedDeliveryAt) : "—"}
                 </td>
                 <td className="px-3 py-2">
-                  {actor.perspective === "shipper" &&
-                  r.status !== "CANCELLED" &&
-                  r.status !== "NEEDS_REPOST" &&
-                  r.status !== "UNLISTED" ? (
-                    <div className="space-y-1.5">
-                      <ShipmentLiveStages
-                        compact
-                        postedAt={r.postedAt}
-                        bookedAt={r.bookedAt}
-                        pickupConfirmedAt={r.pickupConfirmedAt}
-                        deliveredAt={r.deliveredAt}
-                        supplierDeliveredAt={r.supplierDeliveredAt}
-                      />
-                      <span
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${statusBadge(r.status)}`}
-                      >
-                        {statusLabel(r.status)}
-                      </span>
-                    </div>
-                  ) : (
-                    <span
-                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${statusBadge(r.status)} ${
-                        r.status === "NEEDS_REPOST" ? "lob-needs-repost-badge" : ""
-                      }`}
-                    >
-                      {statusLabel(r.status)}
-                    </span>
-                  )}
+                  <span
+                    className={`inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${statusBadge(r.status)} ${
+                      r.status === "NEEDS_REPOST" ? "lob-needs-repost-badge" : ""
+                    }`}
+                  >
+                    {statusLabel(r.status)}
+                  </span>
                 </td>
                 <td className="px-3 py-2 text-zinc-700">
                   <div className="flex flex-col">
@@ -516,13 +555,13 @@ export function ShipmentsWorkspace({
                     </span>
                   </div>
                 </td>
-                <td className="px-3 py-2 text-right">
-                  <div className="flex flex-col items-end gap-1">
+                <td className="min-w-[7.5rem] px-3 py-2 text-right">
+                  <div className="inline-flex flex-col items-end gap-1">
                     {r.status === "POSTED" ? (
                       <RateModeBadge rateMode={r.rateMode} allowCounterOffers={r.allowCounterOffers} compact />
                     ) : null}
                     <span className="tabular-nums">
-                      {r.rateUsd != null ? formatMoney(r.rateUsd, r.rateCurrency) : r.rateMode === "OPEN_BID" ? "Open bid" : "—"}
+                      {r.rateUsd != null ? formatMoney(r.rateUsd, r.rateCurrency) : r.rateMode === "OPEN_BID" ? "Open Bid" : "—"}
                     </span>
                   </div>
                 </td>

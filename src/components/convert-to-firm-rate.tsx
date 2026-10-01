@@ -60,7 +60,7 @@ export function ConvertToFirmRate({
         rateMode: "TAKE_IT",
         offeredRateUsd: n,
         allowCounterOffers: true,
-        changeSummary: `Converted Open bid to ${TAKE_IT_LABEL} ${currency} ${Math.round(n)}.`,
+        changeSummary: `Converted Open Bid to ${TAKE_IT_LABEL} ${currency} ${Math.round(n)}.`,
       }),
     });
     const data = await res.json().catch(() => ({}));

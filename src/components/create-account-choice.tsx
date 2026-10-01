@@ -14,7 +14,7 @@ export function CreateAccountChoice() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className={`${lobWoodPrimaryButtonClass} min-h-12 px-8`}
+        className={`${lobWoodPrimaryButtonClass} min-h-12 w-full px-8 sm:w-auto`}
       >
         Create account
       </button>

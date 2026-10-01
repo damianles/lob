@@ -123,7 +123,7 @@ export async function sweepExpiredBidWindows(tx?: Prisma.TransactionClient) {
         companyId: load.shipperCompanyId,
         kind: "BID_CYCLES_EXHAUSTED",
         title: `Removed after 2 bid cycles: ${load.referenceNumber}`,
-        body: `${load.referenceNumber} ran two Open bid windows without a book and was removed from the board. History and posted price are retained.`,
+        body: `${load.referenceNumber} ran two Open Bid windows without a book and was removed from the board. History and posted price are retained.`,
       });
     } else {
       await db.load.update({
@@ -140,7 +140,7 @@ export async function sweepExpiredBidWindows(tx?: Prisma.TransactionClient) {
         companyId: load.shipperCompanyId,
         kind: "BID_WINDOW_ENDED",
         title: `Bid window ended: ${load.referenceNumber}`,
-        body: `${load.referenceNumber} Open bid window closed (cycle ${load.bidCycleCount} of ${MAX_OPEN_BID_CYCLES}). Repost for another ${MAX_BID_WINDOW_HOURS}h cycle, or remove the load.`,
+        body: `${load.referenceNumber} Open Bid window closed (cycle ${load.bidCycleCount} of ${MAX_OPEN_BID_CYCLES}). Repost for another ${MAX_BID_WINDOW_HOURS}h cycle, or remove the load.`,
       });
     }
   }

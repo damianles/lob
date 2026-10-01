@@ -387,7 +387,7 @@ export function SupplierPostLoadForm({
     if (rateMode === "OPEN_BID") {
       const hours = Number(customBidHours || bidWindowHours);
       if (!Number.isFinite(hours) || hours < 1 || hours > 72) {
-        setErr("Open bid window must be between 1 and 72 hours.");
+        setErr("Open Bid window must be between 1 and 72 hours.");
         return;
       }
     }
