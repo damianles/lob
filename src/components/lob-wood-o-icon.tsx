@@ -14,7 +14,7 @@ type Props = {
 };
 
 /**
- * Home / nav mark — raster from `lob-app-icon.png` (same O and ring as production branding), not a vector recreation.
+ * Home / nav mark — raster from `lob-app-icon.png` (nested-L mark).
  */
 export function LobWoodOIcon({
   className,

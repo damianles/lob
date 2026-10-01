@@ -18,7 +18,8 @@ type Props = {
 };
 
 /**
- * Official square mark from `public/brand/lob-app-icon.png` (same asset as favicon / app icon).
+ * Official nested-L mark from `public/brand/lob-app-icon.png` (light UI).
+ * Favicon uses white-on-navy `src/app/icon.png` built from the knockout mark.
  * Size with Tailwind on `className` (e.g. `h-9 w-9`); keep `object-contain` for crisp scaling.
  */
 export function LobAppIconMark({

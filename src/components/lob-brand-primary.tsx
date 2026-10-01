@@ -11,7 +11,7 @@ type Props = {
   priority?: boolean;
 };
 
-/** Full navy LOB board (LOB + brand O + “Lumber One Board”) — auth pages and anywhere you want the primary mark. */
+/** Marketing concept card (nested-L mark + tagline) — auth / share surfaces. */
 export function LobBrandPrimary({ className, priority }: Props) {
   return (
     <Image

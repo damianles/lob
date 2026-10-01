@@ -1,34 +1,28 @@
 import Image from "next/image";
 
-import { LOB_MARK_COMPACT_SRC } from "@/lib/brand";
+import { LOB_BRAND_LOCKUP_HEIGHT, LOB_BRAND_LOCKUP_SRC, LOB_BRAND_LOCKUP_WIDTH } from "@/lib/brand";
+import { BRAND_PRODUCT_NAME } from "@/lib/brand-marketing";
 
 type Props = {
-  /** Applied to the sizing wrapper (use `relative`, explicit `h-*` / `w-*` for `fill` layout). */
   className?: string;
   priority?: boolean;
 };
 
 /**
- * LOB letters + brand “O” — `fill` + `object-contain` avoids Next/Image’s overflow-hidden wrapper
- * clipping the mark in flex headers (common when only `h-* w-auto` was set on Image).
+ * Full brand lockup (nested-L | gold rule | LOB / LUMBER ONE BOARD) for light surfaces.
+ * Favicon / square mark: use `LobAppIconMark` instead.
  */
 export function LobBrandMark({ className, priority }: Props) {
   return (
-    <div
-      className={
-        className ??
-        "relative h-10 w-[9.5rem] shrink-0 sm:h-11 sm:w-[11rem]"
-      }
-    >
-      <Image
-        src={LOB_MARK_COMPACT_SRC}
-        alt="LOB"
-        fill
-        priority={priority}
-        quality={100}
-        sizes="(max-width: 640px) 160px, 180px"
-        className="object-contain object-left"
-      />
-    </div>
+    <Image
+      src={LOB_BRAND_LOCKUP_SRC}
+      alt={BRAND_PRODUCT_NAME}
+      width={LOB_BRAND_LOCKUP_WIDTH}
+      height={LOB_BRAND_LOCKUP_HEIGHT}
+      priority={priority}
+      quality={100}
+      className={className ? `${className} object-contain` : "h-10 w-auto object-contain sm:h-11"}
+      sizes="(max-width: 640px) 220px, 280px"
+    />
   );
 }

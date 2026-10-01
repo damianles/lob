@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Lumber One Board mark">
+  <!-- Outer L (left + bottom) -->
+  <path fill="#001233" d="M14 14h16v56h56v16H14z"/>
+  <!-- Inverted L (top + right) -->
+  <path fill="#001233" d="M38 14h48v16H54v40H38z"/>
+  <!-- Inner L -->
+  <path fill="#001233" d="M38 38h16v28h28v16H38z"/>
+</svg>
