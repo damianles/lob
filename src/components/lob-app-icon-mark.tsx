@@ -10,6 +10,7 @@ type Props = {
   decorative?: boolean;
   /** Shown as `alt` when `decorative` is false. */
   accessibilityTitle?: string;
+  /** CSS display width hint for Next/Image srcset (match rendered size, not source pixels). */
   sizes?: string;
   src?: string;
   width?: number;
@@ -25,7 +26,7 @@ export function LobAppIconMark({
   priority,
   decorative = false,
   accessibilityTitle = BRAND_PRODUCT_NAME,
-  sizes = "(max-width: 640px) 44px, 48px",
+  sizes = "(max-width: 640px) 64px, 72px",
   src = LOB_APP_ICON_SRC,
   width = LOB_APP_ICON_SIZE,
   height = LOB_APP_ICON_SIZE,
@@ -37,6 +38,7 @@ export function LobAppIconMark({
       width={width}
       height={height}
       priority={priority}
+      quality={100}
       className={className ? `${className} object-contain` : "object-contain"}
       sizes={sizes}
       aria-hidden={decorative ? true : undefined}

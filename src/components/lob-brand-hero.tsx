@@ -17,6 +17,8 @@ export function LobBrandHero({ className, priority }: Props) {
       height={LOB_BRAND_HERO_HEIGHT}
       className={className}
       priority={priority}
+      quality={100}
+      sizes="(max-width: 640px) 100vw, 640px"
     />
   );
 }

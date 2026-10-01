@@ -405,7 +405,61 @@ export function CapacityWorkspace() {
               Refresh
             </button>
           </div>
-          <div className="mt-4 overflow-x-auto rounded border border-zinc-200 bg-white">
+          <ul className="mt-4 space-y-3 lg:hidden">
+            {shipperRows.map((r) => (
+              <li key={r.id} className="rounded-xl border border-stone-200 bg-white p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="break-words font-semibold text-lob-navy">{capacityLaneLabel(r)}</p>
+                    <p className="mt-1 text-sm text-stone-600">{r.equipmentType}</p>
+                  </div>
+                  <span className="shrink-0 text-sm font-semibold tabular-nums text-stone-900">
+                    {capacityRateLabel(r)}
+                  </span>
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  {r.carrierType || r.isOwnerOperator ? (
+                    <CarrierTypeTag
+                      carrierType={r.carrierType}
+                      isOwnerOperator={r.isOwnerOperator}
+                      compact
+                    />
+                  ) : (
+                    <span className="text-[11px] italic text-zinc-400">Unverified</span>
+                  )}
+                  {r.carrierVerified ? (
+                    <span
+                      className="inline-flex items-center rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-900 ring-1 ring-emerald-300"
+                      title="Carrier identity & docs verified by LOB"
+                    >
+                      ✓ Verified
+                    </span>
+                  ) : null}
+                </div>
+                <div className="mt-2">
+                  <CapacityScoreChips score={r.scorecard} />
+                </div>
+                <p className="mt-2 text-xs text-stone-600">
+                  Available {fmtRange(r.availableFrom, r.availableUntil)}
+                </p>
+                {r.notes ? (
+                  <p className="mt-1 break-words text-xs text-stone-500">{r.notes}</p>
+                ) : null}
+                <div className="mt-3 border-t border-stone-100 pt-3">
+                  <Button type="button" size="sm" className="w-full" onClick={() => setRequestFor(r)}>
+                    Request
+                  </Button>
+                </div>
+              </li>
+            ))}
+            {shipperRows.length === 0 ? (
+              <li className="rounded-xl border border-stone-200 bg-white p-6 text-center text-sm text-zinc-500">
+                No matching capacity in active windows.
+              </li>
+            ) : null}
+          </ul>
+
+          <div className="mt-4 hidden overflow-x-auto rounded border border-zinc-200 bg-white lg:block">
             <table className="w-full min-w-[720px] text-left text-sm">
               <thead className="border-b bg-zinc-50 text-xs font-semibold uppercase text-zinc-600">
                 <tr>

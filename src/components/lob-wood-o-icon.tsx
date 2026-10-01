@@ -8,6 +8,9 @@ type Props = {
   decorative?: boolean;
   /** Used as image `alt` when `decorative` is false. */
   accessibilityTitle?: string;
+  /** Match rendered CSS width so retina gets a sharp srcset. */
+  sizes?: string;
+  priority?: boolean;
 };
 
 /**
@@ -17,12 +20,16 @@ export function LobWoodOIcon({
   className,
   decorative,
   accessibilityTitle = "Lumber One Board home",
+  sizes,
+  priority,
 }: Props) {
   return (
     <LobAppIconMark
       className={className}
       decorative={decorative}
       accessibilityTitle={accessibilityTitle}
+      sizes={sizes}
+      priority={priority}
     />
   );
 }

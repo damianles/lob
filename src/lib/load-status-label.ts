@@ -7,11 +7,11 @@ export function displayLoadStatus(status: string): string {
     case "ASSIGNED":
       return "Booked";
     case "IN_TRANSIT":
-      return "In transit";
+      return "In Transit";
     case "DELIVERED":
       return "Delivered";
     case "NEEDS_REPOST":
-      return "Needs repost";
+      return "Needs Repost";
     case "UNLISTED":
       return "Unlisted";
     case "CANCELLED":

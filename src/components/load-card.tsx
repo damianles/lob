@@ -5,13 +5,13 @@ import { useState } from "react";
 
 import { CarrierTypeTag } from "@/components/carrier-type-tag";
 import type { BoardActor, SerializableLoad } from "@/components/load-board-workspace";
-import { Badge, type BadgeVariant } from "@/components/ui/badge";
+import { LoadStatusBadge } from "@/components/load-status-badge";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
 import { equipmentShortTag } from "@/lib/lumber-equipment";
 import { summarizeLumberSpec } from "@/lib/lumber-spec";
 import { formatMoney } from "@/lib/money";
-import { displayLoadStatus } from "@/lib/load-status-label";
 
 interface LoadCardProps {
   load: SerializableLoad;
@@ -34,22 +34,6 @@ function ageLabel(iso: string) {
 function postedDateLabel(iso: string) {
   const d = new Date(iso);
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
-function statusBadgeVariant(status: string): BadgeVariant {
-  const map: Record<string, BadgeVariant> = {
-    POSTED: "posted",
-    BOOKED: "booked",
-    ASSIGNED: "booked",
-    IN_TRANSIT: "in-transit",
-    DELIVERED: "delivered",
-    CANCELLED: "error",
-  };
-  return map[status] ?? "default";
-}
-
-function formatStatusLabel(status: string) {
-  return displayLoadStatus(status);
 }
 
 export function LoadCard({
@@ -100,9 +84,7 @@ export function LoadCard({
                 <p className="text-xs text-stone-500 mt-0.5 font-mono">{load.referenceNumber}</p>
               </div>
               <div className="flex flex-col items-end gap-1.5 shrink-0">
-                <Badge variant={statusBadgeVariant(load.status)} pulse={load.status === "IN_TRANSIT"}>
-                  {formatStatusLabel(load.status)}
-                </Badge>
+                <LoadStatusBadge status={load.status} />
                 {load.isRush && (
                   <Badge variant="rush" className="text-[10px]">
                     RUSH
@@ -197,9 +179,7 @@ export function LoadCard({
             <p className="text-xs text-stone-500 mt-0.5">{load.referenceNumber}</p>
           </div>
           <div className="flex flex-col items-end gap-1.5 shrink-0">
-            <Badge variant={statusBadgeVariant(load.status)} pulse={load.status === "IN_TRANSIT"}>
-              {formatStatusLabel(load.status)}
-            </Badge>
+            <LoadStatusBadge status={load.status} />
             {load.isRush && (
               <Badge variant="rush" className="text-[10px]">
                 RUSH

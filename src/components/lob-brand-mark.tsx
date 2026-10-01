@@ -25,6 +25,7 @@ export function LobBrandMark({ className, priority }: Props) {
         alt="LOB"
         fill
         priority={priority}
+        quality={100}
         sizes="(max-width: 640px) 160px, 180px"
         className="object-contain object-left"
       />

@@ -4,8 +4,8 @@
  * Source of truth for all logo/wordmark usage in the app. To update branding,
  * replace the PNGs in `web/public/brand/` and update the dimensions below.
  *
- * Currently shipped:
- * - lob-app-icon.png            — square dark-navy mark (1024×1024) — favicons, sidebar, social avatar
+ * Currently shipped (true PNG only — do not check in JPEG bytes with a .png name):
+ * - lob-app-icon.png            — square dark-navy mark (1024×1024) from approved/icon-1024.png
  * - lob-app-icon-knockout.png   — LOB letters only, navy field removed (876×387) — masthead on banner
  * - lob-brand-lockup.png        — horizontal "LOB | Lumber One Board" (1024×799 canvas, content centered)
  * - lob-dark-lockup.png         — navy field, white LOB + “Lumber One Board” (1024×799) — sidebar / other chrome

@@ -27,28 +27,6 @@ function isCurrentPath(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-/** Desktop product links live in the sidebar. These routes render that sidebar. */
-function workspaceHasSidebar(pathname: string): boolean {
-  if (
-    pathname === "/" ||
-    pathname === "/shipments" ||
-    pathname === "/bids" ||
-    pathname === "/capacity" ||
-    pathname === "/driver" ||
-    pathname === "/onboarding" ||
-    pathname === "/post"
-  ) {
-    return true;
-  }
-  if (pathname.startsWith("/carrier/compliance") || pathname.startsWith("/shipper/carrier-preferences")) {
-    return true;
-  }
-  if (pathname.startsWith("/loads/")) {
-    return !pathname.includes("/rate-con") && !pathname.includes("/invoice") && !pathname.includes("/bol");
-  }
-  return false;
-}
-
 export function AppNav() {
   const pathname = usePathname() ?? "/";
   const { isSignedIn, isLoaded } = useAuth();
@@ -80,19 +58,15 @@ export function AppNav() {
     ...lobTopNavLinksForViewer(viewer.kind),
     ...(isAdmin ? adminLinks : []),
   ];
-  const hasWorkspaceSidebar = signedIn && workspaceHasSidebar(pathname);
-  /** Bottom tabs cover product links on phones. Keep a top scroller for admin-only routes. */
-  const showTopProductLinks = signedIn && (viewer.kind === "ADMIN" || !hasWorkspaceSidebar);
+  /** Phone uses bottom tabs only. Desktop keeps a compact top link row (sidebar also lists product pages). */
+  const showDesktopTopLinks = signedIn;
 
   return (
     <header className="relative z-50 border-b border-stone-200/50 bg-white/75 backdrop-blur-xl supports-[backdrop-filter]:bg-white/60 lg:sticky lg:top-0">
       <div className="mx-auto flex max-w-[1680px] items-center justify-between gap-3 px-3 py-2 sm:px-8 sm:py-3">
-        {signedIn ? (
+        {showDesktopTopLinks ? (
           <nav
-            className={cn(
-              "hide-scrollbar -mx-1 min-w-0 flex-1 items-center gap-x-1 overflow-x-auto px-1",
-              showTopProductLinks ? "flex" : "hidden lg:flex",
-            )}
+            className="hide-scrollbar -mx-1 hidden min-w-0 flex-1 items-center gap-x-1 overflow-x-auto px-1 lg:flex"
             aria-label="Primary"
           >
             {signedInLinks.map((l) => {
@@ -116,6 +90,8 @@ export function AppNav() {
         ) : (
           <div className="min-w-0 flex-1" />
         )}
+        {/* Phone: account chrome only — product pages live in the bottom tab bar. */}
+        {signedIn ? <div className="min-w-0 flex-1 lg:hidden" /> : null}
         <div className="flex shrink-0 items-center justify-end gap-2 pl-2 sm:gap-3">
           {signedIn && viewer.kind !== "GUEST" && (
             <span

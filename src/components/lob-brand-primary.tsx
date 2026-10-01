@@ -21,6 +21,8 @@ export function LobBrandPrimary({ className, priority }: Props) {
       height={LOB_CONCEPT_PRIMARY_HEIGHT}
       className={className}
       priority={priority}
+      quality={100}
+      sizes="(max-width: 640px) 100vw, 640px"
     />
   );
 }

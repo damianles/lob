@@ -9,7 +9,7 @@ import { useAuth } from "@clerk/nextjs";
 import { useViewerRole } from "@/components/providers/app-providers";
 import { useOpenBidsInboxCount } from "@/components/open-bids-inbox-count";
 import { cn } from "@/lib/cn";
-import { lobNavItemsForViewer, type LobNavId } from "@/lib/lob-nav";
+import { lobNavItemsForViewer, type LobNavId, type LobNavItem } from "@/lib/lob-nav";
 
 interface IconProps {
   className?: string;
@@ -68,14 +68,53 @@ function BidsIcon({ className, active }: IconProps) {
   );
 }
 
+function PostIcon({ className }: IconProps) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.25} d="M12 4v16m8-8H4" />
+    </svg>
+  );
+}
+
+type MobileTabId = LobNavId | "post";
+
+type MobileTab = {
+  id: MobileTabId;
+  href: string;
+  label: string;
+  elevated?: boolean;
+};
+
 const ICONS: Record<string, (props: IconProps) => ReactElement> = {
   shipments: ShipmentsIcon,
   openBids: BidsIcon,
   loads: LoadsIcon,
   capacity: CapacityIcon,
+  post: PostIcon,
 };
 
-const MOBILE_IDS: LobNavId[] = ["shipments", "openBids", "loads", "capacity"];
+const SHORT_LABEL: Partial<Record<MobileTabId, string>> = {
+  loads: "Loads",
+  openBids: "Bids",
+  shipments: "Shipments",
+  capacity: "Capacity",
+  post: "Post",
+};
+
+const CARRIER_MOBILE_IDS: LobNavId[] = ["shipments", "openBids", "loads", "capacity"];
+const SHIPPER_MOBILE_IDS: LobNavId[] = ["shipments", "openBids", "capacity"];
+const GUEST_MOBILE_IDS: LobNavId[] = ["loads", "capacity", "shipments"];
+const ADMIN_MOBILE_IDS: LobNavId[] = ["shipments", "openBids", "loads", "capacity"];
+
+function shortLabel(item: Pick<MobileTab, "id" | "label">): string {
+  return SHORT_LABEL[item.id] ?? item.label;
+}
+
+function toMobileTabs(items: LobNavItem[], ids: LobNavId[]): MobileTab[] {
+  return items
+    .filter((i) => ids.includes(i.id))
+    .map((i) => ({ id: i.id, href: i.href, label: i.label }));
+}
 
 export function MobileBottomNav() {
   const pathname = usePathname();
@@ -83,11 +122,42 @@ export function MobileBottomNav() {
   const { viewer, loading } = useViewerRole();
   const inboxCount = useOpenBidsInboxCount();
 
-  const items = useMemo(() => {
-    // Marketing / guest pages: no app chrome. Landing CTAs own the actions.
-    if (!isLoaded || !isSignedIn) return [];
+  const items = useMemo((): MobileTab[] => {
+    if (!isLoaded) return [];
+
+    if (!isSignedIn) {
+      return toMobileTabs(lobNavItemsForViewer("GUEST", { showOnboarding: false }), GUEST_MOBILE_IDS);
+    }
+
     const kind = loading ? "GUEST" : viewer.kind;
-    return lobNavItemsForViewer(kind, { showOnboarding: false }).filter((i) => MOBILE_IDS.includes(i.id));
+    const nav = lobNavItemsForViewer(kind, { showOnboarding: false });
+
+    if (kind === "SHIPPER") {
+      const base = toMobileTabs(nav, SHIPPER_MOBILE_IDS);
+      const mid = Math.min(2, base.length);
+      return [
+        ...base.slice(0, mid),
+        { id: "post", href: "/post", label: "Post", elevated: true },
+        ...base.slice(mid),
+      ];
+    }
+
+    if (kind === "ADMIN") {
+      const base = toMobileTabs(nav, ADMIN_MOBILE_IDS);
+      const mid = Math.min(2, base.length);
+      return [
+        ...base.slice(0, mid),
+        { id: "post", href: "/post", label: "Post", elevated: true },
+        ...base.slice(mid),
+      ];
+    }
+
+    if (kind === "CARRIER") {
+      return toMobileTabs(nav, CARRIER_MOBILE_IDS);
+    }
+
+    // SETUP / fallback — browse + capacity while company is unfinished
+    return toMobileTabs(nav, GUEST_MOBILE_IDS);
   }, [isLoaded, isSignedIn, loading, viewer.kind]);
 
   if (pathname?.startsWith("/sign-in") || pathname?.startsWith("/sign-up")) {
@@ -111,23 +181,63 @@ export function MobileBottomNav() {
         "
         aria-label="Mobile navigation"
       >
-        <div className="flex h-16 items-center justify-around">
+        <div className="flex h-16 items-end justify-around px-1">
           {items.map((item) => {
             const isActive =
               pathname === item.href || (item.href !== "/" && pathname?.startsWith(item.href));
             const Icon = ICONS[item.id] ?? LoadsIcon;
+            const label = shortLabel(item);
+
+            if (item.elevated) {
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  prefetch={false}
+                  aria-current={isActive ? "page" : undefined}
+                  className={cn(
+                    "relative -mt-3 flex min-w-0 flex-1 flex-col items-center justify-end gap-1 px-1 pb-1.5",
+                    "active:scale-95",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "flex h-12 w-12 items-center justify-center rounded-full shadow-md ring-2 ring-white",
+                      isActive ? "bg-lob-navy text-white" : "bg-lob-navy text-white",
+                    )}
+                  >
+                    <Icon className="h-6 w-6" active />
+                  </span>
+                  <span
+                    className={cn(
+                      "text-[10px] font-semibold leading-none",
+                      isActive ? "text-lob-navy" : "text-stone-600",
+                    )}
+                  >
+                    {label}
+                  </span>
+                </Link>
+              );
+            }
 
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 prefetch={false}
+                aria-current={isActive ? "page" : undefined}
                 className={cn(
-                  "flex min-w-0 flex-1 flex-col items-center justify-center gap-1 px-2 py-1.5",
+                  "relative flex min-w-0 flex-1 flex-col items-center justify-center gap-1 px-1 py-1.5",
                   "active:scale-95",
                   isActive ? "text-lob-navy" : "text-stone-500",
                 )}
               >
+                {isActive ? (
+                  <span
+                    className="absolute inset-x-3 top-0 h-0.5 rounded-full bg-lob-navy"
+                    aria-hidden
+                  />
+                ) : null}
                 <div className="relative">
                   <Icon className="h-6 w-6" active={isActive} />
                   {item.id === "openBids" && inboxCount != null && inboxCount > 0 ? (
@@ -137,7 +247,7 @@ export function MobileBottomNav() {
                   ) : null}
                 </div>
                 <span className={cn("text-[10px] font-medium leading-none", isActive && "font-semibold")}>
-                  {item.label}
+                  {label}
                 </span>
               </Link>
             );

@@ -22,6 +22,7 @@ export function LobBrandLockup({ className, priority }: Props) {
         alt="Lumber One Board"
         fill
         priority={priority}
+        quality={100}
         sizes="(max-width: 640px) 280px, 360px"
         className="object-contain object-left"
       />

@@ -125,6 +125,9 @@ tr.lob-needs-repost-glow {
 .lob-needs-repost-badge {
   background-color: rgb(254 243 199);
   color: rgb(120 53 15);
+  /* Keep label on one line and optically centered inside the pill. */
+  white-space: nowrap;
+  line-height: 1;
 }
 
 /* Glass morphism utility */

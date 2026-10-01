@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { CarrierTypeTag } from "@/components/carrier-type-tag";
+import { LoadStatusBadge } from "@/components/load-status-badge";
 import { RateModeBadge } from "@/components/rate-mode-badge";
 import { PlaceAutocomplete } from "@/components/place-autocomplete";
 import { formatDisplayDate } from "@/lib/format-display-date";
@@ -88,20 +89,6 @@ const DEFAULT_FILTERS: FiltersState = {
 
 function statusLabel(s: ShipmentRow["status"]): string {
   return displayLoadStatus(s);
-}
-
-function statusBadge(s: ShipmentRow["status"]): string {
-  switch (s) {
-    case "POSTED": return "bg-stone-100 text-stone-700 ring-stone-200";
-    case "BOOKED":
-    case "ASSIGNED":
-      return "bg-blue-50 text-blue-900 ring-blue-200";
-    case "IN_TRANSIT": return "bg-amber-50 text-amber-900 ring-amber-200";
-    case "DELIVERED": return "bg-emerald-50 text-emerald-900 ring-emerald-200";
-    case "NEEDS_REPOST": return "bg-amber-50 text-amber-950 ring-amber-200";
-    case "UNLISTED": return "bg-zinc-100 text-zinc-600 ring-zinc-200";
-    case "CANCELLED": return "bg-rose-50 text-rose-900 ring-rose-200";
-  }
 }
 
 function csvEscape(v: unknown): string {
@@ -440,46 +427,68 @@ export function ShipmentsWorkspace({
             }
           >
             <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <Link href={`/loads/${r.id}`} className="font-semibold text-lob-navy underline">
+              <div className="min-w-0 flex-1">
+                <Link href={`/loads/${r.id}`} className="break-words font-semibold text-lob-navy underline">
                   {r.originCity}, {r.originState} → {r.destinationCity}, {r.destinationState}
                 </Link>
                 {r.isRush ? (
-                  <span className="ml-1.5 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-amber-900">
+                  <span className="ml-1.5 inline-block rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-amber-900">
                     Rush
                   </span>
                 ) : null}
+                <p className="mt-1 text-xs font-medium text-stone-500">{r.referenceNumber}</p>
                 <p className="mt-1 text-sm text-stone-600">
                   {r.equipmentType} · {r.weightLbs.toLocaleString()} lbs
                 </p>
-                <p className="mt-0.5 text-xs text-stone-500">{r.referenceNumber}</p>
               </div>
-              <span
-                className={`inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${statusBadge(r.status)} ${
-                  r.status === "NEEDS_REPOST" ? "lob-needs-repost-badge" : ""
-                }`}
-              >
-                {statusLabel(r.status)}
-              </span>
+              <LoadStatusBadge status={r.status} />
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1 text-sm text-stone-600">
+              <p>
+                Pickup{" "}
+                <span className="tabular-nums text-stone-800">
+                  {formatDisplayDate(r.requestedPickupAt)}
+                </span>
+              </p>
+              <p>
+                Delivery{" "}
+                <span className="tabular-nums text-stone-800">
+                  {r.requestedDeliveryAt ? formatDisplayDate(r.requestedDeliveryAt) : "—"}
+                </span>
+              </p>
+              <p className="col-span-2 text-xs text-stone-500">
+                Posted <span className="tabular-nums">{formatDisplayDate(r.postedAt)}</span>
+              </p>
             </div>
             <div className="mt-3 flex flex-wrap items-end justify-between gap-3">
-              <p className="text-sm text-stone-600">
-                Pickup <span className="tabular-nums text-stone-800">{formatDisplayDate(r.requestedPickupAt)}</span>
-              </p>
-              <div className="inline-flex flex-col items-end gap-1">
+              <div className="inline-flex flex-col items-start gap-1">
                 {r.status === "POSTED" ? (
                   <RateModeBadge rateMode={r.rateMode} allowCounterOffers={r.allowCounterOffers} compact />
                 ) : null}
                 <span className="text-sm font-semibold tabular-nums">
-                  {r.rateUsd != null ? formatMoney(r.rateUsd, r.rateCurrency) : r.rateMode === "OPEN_BID" ? "Open Bid" : "—"}
+                  {r.rateUsd != null
+                    ? formatMoney(r.rateUsd, r.rateCurrency)
+                    : r.rateMode === "OPEN_BID"
+                      ? "Open Bid"
+                      : "—"}
                 </span>
               </div>
             </div>
             {showCarrierColumn && r.carrierName ? (
-              <p className="mt-2 truncate text-xs text-stone-500">{r.carrierName}</p>
+              <div className="mt-2 flex min-w-0 flex-wrap items-center gap-1.5 text-xs text-stone-600">
+                <span className="break-words font-medium text-stone-700">{r.carrierName}</span>
+                <CarrierTypeTag
+                  carrierType={r.carrierType}
+                  isOwnerOperator={r.isOwnerOperator}
+                  compact
+                />
+              </div>
             ) : null}
             {showShipperColumn ? (
-              <p className="mt-2 truncate text-xs text-stone-500">{r.shipperName}</p>
+              <p className="mt-2 break-words text-xs text-stone-500">{r.shipperName}</p>
+            ) : null}
+            {r.hasDispatchLink ? (
+              <p className="mt-1 text-[11px] font-medium text-emerald-800">Dispatch link active</p>
             ) : null}
           </li>
         ))}
@@ -538,14 +547,8 @@ export function ShipmentsWorkspace({
                 <td className="px-3 py-2 text-zinc-700 tabular-nums">
                   {r.requestedDeliveryAt ? formatDisplayDate(r.requestedDeliveryAt) : "—"}
                 </td>
-                <td className="px-3 py-2">
-                  <span
-                    className={`inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${statusBadge(r.status)} ${
-                      r.status === "NEEDS_REPOST" ? "lob-needs-repost-badge" : ""
-                    }`}
-                  >
-                    {statusLabel(r.status)}
-                  </span>
+                <td className="min-w-[8.5rem] px-3 py-2">
+                  <LoadStatusBadge status={r.status} />
                 </td>
                 <td className="px-3 py-2 text-zinc-700">
                   <div className="flex flex-col">

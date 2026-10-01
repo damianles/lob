@@ -23,6 +23,7 @@ import {
   LUMBER_TREATMENT_OPTIONS,
 } from "@/lib/lumber-spec";
 import { formatDisplayDate } from "@/lib/format-display-date";
+import { LoadStatusBadge } from "@/components/load-status-badge";
 import { displayLoadStatus, loadStatusSortRank } from "@/lib/load-status-label";
 import { convertMoney, formatMoney } from "@/lib/money";
 import { parseRadiusToMiles } from "@/lib/units";
@@ -52,25 +53,6 @@ type BoardSortKey = "pickupAt" | "deliveryAt" | "postedAt" | "rate" | "lane" | "
 
 function statusLabel(status: string) {
   return displayLoadStatus(status);
-}
-
-function statusBadgeClass(status: string) {
-  switch (status) {
-    case "POSTED":
-      return "bg-stone-100 text-stone-700 ring-stone-200";
-    case "BOOKED":
-      return "bg-blue-50 text-blue-900 ring-blue-200";
-    case "ASSIGNED":
-      return "bg-blue-50 text-blue-900 ring-blue-200";
-    case "IN_TRANSIT":
-      return "bg-amber-50 text-amber-900 ring-amber-200";
-    case "DELIVERED":
-      return "bg-emerald-50 text-emerald-900 ring-emerald-200";
-    case "CANCELLED":
-      return "bg-rose-50 text-rose-900 ring-rose-200";
-    default:
-      return "bg-stone-100 text-stone-700 ring-stone-200";
-  }
 }
 
 function csvEscape(v: unknown): string {
@@ -965,11 +947,7 @@ export function LoadBoardWorkspace({
                       </p>
                       {specHint ? <p className="mt-0.5 text-xs text-stone-500">{specHint}</p> : null}
                     </div>
-                    <span
-                      className={`inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${statusBadgeClass(load.status)}`}
-                    >
-                      {statusLabel(load.status)}
-                    </span>
+                    <LoadStatusBadge status={load.status} />
                   </div>
                   <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1 text-sm text-stone-600">
                     <p>
@@ -1102,12 +1080,8 @@ export function LoadBoardWorkspace({
                       <td className="border-b border-zinc-100 px-3 py-2 text-zinc-700 tabular-nums group-hover:bg-zinc-50/50">
                         {load.requestedDeliveryAt ? formatDisplayDate(load.requestedDeliveryAt) : "—"}
                       </td>
-                      <td className="border-b border-zinc-100 px-3 py-2 group-hover:bg-zinc-50/50">
-                        <span
-                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${statusBadgeClass(load.status)}`}
-                        >
-                          {statusLabel(load.status)}
-                        </span>
+                      <td className="min-w-[8.5rem] border-b border-zinc-100 px-3 py-2 group-hover:bg-zinc-50/50">
+                        <LoadStatusBadge status={load.status} />
                       </td>
                       <td className="border-b border-zinc-100 px-3 py-2 text-zinc-700 tabular-nums group-hover:bg-zinc-50/50">
                         {formatDisplayDate(load.createdAt)}
