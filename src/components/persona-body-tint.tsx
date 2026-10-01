@@ -6,8 +6,8 @@ import { useViewerRole } from "@/components/providers/app-providers";
 import { personaToneFromViewer } from "@/lib/viewer-role";
 
 /**
- * Sets `data-persona` on <body> so globals.css can wash page backgrounds by
- * supplier (wood) or carrier (sky).
+ * Sets `data-persona` on <body> for role-aware CSS hooks.
+ * Page background stays the shared paper color. Role is the nav pill.
  */
 export function PersonaBodyTint() {
   const { viewer, loading } = useViewerRole();
