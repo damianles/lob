@@ -77,8 +77,8 @@ export function NeedsRepostPanel({ compact = false }: { compact?: boolean }) {
     <section
       className={
         compact
-          ? "lob-needs-repost-glow rounded-lg border border-amber-300 bg-amber-50 px-3 py-2"
-          : "lob-needs-repost-glow rounded-xl border border-amber-300 bg-amber-50/90 p-4"
+          ? "lob-needs-repost-panel rounded-lg border border-amber-300 bg-amber-50 px-3 py-2"
+          : "lob-needs-repost-panel rounded-xl border border-amber-300 bg-amber-50/90 p-4"
       }
     >
       <h2 className="text-sm font-semibold text-amber-950">

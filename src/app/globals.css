@@ -115,19 +115,57 @@ a {
   animation: scaleIn 0.2s ease-out;
 }
 
-/* Needs repost — static amber. A pulsing row fatigues a list someone watches all day. */
+/*
+ * Needs Repost attention:
+ * - Table/list rows stay static (amber wash + left bar) so a dense ledger does not pulse.
+ * - Panel shell + status badge get a low-amplitude pulse to draw the eye without fatigue.
+ */
 .lob-needs-repost-glow,
 tr.lob-needs-repost-glow {
   background-color: rgb(255 251 235);
   box-shadow: inset 3px 0 0 rgb(146 64 14);
 }
 
+@keyframes lob-needs-repost-panel {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(146, 64, 14, 0.12);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px rgba(146, 64, 14, 0.14),
+      0 0 16px 1px rgba(180, 83, 9, 0.2);
+  }
+}
+
+@keyframes lob-needs-repost-badge {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(146, 64, 14, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 0 3px rgba(146, 64, 14, 0.22);
+  }
+}
+
+.lob-needs-repost-panel {
+  animation: lob-needs-repost-panel 2.8s ease-in-out infinite;
+}
+
 .lob-needs-repost-badge {
   background-color: rgb(254 243 199);
   color: rgb(120 53 15);
-  /* Keep label on one line and optically centered inside the pill. */
   white-space: nowrap;
   line-height: 1;
+  animation: lob-needs-repost-badge 2.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lob-needs-repost-panel,
+  .lob-needs-repost-badge {
+    animation: none;
+    box-shadow: 0 0 0 2px rgba(146, 64, 14, 0.35);
+  }
 }
 
 /* Glass morphism utility */
