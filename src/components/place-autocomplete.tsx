@@ -23,6 +23,8 @@ export function PlaceAutocomplete({
   className = "",
   disabled = false,
   placeholder = "Start typing a city, ZIP, or address…",
+  value,
+  onValueChange,
 }: {
   mode?: Mode;
   label: string;
@@ -32,9 +34,17 @@ export function PlaceAutocomplete({
   className?: string;
   disabled?: boolean;
   placeholder?: string;
+  /** When set, the input is the lane filter. Typing updates the parent immediately. */
+  value?: string;
+  onValueChange?: (next: string) => void;
 }) {
   const id = useId();
-  const [q, setQ] = useState("");
+  const [uncontrolled, setUncontrolled] = useState("");
+  const q = value !== undefined ? value : uncontrolled;
+  const setQ = (next: string) => {
+    onValueChange?.(next);
+    if (value === undefined) setUncontrolled(next);
+  };
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [predictions, setPredictions] = useState<{ placeId: string; label: string }[]>([]);
@@ -171,7 +181,7 @@ export function PlaceAutocomplete({
                 className="w-full text-left px-3 py-2 text-stone-800 hover:bg-stone-50"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => {
-                  setQ(p.label);
+                  if (value === undefined) setQ(p.label);
                   pick(p.placeId);
                 }}
               >
