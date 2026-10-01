@@ -4,8 +4,8 @@
  * Source of truth for all logo/wordmark usage in the app. To update branding,
  * replace the PNGs in `public/brand/` and update the dimensions below.
  *
- * Rebuild mark / favicon / lockups from the approved hybrid-05 mark:
- *   python scripts/promote-official-mark.py
+ * Restore approved hybrid-05 lockup (frozen — no geometry experiments):
+ *   python scripts/restore-approved-hybrid05.py
  *
  * Currently shipped (true PNG only — do not check in JPEG bytes with a .png name):
  * - lob-app-icon.png            — square nested-L mark, navy on white (1024×1024) — light UI / favicon source
@@ -36,8 +36,8 @@ export const LOB_APP_ICON_KNOCKOUT_HEIGHT = 1024;
 
 /** Full logo (mark | gold rule | LOB / LUMBER ONE BOARD), white+gold on transparent — masthead. */
 export const LOB_LOCKUP_KNOCKOUT_SRC = "/brand/lob-lockup-knockout.png";
-export const LOB_LOCKUP_KNOCKOUT_WIDTH = 537;
-export const LOB_LOCKUP_KNOCKOUT_HEIGHT = 179;
+export const LOB_LOCKUP_KNOCKOUT_WIDTH = 856;
+export const LOB_LOCKUP_KNOCKOUT_HEIGHT = 332;
 
 /** Wide concept art — alternate marketing/share card (currently same as hero). */
 export const LOB_CONCEPT_PRIMARY_SRC = "/brand/lob-concept-primary.png";
@@ -51,13 +51,13 @@ export const LOB_BRAND_HERO_HEIGHT = 540;
 
 /** Full horizontal lockup (mark | gold rule | LOB / Lumber One Board) — light / print docs. */
 export const LOB_BRAND_LOCKUP_SRC = "/brand/lob-brand-lockup.png";
-export const LOB_BRAND_LOCKUP_WIDTH = 1100;
-export const LOB_BRAND_LOCKUP_HEIGHT = 320;
+export const LOB_BRAND_LOCKUP_WIDTH = 1280;
+export const LOB_BRAND_LOCKUP_HEIGHT = 720;
 
 /** Dark navy lockup (full logo) — print / dark chrome. */
 export const LOB_DARK_LOCKUP_SRC = "/brand/lob-dark-lockup.png";
-export const LOB_DARK_LOCKUP_WIDTH = 1100;
-export const LOB_DARK_LOCKUP_HEIGHT = 320;
+export const LOB_DARK_LOCKUP_WIDTH = 1280;
+export const LOB_DARK_LOCKUP_HEIGHT = 720;
 
 /** Dark navy wordmark only (“Lumber One Board”) — global top masthead. */
 export const LOB_DARK_WORDMARK_SRC = "/brand/lob-dark-wordmark.png";
