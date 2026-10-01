@@ -1,6 +1,6 @@
 # LOB — where we are
 
-**As of:** 30 Sep 2026  
+**As of:** 30 Sep 2026 (Insights hidden from customers; marketplace intel admin/CLI kept)  
 **This file is the product snapshot.** `AGENTS.md` is the code map. Do not treat chat history as current.
 
 Update this file when something **material** changes (shipped feature, explicit deferral, launch blocker). Skip drive-by session notes.
@@ -55,8 +55,15 @@ Platform Terms, Privacy Policy, Supplier Agreement, and Carrier Agreement ship a
 | Item | Rule |
 |------|------|
 | In-app email / SMTP / Resend | Deferred. Outlook-manual PDF attach. |
-| Insights product (nav) | Hidden until privacy/product review. |
+| **Insights product (nav + `/insights` pages)** | Hidden for carriers, suppliers, and guests. Routes redirect home. Market-rate chips / lane decision stats are not shown to customers. Do not re-expose without an explicit product decision. |
+| Insights as a paid monthly add-on | Still future. Do not build billing. |
 | Docker on this machine | Virtualization disabled. Native Postgres. |
+
+## Internal lane / usage intel (kept)
+
+- **DB:** every post/book still writes/updates `LaneRateObservation` (and static `data/market-benchmarks.json` remains).
+- **Admin UI:** `/admin/marketplace-intel` — top lanes, active shippers/carriers, thin lanes (ADMIN only).
+- **CLI:** `npm run report:marketplace-intel` (optional `DAYS=30`) for JSON export used in targeting.
 
 ---
 

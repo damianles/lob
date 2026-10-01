@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { LaneDecisionStats } from "@/components/lane-decision-stats";
 import { Button } from "@/components/ui/button";
 import { fetchLaneDecisionContext } from "@/lib/fetch-lane-decision";
 import type { LaneDecisionContext } from "@/lib/lane-decision-types";
@@ -117,7 +116,6 @@ export function CarrierRateActions({
     setMessage(rateMode === "OPEN_BID" ? "Bid submitted." : "Counter sent to the mill.");
   }
 
-  const stats = ctx ? <LaneDecisionStats ctx={ctx} compact /> : null;
   const showBidForm = rateMode === "OPEN_BID" ? !windowClosed : allowCounterOffers;
   const noteField = showBidForm ? (
     <input
@@ -132,7 +130,6 @@ export function CarrierRateActions({
   if (rateMode === "OPEN_BID") {
     return (
       <div className="space-y-2">
-        {stats}
         <p className="text-[11px] text-zinc-600">
           {OPEN_BID_LABEL}
           {windowClosed ? " — window closed" : ""}
@@ -161,7 +158,6 @@ export function CarrierRateActions({
 
   return (
     <div className="space-y-2">
-      {stats}
       <p className="text-[11px] text-zinc-600">
         {TAKE_IT_LABEL}
         {offeredRateUsd != null ? ` ${formatMoney(offeredRateUsd, offerCurrency)}` : ""}

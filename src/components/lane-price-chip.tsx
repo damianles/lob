@@ -34,6 +34,11 @@ type Props = {
   currency?: "USD" | "CAD";
   className?: string;
   onBand?: (band: { floor: number; ceiling: number; bandEnforced: true } | null) => void;
+  /**
+   * When true, still fetches band data for post validation but does not show
+   * market-rate UI (Insights product is deferred for customers).
+   */
+  silent?: boolean;
 };
 
 function formatLaneAvg(q: Quote): string {
@@ -67,6 +72,7 @@ export function LanePriceChip({
   currency = "CAD",
   className,
   onBand,
+  silent = false,
 }: Props) {
   const [quote, setQuote] = useState<Quote | null>(null);
   const [loading, setLoading] = useState(false);
@@ -124,6 +130,8 @@ export function LanePriceChip({
       onBand(null);
     }
   }, [quote, onBand]);
+
+  if (silent) return null;
 
   if (!quote && !loading) return null;
 

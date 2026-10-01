@@ -1391,10 +1391,11 @@ export function SupplierPostLoadForm({
               currency={currency}
               className="self-center"
               onBand={onRateBand}
+              silent
             />
             {showFairMarketAdminCopy && (
             <p className="text-xs text-zinc-500">
-              Band ±30% with enough samples, ±50% on thin lanes.
+              Band ±30% with enough samples, ±50% on thin lanes (admin preview only — not shown to customers).
             </p>
             )}
           </div>

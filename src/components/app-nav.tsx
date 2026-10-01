@@ -50,7 +50,6 @@ export function AppNav() {
   const guestLinks = [
     { href: signUpUrlForAppPath("/"), label: "Register" },
     { href: signUpUrlForAppPath("/capacity"), label: "Capacity" },
-    { href: signUpUrlForAppPath("/insights"), label: "Insights" },
     { href: signInUrlForAppPath("/"), label: "Sign In" },
   ];
   const signedInLinks = lobTopNavLinksForViewer(viewer.kind);

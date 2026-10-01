@@ -5,7 +5,6 @@ import { redirect } from "next/navigation";
 import { BidWithdrawButton } from "@/components/bid-withdraw-button";
 import { CarrierRateActions } from "@/components/carrier-rate-actions";
 import { ConvertToFirmRate } from "@/components/convert-to-firm-rate";
-import { LaneDecisionStats } from "@/components/lane-decision-stats";
 import { LobBrandStrip } from "@/components/lob-brand-strip";
 import { LobSidebar } from "@/components/lob-sidebar";
 import { RateModeBadge } from "@/components/rate-mode-badge";
@@ -137,14 +136,11 @@ async function ShipperOpenBids({ companyId }: { companyId: string }) {
               : ""}
             {l.offeredRateUsd != null ? ` · posted ${formatMoney(Number(l.offeredRateUsd), l.offerCurrency)}` : ""}
           </p>
-          <div className="mt-3">
-            <LaneDecisionStats ctx={decision} compact />
-          </div>
           <div className="mt-4">
             <ShipperBidReviewList
               loadId={l.id}
               postedRate={l.offeredRateUsd != null ? Number(l.offeredRateUsd) : null}
-              marketAvg={decision.marketAvg}
+              marketAvg={null}
               miles={decision.miles}
               bids={l.bids.map((b) => ({
                 id: b.id,

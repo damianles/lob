@@ -396,7 +396,7 @@ export default async function Home() {
             </li>
             <li>
               API: <code>POST /api/loads</code>, <code>POST /api/loads/:id/book</code>,{" "}
-              <code>POST /api/loads/:id/dispatch</code>. More in <Link href="/insights">Insights</Link>.
+              <code>POST /api/loads/:id/dispatch</code>.
             </li>
           </ol>
         </details>

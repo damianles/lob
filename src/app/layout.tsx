@@ -27,7 +27,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Lumber One Board | The #1 Lumber Load Board",
   description:
-    "The load board built for forest products — mills, wholesalers, and carriers moving dimensional lumber, panels, and bulk wood with lane intelligence and verified booking.",
+    "The load board built for forest products — mills, wholesalers, and carriers moving dimensional lumber, panels, and bulk wood.",
 };
 
 export default function RootLayout({

@@ -90,7 +90,7 @@ const ICONS: Record<string, (props: IconProps) => ReactElement> = {
   insights: InsightsIcon,
 };
 
-const MOBILE_IDS: LobNavId[] = ["shipments", "openBids", "loads", "capacity", "insights"];
+const MOBILE_IDS: LobNavId[] = ["shipments", "openBids", "loads", "capacity"];
 
 export function MobileBottomNav() {
   const pathname = usePathname();

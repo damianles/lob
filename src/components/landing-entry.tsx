@@ -66,7 +66,7 @@ export function LandingEntry() {
           <h2 className="text-center text-sm font-semibold uppercase tracking-wider text-stone-500">
             Why {BRAND_PRODUCT_NAME}
           </h2>
-          <div className="mt-8 grid gap-5 sm:grid-cols-3">
+          <div className="mt-8 grid gap-5 sm:grid-cols-2">
             {BRAND_VALUE_PROPS.map((item) => (
               <article
                 key={item.title}
@@ -93,14 +93,7 @@ export function LandingEntry() {
             >
               account setup
             </Link>{" "}
-            to link your company. Lane analytics &amp; fuel tools live in{" "}
-            <Link
-              className="font-semibold text-lob-navy underline decoration-lob-gold/40 underline-offset-2"
-              href={signUpUrlForAppPath("/insights")}
-            >
-              Insights
-            </Link>
-            .
+            to link your company.
           </p>
         </section>
       </div>

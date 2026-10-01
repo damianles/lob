@@ -41,7 +41,7 @@ src/
     api/            # REST handlers (loads, companies, admin, webhooks, …)
     loads/[loadId]/ # Shipment detail, BOL, rate con
     capacity/       # Carrier capacity offers
-    insights/       # Lane / fuel analytics
+    insights/       # Deferred — routes redirect home; not in nav until privacy review
     shipments/      # Shipments list (`/booked` redirects here)
     sign-in/ sign-up/
   components/       # UI (load-board-workspace, app-nav, lob-sidebar, …)

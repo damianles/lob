@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { LaneDecisionStats } from "@/components/lane-decision-stats";
 import { Button } from "@/components/ui/button";
 import { fetchLaneDecisionContext } from "@/lib/fetch-lane-decision";
 import { bandSide, type LaneDecisionContext } from "@/lib/lane-decision-types";
@@ -78,11 +77,6 @@ export function ConvertToFirmRate({
       <p className="text-[11px] text-zinc-600">
         No cover yet? Post a {TAKE_IT_LABEL} so carriers can book instantly. Pending bids stay as counters.
       </p>
-      {ctx ? (
-        <div className="mt-2">
-          <LaneDecisionStats ctx={ctx} compact />
-        </div>
-      ) : null}
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
         <span className="text-[11px] text-zinc-500">{currency}</span>
         <input

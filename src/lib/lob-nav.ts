@@ -47,7 +47,12 @@ export const LOB_NAV_ITEMS: LobNavItem[] = [
     label: "Capacity",
     hint: "Carrier truck availability by lane & dates",
   },
-  { id: "insights", href: "/insights", label: "Insights", hint: "Lane rate analytics" },
+  {
+    id: "insights",
+    href: "/admin/marketplace-intel",
+    label: "Marketplace Intel",
+    hint: "Internal lane & usage analysis (admin only)",
+  },
   { id: "driver", href: "/driver", label: "Driver", hint: "Dispatch links & QR for drivers" },
   {
     id: "facilityPickup",
@@ -81,7 +86,6 @@ const CARRIER_IDS: LobNavId[] = [
   "loads",
   "openBids",
   "capacity",
-  "insights",
   "driver",
   "carrierProfile",
   "onboarding",
@@ -91,7 +95,6 @@ const SHIPPER_IDS: LobNavId[] = [
   "shipments",
   "openBids",
   "capacity",
-  "insights",
   "facilityPickup",
   "facilityDelivery",
   "carrierPrefs",
@@ -111,7 +114,7 @@ function navIdsForKind(kind: ViewerKind): Set<LobNavId> {
     case "ADMIN":
       return new Set(LOB_NAV_ITEMS.map((i) => i.id));
     default:
-      return new Set(["shipments", "loads", "capacity", "insights", "onboarding"]);
+      return new Set(["shipments", "loads", "capacity", "onboarding"]);
   }
 }
 

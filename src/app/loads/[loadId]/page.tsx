@@ -6,7 +6,6 @@ import { notFound, redirect } from "next/navigation";
 import { CarrierRateActions } from "@/components/carrier-rate-actions";
 import { CancelLoadButton } from "@/components/cancel-load-button";
 import { ConvertToFirmRate } from "@/components/convert-to-firm-rate";
-import { LaneDecisionStats } from "@/components/lane-decision-stats";
 import { RateModeBadge } from "@/components/rate-mode-badge";
 import { ShipperBidReviewList } from "@/components/shipper-bid-review-list";
 import { CarrierScorecard } from "@/components/carrier-scorecard";
@@ -440,16 +439,11 @@ async function renderLoadDetailPage({ params }: { params: Promise<{ loadId: stri
                 <p className="mt-1 text-xs text-zinc-500">
                   Accepting a bid books the load at that amount and closes the others.
                 </p>
-                {decision ? (
-                  <div className="mt-3">
-                    <LaneDecisionStats ctx={decision} />
-                  </div>
-                ) : null}
                 <div className="mt-3">
                   <ShipperBidReviewList
                     loadId={load.id}
                     postedRate={load.offeredRateUsd != null ? Number(load.offeredRateUsd) : null}
-                    marketAvg={decision?.marketAvg ?? null}
+                    marketAvg={null}
                     miles={decision?.miles ?? null}
                     bids={load.bids.map((b) => ({
                       id: b.id,

@@ -23,6 +23,7 @@
     "set-admin": "tsx scripts/set-admin.ts",
     "admin:setup": "tsx scripts/setup-admins.ts",
     "report-thin-lanes": "tsx scripts/report-thin-lanes.ts",
+    "report:marketplace-intel": "tsx scripts/report-marketplace-intel.ts",
     "brand:icons": "node scripts/build-brand-icons.cjs",
     "brand:extract": "node scripts/extract-brand-assets.cjs",
     "benchmarks:build": "tsx scripts/build-benchmarks-from-posted-xlsx.ts",
