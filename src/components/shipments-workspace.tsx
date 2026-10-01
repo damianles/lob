@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { CarrierTypeTag } from "@/components/carrier-type-tag";
 import { RateModeBadge } from "@/components/rate-mode-badge";
 import { PlaceAutocomplete } from "@/components/place-autocomplete";
+import { ShipmentLiveStages } from "@/components/shipment-live-stages";
 import { formatDisplayDate } from "@/lib/format-display-date";
 import { formatMoney } from "@/lib/money";
 import { displayLoadStatus, loadStatusSortRank } from "@/lib/load-status-label";
@@ -30,6 +31,7 @@ export type ShipmentRow = {
   bookedAt: string | null;
   pickupConfirmedAt: string | null;
   deliveredAt: string | null;
+  supplierDeliveredAt: string | null;
   rateUsd: number | null;
   rateCurrency: "USD" | "CAD";
   rateMode: "TAKE_IT" | "OPEN_BID";
@@ -477,13 +479,34 @@ export function ShipmentsWorkspace({
                   {r.requestedDeliveryAt ? formatDisplayDate(r.requestedDeliveryAt) : "—"}
                 </td>
                 <td className="px-3 py-2">
-                  <span
-                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${statusBadge(r.status)} ${
-                      r.status === "NEEDS_REPOST" ? "lob-needs-repost-badge" : ""
-                    }`}
-                  >
-                    {statusLabel(r.status)}
-                  </span>
+                  {actor.perspective === "shipper" &&
+                  r.status !== "CANCELLED" &&
+                  r.status !== "NEEDS_REPOST" &&
+                  r.status !== "UNLISTED" ? (
+                    <div className="space-y-1.5">
+                      <ShipmentLiveStages
+                        compact
+                        postedAt={r.postedAt}
+                        bookedAt={r.bookedAt}
+                        pickupConfirmedAt={r.pickupConfirmedAt}
+                        deliveredAt={r.deliveredAt}
+                        supplierDeliveredAt={r.supplierDeliveredAt}
+                      />
+                      <span
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${statusBadge(r.status)}`}
+                      >
+                        {statusLabel(r.status)}
+                      </span>
+                    </div>
+                  ) : (
+                    <span
+                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${statusBadge(r.status)} ${
+                        r.status === "NEEDS_REPOST" ? "lob-needs-repost-badge" : ""
+                      }`}
+                    >
+                      {statusLabel(r.status)}
+                    </span>
+                  )}
                 </td>
                 <td className="px-3 py-2 text-zinc-700">
                   <div className="flex flex-col">

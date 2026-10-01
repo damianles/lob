@@ -94,8 +94,7 @@ export default async function BolStripPage({ params }: { params: Promise<{ loadI
         <div className="mx-auto max-w-md rounded-2xl border border-stone-200 bg-white p-6 text-center shadow-sm">
           <h1 className="text-lg font-semibold">Driver Haul Sheet Not Available Yet</h1>
           <p className="mt-2 text-sm text-stone-600">
-            Create a driver dispatch link from the load first. Yard pickup links and office QRs are on the load for the
-            posting mill.
+            Create a driver dispatch link from the load first.
           </p>
           <Link href={`/loads/${loadId}`} className="mt-4 inline-block text-sm font-medium text-lob-navy underline">
             Back to load
@@ -110,6 +109,8 @@ export default async function BolStripPage({ params }: { params: Promise<{ loadI
   const lumberSpec = extractLumberSpec(load.extendedPosting);
   const packet = parseDriverPacket(load.dispatchLink.driverPacket);
   const carrierName = load.booking?.carrierCompany.legalName ?? null;
+  const millPhone = load.shipperCompany.businessPhone ?? null;
+  const carrierPhone = load.booking?.carrierCompany.businessPhone ?? null;
 
   return (
     <main className="min-h-screen bg-stone-100 print:bg-white print:p-0">
@@ -125,12 +126,15 @@ export default async function BolStripPage({ params }: { params: Promise<{ loadI
         weightLbs={load.weightLbs}
         equipmentType={load.equipmentType}
         millLabel={millName}
+        millPhone={millPhone}
         carrierName={carrierName}
+        carrierPhone={carrierPhone}
         bookedAt={load.booking?.bookedAt.toISOString() ?? null}
         driverName={load.dispatchLink.driverName}
         driverPhone={load.dispatchLink.driverPhone}
         pickupAt={load.requestedPickupAt.toISOString()}
         deliveryAt={load.requestedDeliveryAt?.toISOString() ?? null}
+        uniquePickupCode={load.uniquePickupCode}
         lumberSpec={lumberSpec}
         packet={packet}
         extendedPosting={load.extendedPosting}

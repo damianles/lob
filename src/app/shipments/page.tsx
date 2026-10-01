@@ -124,6 +124,7 @@ export default async function ShipmentsPage({
     bookedAt: l.booking?.bookedAt.toISOString() ?? null,
     pickupConfirmedAt: l.dispatchLink?.pickupConfirmedAt?.toISOString() ?? null,
     deliveredAt: l.dispatchLink?.deliveredAt?.toISOString() ?? null,
+    supplierDeliveredAt: l.dispatchLink?.supplierDeliveredAt?.toISOString() ?? null,
     rateUsd: l.booking
       ? Number(l.booking.agreedRateUsd)
       : l.offeredRateUsd != null

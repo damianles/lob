@@ -7,20 +7,31 @@ import { isSupplierActor } from "@/lib/simulated-actor-company";
 
 export async function POST(_req: Request, ctx: { params: Promise<{ loadId: string }> }) {
   const actor = await getActorContext();
-  if (!isSupplierActor(actor)) {
-    return NextResponse.json({ error: "Supplier accounts only." }, { status: 403 });
-  }
-
   const { loadId } = await ctx.params;
+
   const load = await prisma.load.findUnique({
     where: { id: loadId },
-    select: { shipperCompanyId: true },
+    select: {
+      shipperCompanyId: true,
+      booking: { select: { carrierCompanyId: true } },
+    },
   });
   if (!load) {
     return NextResponse.json({ error: "Load not found." }, { status: 404 });
   }
-  if (load.shipperCompanyId !== actor.companyId) {
-    return NextResponse.json({ error: "You can only confirm pickup for your own loads." }, { status: 403 });
+
+  const isShipperOwner =
+    isSupplierActor(actor) && load.shipperCompanyId === actor.companyId;
+  const isBookedCarrier =
+    actor.role === "DISPATCHER" &&
+    Boolean(actor.companyId) &&
+    load.booking?.carrierCompanyId === actor.companyId;
+
+  if (!isShipperOwner && !isBookedCarrier) {
+    return NextResponse.json(
+      { error: "Only the booked carrier (or the posting supplier) can confirm pickup." },
+      { status: 403 },
+    );
   }
 
   try {

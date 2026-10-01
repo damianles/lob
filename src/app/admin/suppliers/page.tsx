@@ -20,7 +20,7 @@ function supplierLabel(k: SupplierKind) {
 }
 
 function isCreditKind(kind: string): kind is CreditFileKind {
-  return kind === "W9" || kind === "CREDIT_REFERENCE" || kind === "INSURANCE";
+  return kind === "W9" || kind === "CREDIT_REFERENCE" || kind === "INSURANCE" || kind === "BUSINESS_REGISTRATION";
 }
 
 export default async function AdminSuppliersPage() {
@@ -37,7 +37,7 @@ export default async function AdminSuppliersPage() {
       documents: {
         where: {
           dispatchLinkId: null,
-          kind: { in: ["W9", "CREDIT_REFERENCE", "INSURANCE"] },
+          kind: { in: ["W9", "CREDIT_REFERENCE", "INSURANCE", "BUSINESS_REGISTRATION"] },
         },
         orderBy: { createdAt: "desc" },
         select: { id: true, kind: true, fileUrl: true, expiresAt: true },
@@ -56,9 +56,9 @@ export default async function AdminSuppliersPage() {
           open each credit link, confirm the legal name matches the documents, then Mark docs verified.
         </p>
         <ol className="mt-3 list-decimal space-y-1 pl-5 text-xs text-zinc-600">
-          <li>Open the W-9 and credit reference https links.</li>
+          <li>Open the W-9 / business registration and credit reference files.</li>
           <li>Confirm company legal name on the docs matches the registration.</li>
-          <li>Call or note the business phone if anything looks off.</li>
+          <li>Call or note the business phone (and remittance email if filed) if anything looks off.</li>
           <li>Mark docs verified, then Approve (or Reject).</li>
         </ol>
 
@@ -100,6 +100,9 @@ export default async function AdminSuppliersPage() {
                         {c.users[0]?.name ?? "N/A"} ({c.users[0]?.email ?? "N/A"})
                       </p>
                       <p className="mt-1 text-xs text-zinc-600">{c.businessPhone ?? "No phone on file"}</p>
+                      {c.remittanceEmail ? (
+                        <p className="mt-1 text-xs text-zinc-600">AP {c.remittanceEmail}</p>
+                      ) : null}
                     </td>
                     <td className="p-3">
                       <ul className="space-y-1 text-xs">

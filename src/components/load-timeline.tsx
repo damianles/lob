@@ -11,6 +11,7 @@ type Props = {
     createdAt: string;
     pickupConfirmedAt: string | null;
     deliveredAt: string | null;
+    supplierDeliveredAt?: string | null;
     status: string;
     token: string;
   };
@@ -34,9 +35,10 @@ export function LoadTimeline({ load, booking, dispatch }: Props) {
   const s2 = Boolean(booking);
   const s3 = Boolean(dispatch);
   const s4 = Boolean(dispatch?.pickupConfirmedAt);
-  const s5 = load.status === "DELIVERED" || Boolean(dispatch?.deliveredAt);
+  const s5 = Boolean(dispatch?.deliveredAt);
+  const s6 = Boolean(dispatch?.supplierDeliveredAt);
 
-  const done = [s1, s2, s3, s4, s5];
+  const done = [s1, s2, s3, s4, s5, s6];
   const firstOpen = done.findIndex((d) => !d);
 
   const rows = [
@@ -55,7 +57,7 @@ export function LoadTimeline({ load, booking, dispatch }: Props) {
     {
       key: "dispatch",
       label: "Driver link created",
-      detail: dispatch ? fmt(dispatch.createdAt) : booking ? "Create link from load board" : "—",
+      detail: dispatch ? fmt(dispatch.createdAt) : booking ? "Carrier creates the driver link" : "—",
       stepDone: s3,
       extra: dispatch ? (
         <Link href={`/driver/${dispatch.token}`} className="font-medium text-lob-navy underline">
@@ -65,17 +67,27 @@ export function LoadTimeline({ load, booking, dispatch }: Props) {
     },
     {
       key: "pickup",
-      label: "Pickup confirmed",
+      label: "Picked up",
       detail: dispatch?.pickupConfirmedAt
         ? fmt(dispatch.pickupConfirmedAt)
-        : "Mill or yard confirms pickup",
+        : "Carrier checks in when the truck leaves origin",
       stepDone: s4,
     },
     {
-      key: "delivered",
-      label: "Delivered (POD)",
-      detail: dispatch?.deliveredAt ? fmt(dispatch.deliveredAt) : "Receiver confirms on delivery link",
+      key: "carrierDelivered",
+      label: "Carrier delivered",
+      detail: dispatch?.deliveredAt
+        ? fmt(dispatch.deliveredAt)
+        : "Carrier checks in when the load arrives",
       stepDone: s5,
+    },
+    {
+      key: "supplierDelivered",
+      label: "Supplier confirmed",
+      detail: dispatch?.supplierDeliveredAt
+        ? fmt(dispatch.supplierDeliveredAt)
+        : "Supplier marks delivered for mutual close",
+      stepDone: s6,
     },
   ];
 

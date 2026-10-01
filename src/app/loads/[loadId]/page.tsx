@@ -12,15 +12,17 @@ import { CarrierScorecard } from "@/components/carrier-scorecard";
 import { CreditFilePanel } from "@/components/credit-file-panel";
 import { CarrierTypeTag } from "@/components/carrier-type-tag";
 import { CreateDispatchForm } from "@/components/create-dispatch-form";
+import { CarrierShipmentCheckIn } from "@/components/carrier-shipment-check-in";
 import { DriverLinkPanel } from "@/components/driver-link-panel";
-import { FacilitySiteLinksPanel } from "@/components/facility-site-links-panel";
-import { ShipperConfirmPickup } from "@/components/shipper-confirm-pickup";
 import { ExtendedPostingPanel } from "@/components/extended-posting-panel";
 import { LoadDateChangePanel } from "@/components/load-date-change-panel";
 import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { LobBrandStrip } from "@/components/lob-brand-strip";
 import { LobSidebar } from "@/components/lob-sidebar";
 import { LoadTimeline } from "@/components/load-timeline";
+import { ShipmentLiveStages } from "@/components/shipment-live-stages";
+import { SupplierConfirmDelivery } from "@/components/supplier-confirm-delivery";
+import { isShipmentMutuallyComplete } from "@/lib/confirm-load-delivery";
 import { LumberSpecPanel } from "@/components/lumber-spec-panel";
 import { prisma } from "@/lib/prisma";
 import { carrierCompanyNameForViewer } from "@/lib/carrier-visibility";
@@ -494,9 +496,21 @@ async function renderLoadDetailPage({ params }: { params: Promise<{ loadId: stri
                     href={`/loads/${load.id}/bol-strip`}
                     className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-semibold text-zinc-900 hover:bg-zinc-50"
                   >
-                    BOL / pickup strip
+                    Driver haul sheet
                   </Link>
                 )}
+                {load.dispatchLink &&
+                  isShipmentMutuallyComplete({
+                    deliveredAt: load.dispatchLink.deliveredAt,
+                    supplierDeliveredAt: load.dispatchLink.supplierDeliveredAt,
+                  }) && (
+                    <Link
+                      href={`/loads/${load.id}/invoice`}
+                      className="rounded-lg bg-emerald-800 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-900"
+                    >
+                      Completion invoice
+                    </Link>
+                  )}
                 <CancelLoadButton
                   loadId={load.id}
                   referenceNumber={load.referenceNumber}
@@ -580,8 +594,21 @@ async function renderLoadDetailPage({ params }: { params: Promise<{ loadId: stri
             <div className="mt-6">
               <h2 className="text-sm font-semibold text-zinc-900">Shipment progress</h2>
               <p className="mt-1 text-xs text-zinc-500">
-                Same steps your team sees in tools like Samsara or a TMS: post → book → pickup → delivery.
+                Live stages: post → book → picked up → carrier delivered → supplier confirmed. Mutual close unlocks the
+                completion invoice.
               </p>
+              {(isShipperOwner || isRealAdmin || isBookedCarrier) && (
+                <div className="mt-3">
+                  <ShipmentLiveStages
+                    postedAt={load.createdAt.toISOString()}
+                    bookedAt={load.booking?.bookedAt.toISOString() ?? null}
+                    pickupConfirmedAt={load.dispatchLink?.pickupConfirmedAt?.toISOString() ?? null}
+                    deliveredAt={load.dispatchLink?.deliveredAt?.toISOString() ?? null}
+                    supplierDeliveredAt={load.dispatchLink?.supplierDeliveredAt?.toISOString() ?? null}
+                    cancelled={load.status === LoadStatus.CANCELLED}
+                  />
+                </div>
+              )}
               <LoadTimeline
                 load={{
                   status: load.status,
@@ -599,6 +626,7 @@ async function renderLoadDetailPage({ params }: { params: Promise<{ loadId: stri
                         createdAt: load.dispatchLink.createdAt.toISOString(),
                         pickupConfirmedAt: load.dispatchLink.pickupConfirmedAt?.toISOString() ?? null,
                         deliveredAt: load.dispatchLink.deliveredAt?.toISOString() ?? null,
+                        supplierDeliveredAt: load.dispatchLink.supplierDeliveredAt?.toISOString() ?? null,
                         status: load.dispatchLink.status,
                         token: load.dispatchLink.token,
                       }
@@ -611,22 +639,46 @@ async function renderLoadDetailPage({ params }: { params: Promise<{ loadId: stri
               <CreateDispatchForm loadId={load.id} />
             )}
 
-            {load.dispatchLink && (isShipperOwner || isBookedCarrier || isRealAdmin) && (
-              <>
-                <FacilitySiteLinksPanel
-                  token={load.dispatchLink.token}
-                  referenceNumber={load.referenceNumber}
-                />
-                {(isShipperOwner || isRealAdmin) && (
-                  <ShipperConfirmPickup
-                    loadId={load.id}
-                    referenceNumber={load.referenceNumber}
-                    canConfirm={!load.dispatchLink.pickupConfirmedAt}
-                    pickupConfirmedAt={load.dispatchLink.pickupConfirmedAt}
-                  />
-                )}
-              </>
+            {load.dispatchLink && isBookedCarrier && (
+              <CarrierShipmentCheckIn
+                loadId={load.id}
+                referenceNumber={load.referenceNumber}
+                pickupConfirmedAt={load.dispatchLink.pickupConfirmedAt}
+                deliveredAt={load.dispatchLink.deliveredAt}
+                supplierDeliveredAt={load.dispatchLink.supplierDeliveredAt}
+                signedBolFileUrl={load.dispatchLink.signedBolFileUrl}
+                mutualComplete={isShipmentMutuallyComplete({
+                  deliveredAt: load.dispatchLink.deliveredAt,
+                  supplierDeliveredAt: load.dispatchLink.supplierDeliveredAt,
+                })}
+              />
             )}
+
+            {load.dispatchLink && isShipperOwner && (
+              <SupplierConfirmDelivery
+                loadId={load.id}
+                referenceNumber={load.referenceNumber}
+                pickupConfirmedAt={load.dispatchLink.pickupConfirmedAt}
+                carrierDeliveredAt={load.dispatchLink.deliveredAt}
+                supplierDeliveredAt={load.dispatchLink.supplierDeliveredAt}
+              />
+            )}
+
+            {load.dispatchLink &&
+              isBookedCarrier &&
+              isShipmentMutuallyComplete({
+                deliveredAt: load.dispatchLink.deliveredAt,
+                supplierDeliveredAt: load.dispatchLink.supplierDeliveredAt,
+              }) && (
+                <div className="mt-4">
+                  <Link
+                    href={`/loads/${load.id}/invoice`}
+                    className="inline-flex rounded-lg bg-emerald-800 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-900"
+                  >
+                    Open completion invoice
+                  </Link>
+                </div>
+              )}
 
             {load.dispatchLink && (isBookedCarrier || isRealAdmin) && (
               <DriverLinkPanel

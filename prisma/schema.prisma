@@ -193,9 +193,24 @@ model Company {
    */
   businessPhone         String?
   /**
+   * Optional AP / remittance email (suppliers) for payment follow-up.
+   */
+  remittanceEmail       String?
+  /**
    * Optional billing / mailing address collected at onboarding.
    */
   billingAddress        String?
+  /**
+   * Tax / operating region: US | CA | BOTH.
+   */
+  authorityRegion       String?
+  caBusinessNumber      String?
+  caSafetyNumber        String?
+  caSafetyProvince      String?            @db.VarChar(2)
+  /**
+   * Broker attestation accepted at onboarding (timestamp).
+   */
+  brokerAttestedAt      DateTime?
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt
 
@@ -779,7 +794,13 @@ model DispatchLink {
   driverPacket      Json?
   status            DispatchLinkStatus @default(ACTIVE)
   pickupConfirmedAt DateTime?
+  /** Carrier marked delivered (check-in). */
   deliveredAt       DateTime?
+  /** Supplier confirmed delivery on their side (mutual close). */
+  supplierDeliveredAt DateTime?
+  /** HTTPS URL to signed BOL (PDF/image) uploaded or pasted by carrier. */
+  signedBolFileUrl    String?
+  signedBolUploadedAt DateTime?
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
 

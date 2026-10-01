@@ -3,6 +3,11 @@ import { LegalDocumentKey, UserRole, VerificationStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 
+import {
+  normalizeCaBusinessNumber,
+  normalizeDotNumber,
+  normalizeMcNumber,
+} from "@/lib/carrier-authority";
 import { validateLegalAcceptances } from "@/lib/legal/documents";
 import {
   allowUnsignedCompanyCreate,
@@ -87,19 +92,11 @@ export async function POST(req: Request) {
     }
   }
 
-  if (payload.role === "DISPATCHER") {
-    if (!payload.carrierType) {
-      return NextResponse.json(
-        { error: "Carrier type is required for carrier onboarding." },
-        { status: 400 },
-      );
-    }
-    if (!payload.dotNumber?.trim()) {
-      return NextResponse.json({ error: "DOT number is required for carriers." }, { status: 400 });
-    }
-    if (!payload.mcNumber?.trim()) {
-      return NextResponse.json({ error: "MC number is required for carriers." }, { status: 400 });
-    }
+  if (payload.role === "DISPATCHER" && !payload.carrierType) {
+    return NextResponse.json(
+      { error: "Carrier type is required for carrier onboarding." },
+      { status: 400 },
+    );
   }
 
   const autoApproveCarriers = autoApproveCarriersEnabled();
@@ -112,17 +109,39 @@ export async function POST(req: Request) {
     null;
   const userAgent = hdrs.get("user-agent");
 
+  const isCarrier = payload.role === "DISPATCHER";
+  const region = payload.authorityRegion;
+  const needsUs = region === "US" || region === "BOTH";
+  const needsCa = region === "CA" || region === "BOTH";
+
+  const dotNormalized =
+    isCarrier && needsUs && payload.dotNumber ? normalizeDotNumber(payload.dotNumber) : null;
+  const mcNormalized =
+    isCarrier && needsUs && payload.mcNumber ? normalizeMcNumber(payload.mcNumber) : null;
+  const caBn =
+    isCarrier && needsCa && payload.caBusinessNumber
+      ? normalizeCaBusinessNumber(payload.caBusinessNumber)
+      : null;
+
   const companyWithUsers = await prisma.$transaction(async (tx) => {
     const company = await tx.company.create({
       data: {
         legalName: payload.legalName,
         acronym: payload.role === "SHIPPER" ? payload.acronym : undefined,
         businessPhone: payload.businessPhone?.trim() || null,
+        remittanceEmail:
+          payload.role === "SHIPPER" ? payload.remittanceEmail?.trim().toLowerCase() || null : null,
         billingAddress: payload.billingAddress?.trim() || null,
-        dotNumber: payload.dotNumber,
-        mcNumber: payload.mcNumber,
+        authorityRegion: payload.authorityRegion ?? null,
+        dotNumber: dotNormalized || null,
+        mcNumber: mcNormalized || null,
+        caBusinessNumber: caBn,
+        caSafetyNumber: isCarrier && needsCa ? payload.caSafetyNumber?.trim() || null : null,
+        caSafetyProvince: isCarrier && needsCa ? payload.caSafetyProvince?.trim() || null : null,
         carrierType: payload.carrierType,
-        isOwnerOperator: payload.role === "DISPATCHER" ? Boolean(payload.isOwnerOperator) : false,
+        isOwnerOperator: isCarrier ? Boolean(payload.isOwnerOperator) : false,
+        brokerAttestedAt:
+          isCarrier && payload.carrierType === "BROKER" && payload.brokerAttested ? new Date() : null,
         supplierKind: payload.role === "SHIPPER" ? payload.supplierKind : undefined,
         verificationStatus:
           payload.role === "SHIPPER"
@@ -151,7 +170,14 @@ export async function POST(req: Request) {
     if (payload.w9Url) {
       docs.push({ companyId: company.id, kind: "W9", fileUrl: payload.w9Url });
     }
-    if (payload.role === "DISPATCHER" && payload.insuranceUrl && payload.insuranceExpiresAt) {
+    if (payload.businessRegistrationUrl) {
+      docs.push({
+        companyId: company.id,
+        kind: "BUSINESS_REGISTRATION",
+        fileUrl: payload.businessRegistrationUrl,
+      });
+    }
+    if (isCarrier && payload.insuranceUrl && payload.insuranceExpiresAt) {
       docs.push({
         companyId: company.id,
         kind: "INSURANCE",

@@ -269,14 +269,26 @@ export const companyOnboardingSchema = z
       .min(7, "Enter a reachable business phone")
       .max(40)
       .optional(),
+    remittanceEmail: z.string().trim().email().optional(),
     billingAddress: z.string().trim().max(500).optional(),
+    authorityRegion: z.enum(["US", "CA", "BOTH"]).optional(),
     dotNumber: z.string().min(2).optional(),
     mcNumber: z.string().min(2).optional(),
+    caBusinessNumber: z.string().min(5).optional(),
+    caSafetyNumber: z.string().min(2).optional(),
+    caSafetyProvince: z
+      .string()
+      .trim()
+      .toUpperCase()
+      .regex(/^[A-Z]{2}$/, "Use a 2-letter province code")
+      .optional(),
     carrierType: z.enum(["ASSET_BASED", "BROKER"]).optional(),
     isOwnerOperator: z.boolean().optional(),
+    brokerAttested: z.boolean().optional(),
     role: z.enum(["SHIPPER", "DISPATCHER"]),
     supplierKind: z.enum(["MILL", "WHOLESALER", "OTHER"]).optional(),
     w9Url: httpsUrl.optional(),
+    businessRegistrationUrl: httpsUrl.optional(),
     creditReferenceUrl: httpsUrl,
     creditReviewAuthorized: z.literal(true),
     insuranceUrl: httpsUrl.optional(),
@@ -296,6 +308,15 @@ export const companyOnboardingSchema = z
       .optional(),
   })
   .superRefine((d, ctx) => {
+    if (!d.authorityRegion) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Select tax / operating region (US, Canada, or both).",
+        path: ["authorityRegion"],
+      });
+    }
+    const region = d.authorityRegion;
+
     if (d.role === "SHIPPER" && !d.acronym) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -310,13 +331,30 @@ export const companyOnboardingSchema = z
         path: ["businessPhone"],
       });
     }
-    if (d.role === "SHIPPER" && !d.w9Url) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "W-9 https link is required for suppliers.",
-        path: ["w9Url"],
-      });
+    if (d.role === "SHIPPER" && region) {
+      if ((region === "US" || region === "BOTH") && !d.w9Url) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "W-9 is required for US / dual-region suppliers.",
+          path: ["w9Url"],
+        });
+      }
+      if (region === "CA" && !d.businessRegistrationUrl && !d.w9Url) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Upload business registration / Canadian tax form (or a W-9 if you have one).",
+          path: ["businessRegistrationUrl"],
+        });
+      }
+      if (region === "BOTH" && !d.businessRegistrationUrl && !d.w9Url) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Provide W-9 and/or Canadian business registration.",
+          path: ["w9Url"],
+        });
+      }
     }
+
     if (d.role === "DISPATCHER") {
       if (!d.businessPhone?.trim()) {
         ctx.addIssue({
@@ -325,11 +363,57 @@ export const companyOnboardingSchema = z
           path: ["businessPhone"],
         });
       }
-      if (!d.w9Url) {
+      if (region === "US" || region === "BOTH") {
+        if (!d.dotNumber?.trim()) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "DOT number is required for US authority.",
+            path: ["dotNumber"],
+          });
+        }
+        if (!d.mcNumber?.trim()) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "MC number is required for US authority.",
+            path: ["mcNumber"],
+          });
+        }
+        if (!d.w9Url) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "W-9 is required for US / dual-authority carriers.",
+            path: ["w9Url"],
+          });
+        }
+      }
+      if (region === "CA" || region === "BOTH") {
+        if (!d.caBusinessNumber?.trim()) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Canadian business number (BN) is required.",
+            path: ["caBusinessNumber"],
+          });
+        }
+        if (!d.caSafetyNumber?.trim() || !d.caSafetyProvince?.trim()) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "NSC/CVOR (or equivalent) number and province are required.",
+            path: ["caSafetyNumber"],
+          });
+        }
+        if (region === "CA" && !d.businessRegistrationUrl && !d.w9Url) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Upload business registration / Canadian tax form (or a W-9 if you have one).",
+            path: ["businessRegistrationUrl"],
+          });
+        }
+      }
+      if (d.carrierType === "BROKER" && d.brokerAttested !== true) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "W-9 https link is required for carriers.",
-          path: ["w9Url"],
+          message: "Brokers must attest responsibility for the asset carrier they tender.",
+          path: ["brokerAttested"],
         });
       }
       if (!d.insuranceUrl) {
@@ -352,5 +436,10 @@ export const companyOnboardingSchema = z
 export const insuranceUploadSchema = z.object({
   fileUrl: httpsUrl,
   expiresAt: z.string().datetime(),
+});
+
+/** Carrier attaches signed BOL (HTTPS Blob URL or external hosted file). */
+export const signedBolUploadSchema = z.object({
+  fileUrl: httpsUrl,
 });
 

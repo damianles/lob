@@ -55,18 +55,6 @@ export const LOB_NAV_ITEMS: LobNavItem[] = [
   },
   { id: "driver", href: "/driver", label: "Driver", hint: "Dispatch links & QR for drivers" },
   {
-    id: "facilityPickup",
-    href: "/scan/pickup",
-    label: "Facility Pickup",
-    hint: "Pickup yard link or office QR — no account required",
-  },
-  {
-    id: "facilityDelivery",
-    href: "/scan/delivery",
-    label: "Facility Delivery",
-    hint: "Receiver link or office QR — no account required",
-  },
-  {
     id: "carrierProfile",
     href: "/carrier/compliance",
     label: "Carrier Profile",
@@ -95,8 +83,6 @@ const SHIPPER_IDS: LobNavId[] = [
   "shipments",
   "openBids",
   "capacity",
-  "facilityPickup",
-  "facilityDelivery",
   "carrierPrefs",
   "onboarding",
 ];
@@ -156,7 +142,5 @@ export function lobTopNavLinksForViewer(kind: ViewerKind): { href: string; label
   const sidebar = lobNavItemsForViewer(kind, {
     showOnboarding: kind === "SETUP" || kind === "GUEST",
   });
-  return sidebar
-    .filter((i) => i.id !== "facilityPickup" && i.id !== "facilityDelivery")
-    .map((i) => ({ href: i.href, label: i.label }));
+  return sidebar.map((i) => ({ href: i.href, label: i.label }));
 }

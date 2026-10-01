@@ -15,7 +15,7 @@ function statusClass(status: VerificationStatus) {
 }
 
 function isCreditKind(kind: string): kind is CreditFileKind {
-  return kind === "W9" || kind === "CREDIT_REFERENCE" || kind === "INSURANCE";
+  return kind === "W9" || kind === "CREDIT_REFERENCE" || kind === "INSURANCE" || kind === "BUSINESS_REGISTRATION";
 }
 
 export default async function AdminCarriersPage() {
@@ -32,7 +32,7 @@ export default async function AdminCarriersPage() {
       documents: {
         where: {
           dispatchLinkId: null,
-          kind: { in: ["W9", "CREDIT_REFERENCE", "INSURANCE"] },
+          kind: { in: ["W9", "CREDIT_REFERENCE", "INSURANCE", "BUSINESS_REGISTRATION"] },
         },
         orderBy: { createdAt: "desc" },
         select: { id: true, kind: true, fileUrl: true, expiresAt: true },
@@ -93,8 +93,22 @@ export default async function AdminCarriersPage() {
                         isOwnerOperator={carrier.isOwnerOperator}
                       />
                       <p className="mt-1 text-xs text-zinc-600">
-                        {carrier.dotNumber ?? "-"} / {carrier.mcNumber ?? "-"}
+                        Region: {carrier.authorityRegion ?? "—"}
                       </p>
+                      <p className="mt-1 text-xs text-zinc-600">
+                        DOT/MC: {carrier.dotNumber ?? "-"} / {carrier.mcNumber ?? "-"}
+                      </p>
+                      {(carrier.caBusinessNumber || carrier.caSafetyNumber) && (
+                        <p className="mt-1 text-xs text-zinc-600">
+                          CA BN {carrier.caBusinessNumber ?? "—"} · {carrier.caSafetyProvince ?? "??"}{" "}
+                          {carrier.caSafetyNumber ?? "—"}
+                        </p>
+                      )}
+                      {carrier.brokerAttestedAt ? (
+                        <p className="mt-1 text-[10px] text-zinc-500">
+                          Broker attested {carrier.brokerAttestedAt.toISOString().slice(0, 10)}
+                        </p>
+                      ) : null}
                     </td>
                     <td className="p-3 text-zinc-700">
                       <p className="text-xs">

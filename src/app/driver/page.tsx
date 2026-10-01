@@ -17,8 +17,8 @@ export default async function DriverHubPage() {
           <LobBrandStrip />
           <h1 className="mt-4 text-2xl font-bold text-zinc-900">Driver</h1>
           <p className="mt-2 max-w-2xl text-sm text-zinc-600">
-            Dispatchers assign a driver to each booked load. Share the driver haul-sheet link, then use Confirm Pickup
-            and/or Delivery on the load for yard and receiver QRs. Facilities do not need a LOB account.
+            Dispatchers assign a driver to each booked load, share the driver haul-sheet link, then mark picked up and
+            delivered on the load so the supplier sees those stages live.
           </p>
           <ul className="mt-6 list-inside list-decimal space-y-3 text-sm text-zinc-700">
             <li>
@@ -26,13 +26,12 @@ export default async function DriverHubPage() {
               <Link className="font-medium text-lob-navy underline" href="/shipments">
                 Shipments
               </Link>
-              , choose a load, then create a dispatch from the load detail page. Share the driver haul sheet. Pickup and
-              delivery QRs are under Confirm Pickup and/or Delivery on that same load.
+              , choose a load, create a dispatch, share the driver haul sheet, then use carrier check-in to mark picked
+              up and delivered.
             </li>
             <li>
               <strong>Drivers:</strong> open the dispatch link texted or emailed by your dispatcher (path{" "}
-              <code className="rounded bg-zinc-100 px-1 text-xs">/driver/…</code>). Yard staff should scan the pickup or
-              delivery QR from the load — not this driver page.
+              <code className="rounded bg-zinc-100 px-1 text-xs">/driver/…</code>).
             </li>
             <li>
               <strong>Owner-operators:</strong> complete carrier onboarding; admins verify your company. Eligible

@@ -2,7 +2,8 @@ import { auth } from "@clerk/nextjs/server";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
-import { RateConPrint } from "@/components/rate-con-print";
+import { CompletionInvoicePrint } from "@/components/completion-invoice-print";
+import { isShipmentMutuallyComplete } from "@/lib/confirm-load-delivery";
 import { extractLumberSpec } from "@/lib/lumber-spec";
 import { formatMoney } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
@@ -11,18 +12,13 @@ import { syncClerkUserToDatabase } from "@/lib/sync-clerk-user";
 
 export const dynamic = "force-dynamic";
 
-export default async function RateConPage({ params }: { params: Promise<{ loadId: string }> }) {
+export default async function CompletionInvoicePage({ params }: { params: Promise<{ loadId: string }> }) {
   const { loadId } = await params;
   const { userId } = await auth();
   if (!userId) redirect("/sign-in");
 
   await syncClerkUserToDatabase();
   const actor = await getActorContext();
-  const appUser = await prisma.user.findUnique({
-    where: { authProviderId: userId },
-    select: { id: true, role: true, companyId: true },
-  });
-  if (!appUser) redirect("/sign-in");
 
   const load = await prisma.load.findUnique({
     where: { id: loadId },
@@ -32,7 +28,6 @@ export default async function RateConPage({ params }: { params: Promise<{ loadId
           carrierCompany: {
             select: {
               legalName: true,
-              businessPhone: true,
               dotNumber: true,
               mcNumber: true,
               carrierType: true,
@@ -41,18 +36,17 @@ export default async function RateConPage({ params }: { params: Promise<{ loadId
           },
         },
       },
-      shipperCompany: {
-        select: { legalName: true, businessPhone: true, supplierKind: true },
-      },
+      shipperCompany: { select: { legalName: true } },
+      dispatchLink: true,
     },
   });
 
   if (!load) notFound();
-  if (!load.booking) {
+  if (!load.booking || !load.dispatchLink) {
     return (
       <main className="min-h-screen bg-white p-6 text-sm">
-        <p className="mb-4">No booking on this load yet — rate confirmation is only available after booking.</p>
-        <Link href={`/loads/${load.id}`} className="text-lob-navy underline">
+        <p className="mb-4">Completion invoice needs a booking and dispatch with mutual delivery confirmation.</p>
+        <Link href={`/loads/${load.id}`} className="text-emerald-700 underline">
           Back to load
         </Link>
       </main>
@@ -71,19 +65,39 @@ export default async function RateConPage({ params }: { params: Promise<{ loadId
   if (!isRealAdmin && !isShipperOwner && !isBookedCarrier) {
     return (
       <main className="min-h-screen bg-white p-6 text-sm">
-        <p>You don&apos;t have access to this rate confirmation.</p>
+        <p>You don&apos;t have access to this invoice.</p>
       </main>
     );
   }
 
-  const lumber = extractLumberSpec(load.extendedPosting);
+  if (
+    !isShipmentMutuallyComplete({
+      deliveredAt: load.dispatchLink.deliveredAt,
+      supplierDeliveredAt: load.dispatchLink.supplierDeliveredAt,
+    })
+  ) {
+    return (
+      <main className="min-h-screen bg-white p-6 text-sm">
+        <h1 className="text-lg font-semibold">Invoice not ready</h1>
+        <p className="mt-2 max-w-lg text-zinc-600">
+          Both the carrier and the supplier must confirm delivery before the completion invoice unlocks.
+          {!load.dispatchLink.deliveredAt ? " Carrier delivery check-in is still open." : null}
+          {!load.dispatchLink.supplierDeliveredAt ? " Supplier delivery confirmation is still open." : null}
+        </p>
+        <Link href={`/loads/${load.id}`} className="mt-4 inline-block text-emerald-700 underline">
+          Back to load
+        </Link>
+      </main>
+    );
+  }
+
   const agreedRate = Number(load.booking.agreedRateUsd);
-  const agreedCurrency = load.booking.agreedCurrency;
+  const lumber = extractLumberSpec(load.extendedPosting);
 
   return (
-    <RateConPrint
+    <CompletionInvoicePrint
+      loadId={load.id}
       load={{
-        id: load.id,
         referenceNumber: load.referenceNumber,
         equipmentType: load.equipmentType,
         weightLbs: load.weightLbs,
@@ -97,20 +111,22 @@ export default async function RateConPage({ params }: { params: Promise<{ loadId
         requestedPickupAt: load.requestedPickupAt.toISOString(),
         requestedDeliveryAt: load.requestedDeliveryAt?.toISOString() ?? null,
         bookedAt: load.booking.bookedAt.toISOString(),
-        formattedRate: formatMoney(agreedRate, agreedCurrency),
-        agreedCurrency,
+        formattedRate: formatMoney(agreedRate, load.booking.agreedCurrency),
       }}
-      shipper={{
-        legalName: load.shipperCompany.legalName,
-        businessPhone: load.shipperCompany.businessPhone,
-      }}
+      shipper={{ legalName: load.shipperCompany.legalName }}
       carrier={{
         legalName: load.booking.carrierCompany.legalName,
-        businessPhone: load.booking.carrierCompany.businessPhone,
         dotNumber: load.booking.carrierCompany.dotNumber,
         mcNumber: load.booking.carrierCompany.mcNumber,
         carrierType: load.booking.carrierCompany.carrierType,
         isOwnerOperator: load.booking.carrierCompany.isOwnerOperator,
+      }}
+      completion={{
+        pickupConfirmedAt: load.dispatchLink.pickupConfirmedAt!.toISOString(),
+        carrierDeliveredAt: load.dispatchLink.deliveredAt!.toISOString(),
+        supplierDeliveredAt: load.dispatchLink.supplierDeliveredAt!.toISOString(),
+        signedBolFileUrl: load.dispatchLink.signedBolFileUrl,
+        driverName: load.dispatchLink.driverName,
       }}
       lumber={lumber}
       extendedPosting={load.extendedPosting}

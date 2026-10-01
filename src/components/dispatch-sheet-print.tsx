@@ -23,12 +23,15 @@ type DispatchSheetPrintProps = {
   weightLbs: number;
   equipmentType: string;
   millLabel: string | null;
+  millPhone?: string | null;
   carrierName: string | null;
+  carrierPhone?: string | null;
   bookedAt?: string | null;
   driverName: string;
   driverPhone?: string | null;
   pickupAt: string | null;
   deliveryAt: string | null;
+  uniquePickupCode?: string | null;
   lumberSpec?: LumberSpec | null;
   packet: DriverPacket;
   extendedPosting?: unknown;
@@ -45,15 +48,14 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-/** Print / Save-as-PDF dispatch sheet — full mill details + booking. No rates. */
+/** Print / Save-as-PDF driver haul sheet — mill details + booking. No rates. Not a legal BOL. */
 export function DispatchSheetPrint(props: DispatchSheetPrintProps) {
   const onPrint = useCallback(() => {
     window.print();
   }, []);
 
   const execution = props.execution ?? extractLoadExecution(props.extendedPosting);
-  const specPills = summarizeLumberSpec(props.lumberSpec ?? null);
-  const specText = specPills.length ? specPills.join(" · ") : null;
+  const productLine = summarizeLumberSpec(props.lumberSpec ?? null).join(" · ") || null;
   const pickupLabel = formatPostedDateWithOptionalTime(props.pickupAt, firstStopTime(execution.pickups));
   const deliveryLabel = formatPostedDateWithOptionalTime(props.deliveryAt, firstStopTime(execution.deliveries));
   const bookedLabel = formatInstant(props.bookedAt ?? null);
@@ -68,7 +70,10 @@ export function DispatchSheetPrint(props: DispatchSheetPrintProps) {
   return (
     <div className="mx-auto max-w-[8.5in] bg-white p-6 text-zinc-900 print:max-w-none print:p-0">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2 print:hidden">
-        <p className="text-xs text-zinc-500">Print or Save as PDF, then attach in Outlook if you are sending it.</p>
+        <p className="text-xs text-zinc-500">
+          Driver haul sheet — not a bill of lading. Print or Save as PDF, then attach in Outlook if needed. Use the
+          mill&apos;s signed BOL / shipping papers at the yard.
+        </p>
         <button
           type="button"
           onClick={onPrint}
@@ -82,17 +87,24 @@ export function DispatchSheetPrint(props: DispatchSheetPrintProps) {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={LOB_BRAND_LOCKUP_SRC} alt={BRAND_PRODUCT_NAME} className="h-14 w-auto object-contain" />
         <p className="text-right text-[10px] font-semibold uppercase tracking-[0.18em] text-stone-500">
-          Driver dispatch
+          Driver haul sheet
         </p>
       </header>
 
       <h1 className="mt-4 text-2xl font-bold tracking-tight text-stone-900">Load {props.referenceNumber}</h1>
       {refs.length ? <p className="mt-1 text-sm text-stone-700">{refs.join(" · ")}</p> : null}
+      {props.uniquePickupCode ? (
+        <p className="mt-1 text-sm font-semibold text-stone-900">Pickup code {props.uniquePickupCode}</p>
+      ) : null}
 
       <dl className="mt-5 grid gap-4 text-sm sm:grid-cols-2 print:text-[12px]">
-        <Field label="Shipper / mill">{props.millLabel}</Field>
+        <Field label="Shipper / mill">
+          {props.millLabel}
+          {props.millPhone ? `\n${props.millPhone}` : null}
+        </Field>
         <Field label="Booked carrier">
           {props.carrierName}
+          {props.carrierPhone ? `\nDispatch ${props.carrierPhone}` : null}
           {bookedLabel ? `\nBooked ${bookedLabel}` : null}
         </Field>
         <Field label="Driver">
@@ -123,10 +135,10 @@ export function DispatchSheetPrint(props: DispatchSheetPrintProps) {
           ))}
         </div>
 
-        {specText ? (
+        {productLine ? (
           <div className="sm:col-span-2">
             <dt className="text-[10px] font-semibold uppercase tracking-wide text-stone-500">Product</dt>
-            <dd className="mt-0.5">{specText}</dd>
+            <dd className="mt-0.5 font-medium text-stone-900">{productLine}</dd>
           </div>
         ) : null}
 
@@ -146,6 +158,10 @@ export function DispatchSheetPrint(props: DispatchSheetPrintProps) {
           </div>
         ) : null}
       </dl>
+
+      <p className="mt-6 text-[10px] text-stone-400">
+        {BRAND_PRODUCT_NAME} · Driver haul sheet (not a bill of lading)
+      </p>
     </div>
   );
 }

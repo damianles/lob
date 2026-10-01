@@ -16,31 +16,31 @@ const mastheadWordmark = Nunito({
 });
 
 /**
- * Branded masthead — full-bleed navy bar with the knockout LOB letters
- * (half the wordmark height) to the left of “Lumber One Board”.
+ * Compact app bar. The large marketing lockup is not repeated here.
+ * Knockout LOB letters sit on the navy field. Gold is only the word “One”.
  */
 export function LobBrandMasthead() {
   return (
     <div className="w-full bg-lob-navy">
       <Link
         href="/"
-        className="mx-auto flex w-full items-center justify-center gap-2.5 px-4 py-3 sm:gap-4 sm:px-8 sm:py-4"
+        className="mx-auto flex h-14 w-full max-w-[1680px] items-center gap-2.5 px-4 sm:px-8"
         aria-label={`${BRAND_PRODUCT_NAME} — home`}
       >
         <LobAppIconMark
           src={LOB_APP_ICON_KNOCKOUT_SRC}
           width={LOB_APP_ICON_KNOCKOUT_WIDTH}
           height={LOB_APP_ICON_KNOCKOUT_HEIGHT}
-          className="h-[clamp(0.9rem,3.6vw,2.625rem)] w-auto shrink-0"
+          className="h-7 w-auto shrink-0"
           decorative
           priority
-          sizes="(max-width: 640px) 80px, 120px"
+          sizes="80px"
         />
         <span
-          className={`${mastheadWordmark.className} whitespace-nowrap text-[clamp(1.65rem,7.2vw,5.25rem)] font-extrabold leading-none tracking-[-0.03em]`}
+          className={`${mastheadWordmark.className} whitespace-nowrap text-lg font-extrabold leading-none tracking-[-0.03em] sm:text-xl`}
         >
           <span className="text-white">Lumber</span>
-          <span className="text-[#98662a]"> One </span>
+          <span className="text-[#e4c07a]"> One </span>
           <span className="text-white">Board</span>
         </span>
       </Link>

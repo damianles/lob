@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { DocumentUploadField } from "@/components/document-upload-field";
+
 export function InsuranceUploadForm() {
   const [fileUrl, setFileUrl] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
@@ -32,24 +34,28 @@ export function InsuranceUploadForm() {
   return (
     <section className="mt-6 rounded-lg border bg-white p-4">
       <h2 className="text-lg font-semibold">Insurance document</h2>
+      <p className="mt-1 text-sm text-zinc-600">
+        Upload a current certificate of insurance. It should show auto liability and cargo. Add LOB or the mill as
+        certificate holder if your broker requires it.
+      </p>
       <div className="mt-3 space-y-3">
-        <input
-          className="w-full rounded border px-3 py-2 text-sm"
-          placeholder="Insurance file URL (S3/Drive/etc.)"
+        <DocumentUploadField
+          label="Certificate of insurance"
+          kind="INSURANCE"
           value={fileUrl}
-          onChange={(e) => setFileUrl(e.target.value)}
+          onChange={setFileUrl}
+          required
         />
-        <input
-          className="w-full rounded border px-3 py-2 text-sm"
-          type="date"
-          value={expiresAt}
-          onChange={(e) => setExpiresAt(e.target.value)}
-        />
-        <button
-          className="rounded bg-zinc-900 px-4 py-2 text-sm text-white"
-          type="button"
-          onClick={submit}
-        >
+        <label className="block text-xs font-medium text-zinc-600">
+          Insurance expiry
+          <input
+            className="mt-1 w-full rounded border px-3 py-2 text-sm font-normal"
+            type="date"
+            value={expiresAt}
+            onChange={(e) => setExpiresAt(e.target.value)}
+          />
+        </label>
+        <button className="rounded bg-zinc-900 px-4 py-2 text-sm text-white" type="button" onClick={submit}>
           Save insurance
         </button>
       </div>
@@ -59,4 +65,3 @@ export function InsuranceUploadForm() {
     </section>
   );
 }
-

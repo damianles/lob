@@ -1,7 +1,11 @@
-/** Primary CTA — honey-oak / wood gradient aligned to logo accent (`--lob-gold`). */
+/** Commit action. Navy fill. Gold is a focus accent, not the button face. */
 export const lobWoodPrimaryButtonClass =
-  "inline-flex min-h-11 items-center justify-center rounded-full bg-gradient-to-b from-[#d4a574] via-lob-gold to-[#8f6629] px-6 text-sm font-semibold text-white shadow-md shadow-amber-900/25 ring-2 ring-lob-gold/50 ring-offset-2 ring-offset-stone-50 transition hover:from-[#dfc08a] hover:via-[#c99545] hover:to-lob-gold-muted hover:shadow-lg hover:ring-lob-gold active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lob-navy focus-visible:ring-offset-2";
+  "inline-flex min-h-11 items-center justify-center rounded-full bg-lob-navy px-6 text-sm font-semibold text-white transition hover:bg-lob-navy-hover active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lob-gold focus-visible:ring-offset-2";
 
-/** Secondary — outlined wood / navy for pairing with primary. */
+/** Secondary action beside a navy commit. */
 export const lobWoodOutlineButtonClass =
-  "inline-flex min-h-11 items-center justify-center rounded-full border-2 border-lob-gold bg-white/90 px-6 text-sm font-semibold text-lob-navy shadow-sm transition hover:bg-lob-paper hover:border-[#c99545] hover:shadow-md active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lob-gold focus-visible:ring-offset-2";
+  "inline-flex min-h-11 items-center justify-center rounded-full border border-stone-300 bg-white px-6 text-sm font-semibold text-lob-navy transition hover:border-lob-navy hover:bg-stone-50 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lob-navy focus-visible:ring-offset-2";
+
+/** Compact export and other non-commit actions. */
+export const lobQuietButtonClass =
+  "inline-flex items-center justify-center rounded-md border border-stone-300 bg-white px-3 py-1.5 text-xs font-semibold text-lob-navy hover:bg-stone-50 disabled:cursor-not-allowed disabled:opacity-50";

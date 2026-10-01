@@ -1,12 +1,19 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useMemo } from "react";
 
 import { OpenBidsCountBadge, useOpenBidsInboxCount } from "@/components/open-bids-inbox-count";
 import { useViewerRole } from "@/components/providers/app-providers";
-import { BRAND_POSITIONING, BRAND_PRODUCT_NAME } from "@/lib/brand-marketing";
 import { lobNavItemsForViewer, type LobNavId } from "@/lib/lob-nav";
+
+const ADMIN_LINKS = [
+  { href: "/admin/carriers", label: "Carriers" },
+  { href: "/admin/suppliers", label: "Suppliers" },
+  { href: "/admin/companies", label: "Companies" },
+  { href: "/admin/test-lab", label: "Test Lab" },
+] as const;
 
 export type { LobNavId };
 export type LobSidebarStats = { active: number; rush: number; delivered: number };
@@ -18,6 +25,7 @@ export function LobSidebar({
   active: LobNavId;
   stats?: LobSidebarStats;
 }) {
+  const pathname = usePathname();
   const { viewer, loading } = useViewerRole();
   const inboxCount = useOpenBidsInboxCount();
   const navItems = useMemo(() => {

@@ -10,9 +10,9 @@ Read this at the start of a feature chat. Do **not** re-explore the entire repo 
 
 ## What this app is
 
-B2B load board for forest products: **suppliers** post loads, **carriers** book them, ops track **dispatch → pickup → POD**.
+B2B load board for forest products: **suppliers** post loads, **carriers** book them, ops track **dispatch → pickup check-in → delivery check-in**.
 
-**Core lifecycle:** post load → book → dispatch link → driver pickup confirm → POD upload.
+**Core lifecycle:** post load → book → dispatch link → carrier marks picked up → carrier marks delivered → supplier confirms delivered → completion invoice (signed BOL attach). Facility QR deferred.
 
 ---
 
