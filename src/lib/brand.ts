@@ -11,7 +11,7 @@
  * - lob-app-icon.png            — square nested-L mark, navy on white (1024×1024) — light UI / favicon source
  * - lob-app-icon-knockout.png   — white nested-L mark, transparent (1024×1024) — favicon tile
  * - lob-mark.svg                — vector source for the nested-L mark
- * - lob-lockup-knockout.png     — full logo white+gold on transparent — navy masthead
+ * - lob-lockup-knockout.png     — full logo white+gold on transparent (print / share)
  * - lob-brand-lockup.png        — full logo mark | gold | LOB / LUMBER ONE BOARD (light)
  * - lob-dark-lockup.png         — same full logo on navy
  * - lob-mark-compact.png        — square mark (same as app icon)
@@ -19,7 +19,8 @@
  * - lob-concept-primary.png     — alt wide concept
  * - lob-brand-poster-vertical.png — vertical poster
  *
- * Favicon = mark only (`src/app/icon.png`). Main logo = full lockup.
+ * Favicon = mark only (`src/app/icon.png`).
+ * Masthead = mark + gold rule + live “LOB” text (no subtitle). Full lockup elsewhere.
  *
  * Design review copies live under `public/brand/catalog/` and `public/brand/final/`
  * (PNGs in `catalog/` are gitignored; promote chosen finals into `public/brand/`).
@@ -34,7 +35,7 @@ export const LOB_APP_ICON_KNOCKOUT_SRC = "/brand/lob-app-icon-knockout.png";
 export const LOB_APP_ICON_KNOCKOUT_WIDTH = 1024;
 export const LOB_APP_ICON_KNOCKOUT_HEIGHT = 1024;
 
-/** Full logo (mark | gold rule | LOB / LUMBER ONE BOARD), white+gold on transparent — masthead. */
+/** Full logo (mark | gold rule | LOB / LUMBER ONE BOARD), white+gold on transparent. */
 export const LOB_LOCKUP_KNOCKOUT_SRC = "/brand/lob-lockup-knockout.png";
 export const LOB_LOCKUP_KNOCKOUT_WIDTH = 856;
 export const LOB_LOCKUP_KNOCKOUT_HEIGHT = 332;

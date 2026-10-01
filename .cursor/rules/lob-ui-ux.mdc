@@ -12,14 +12,14 @@ Apply when editing shell layout, brand marks, nav, or page chrome. Prefer existi
 
 | Layer | Component | Role |
 |-------|-----------|------|
-| Global wordmark | `LobBrandMasthead` in `src/app/layout.tsx` | Full-bleed navy bar. Inner row `max-w-[1680px] mx-auto`. Centered full lockup (`lob-lockup-knockout.png`: nested-L mark \| gold rule \| LOB / LUMBER ONE BOARD). Favicon is mark-only (`src/app/icon.png`). No `#1` line in the masthead. |
+| Global wordmark | `LobBrandMasthead` in `src/app/layout.tsx` | Full-bleed navy bar. Inner row `max-w-[1680px] mx-auto`. Centered mark \| gold rule \| **LOB** only (Oswald, live text — not a raster subtitle). Favicon is mark-only (`src/app/icon.png`). Full “LUMBER ONE BOARD” lockup stays on print/marketing assets. |
 | Primary nav | `AppNav` | Desktop: product link row + role pill + account. Mobile: account chrome only (product pages in bottom tabs). Guests: Create account and Sign in. **No** LOB mark in AppNav. |
 | In-app sidebar | `LobSidebar` | Desktop: product name + slogan (`BRAND_POSITIONING`) above Navigate, then nav links. Admin links for `ADMIN`. |
 | Status chrome | `RoleRibbon`, `AdminViewAsBar`, `DemoBanner` | Company and approval. Role pill stays in `AppNav` only. |
 
 - **Global masthead** — one navy bar. Do not add another full-bleed wordmark above/beside `AppNav` or on sign-in.
 - **Sidebar brand block** — keep “Lumber One Board” + “The #1 Lumber Load Board” above Navigate on desktop. That is intentional local wayfinding, not a second masthead.
-- **Masthead lockup** — full logo knockout (`LOB_LOCKUP_KNOCKOUT_SRC`) centered in the rail. Do not use mark-only or the boxed `lob-app-icon.png` as the masthead logo. Favicon stays mark-only.
+- **Masthead lockup** — white nested-L knockout mark + gold rule + live `LOB` text, centered. Do not put “LUMBER ONE BOARD” under LOB in the masthead. Prefer live type over a scaled lockup PNG so it stays sharp. Favicon stays mark-only.
 - **Masthead background is full-bleed** — `w-full` edge-to-edge navy; content lockup is rail-aligned.
 - **No logo in `AppNav`**.
 - **Commit buttons** use `lobWoodPrimaryButtonClass` (navy). Gold is an accent, not a gradient fill. Do not use emerald for Post, Book, or Export.
