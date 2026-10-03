@@ -4,14 +4,16 @@
  * Source of truth for all logo/wordmark usage in the app. To update branding,
  * replace the PNGs in `public/brand/` and update the dimensions below.
  *
- * Restore approved hybrid-05 lockup (frozen — no geometry experiments):
+ * Ship Fav4 mark + hybrid-05 type (gold ONE):
+ *   python scripts/ship-fav4-hybrid05-lockup.py
+ * Prior hybrid-05-only restore (legacy):
  *   python scripts/restore-approved-hybrid05.py
  *
  * Currently shipped (true PNG only — do not check in JPEG bytes with a .png name):
- * - lob-app-icon.png            — square nested-L mark, navy on white (1024×1024) — light UI / favicon source
- * - lob-app-icon-knockout.png   — white nested-L mark, transparent (1024×1024) — favicon tile
- * - lob-mark.svg                — vector source for the nested-L mark
- * - lob-lockup-knockout.png     — full logo white+gold on transparent (print / share)
+ * - lob-app-icon.png            — Fav4 O+L+B mark, navy on white (1024×1024) — light UI / favicon source
+ * - lob-app-icon-knockout.png   — white Fav4 mark, transparent (1024×1024) — favicon tile
+ * - lob-mark.svg                — vector source (may lag raster; prefer PNG mark)
+ * - lob-lockup-knockout.png     — full logo white+gold on transparent (masthead)
  * - lob-brand-lockup.png        — full logo mark | gold | LOB / LUMBER ONE BOARD (light)
  * - lob-dark-lockup.png         — same full logo on navy
  * - lob-mark-compact.png        — square mark (same as app icon)
@@ -20,7 +22,7 @@
  * - lob-brand-poster-vertical.png — vertical poster
  *
  * Favicon = mark only (`src/app/icon.png`).
- * Masthead = hybrid-05 full lockup knockout (mark | gold | LOB / LUMBER ONE BOARD).
+ * Masthead = Fav4 mark | gold rule | hybrid-05 LOB / LUMBER ONE BOARD (gold ONE).
  *
  * Design review copies live under `public/brand/catalog/` and `public/brand/final/`
  * (PNGs in `catalog/` are gitignored; promote chosen finals into `public/brand/`).
@@ -37,8 +39,8 @@ export const LOB_APP_ICON_KNOCKOUT_HEIGHT = 1024;
 
 /** Full logo (mark | gold rule | LOB / LUMBER ONE BOARD), white+gold on transparent. */
 export const LOB_LOCKUP_KNOCKOUT_SRC = "/brand/lob-lockup-knockout.png";
-export const LOB_LOCKUP_KNOCKOUT_WIDTH = 1696;
-export const LOB_LOCKUP_KNOCKOUT_HEIGHT = 647;
+export const LOB_LOCKUP_KNOCKOUT_WIDTH = 1691;
+export const LOB_LOCKUP_KNOCKOUT_HEIGHT = 546;
 
 /** Wide concept art — alternate marketing/share card (currently same as hero). */
 export const LOB_CONCEPT_PRIMARY_SRC = "/brand/lob-concept-primary.png";
@@ -57,8 +59,8 @@ export const LOB_BRAND_LOCKUP_HEIGHT = 720;
 
 /** Dark navy lockup (full logo) — print / dark chrome. */
 export const LOB_DARK_LOCKUP_SRC = "/brand/lob-dark-lockup.png";
-export const LOB_DARK_LOCKUP_WIDTH = 1696;
-export const LOB_DARK_LOCKUP_HEIGHT = 647;
+export const LOB_DARK_LOCKUP_WIDTH = 1710;
+export const LOB_DARK_LOCKUP_HEIGHT = 567;
 
 /** Dark navy wordmark only (“Lumber One Board”) — global top masthead. */
 export const LOB_DARK_WORDMARK_SRC = "/brand/lob-dark-wordmark.png";

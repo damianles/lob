@@ -9,8 +9,8 @@ import {
 import { BRAND_PRODUCT_NAME } from "@/lib/brand-marketing";
 
 /**
- * Full-bleed navy masthead with the approved hybrid-05 lockup
- * (mark | gold rule | LOB / LUMBER ONE BOARD). High-res knockout PNG,
+ * Full-bleed navy masthead with the approved Fav4 + hybrid-05 lockup
+ * (mark | gold rule | LOB / LUMBER ONE BOARD, gold ONE). High-res knockout PNG,
  * height-driven so it stays sharp and centered in the rail.
  */
 export function LobBrandMasthead() {
