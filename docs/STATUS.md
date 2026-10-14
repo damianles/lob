@@ -1,6 +1,6 @@
 # LOB — where we are
 
-**As of:** 30 Sep 2026 (facility QR deferred; carrier check-in + supplier live stages)  
+**As of:** 2 Oct 2026 (no facility/driver QR; BOL required before carrier delivery)  
 **This file is the product snapshot.** `AGENTS.md` is the code map. Do not treat chat history as current.
 
 Update this file when something **material** changes (shipped feature, explicit deferral, launch blocker). Skip drive-by session notes.
@@ -13,7 +13,7 @@ Update this file when something **material** changes (shipped feature, explicit 
 
 Signup collects a W-9 and credit reference (insurance for carriers), business phone, optional billing address, and clickwrap legal acceptances. After a booking, each side can open the other’s credit file. LOB does not score credit. Admin must mark credit docs verified before Approve.
 
-**Core lifecycle:** post load → book (or accept a bid) → dispatch packet → carrier marks picked up → carrier marks delivered → supplier confirms delivered (mutual close unlocks completion invoice + signed BOL on file).
+**Core lifecycle:** post load → book (or accept a bid) → dispatch packet → carrier marks picked up → carrier uploads signed BOL → carrier marks delivered → supplier confirms load complete (unlocks completion invoice).
 
 ---
 
@@ -54,10 +54,10 @@ Platform Terms, Privacy Policy, Supplier Agreement, and Carrier Agreement ship a
 
 | Item | Rule |
 |------|------|
-| In-app email / SMTP / Resend | Deferred. Outlook-manual PDF attach. |
+| In-app email | Live for load alerts when Google SMTP is set (`SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD`, `NOTIFICATION_FROM_EMAIL`). Preferences at `/settings/notifications`. PDF packets are still downloaded and attached in Outlook by hand. |
 | **Insights product (nav + `/insights` pages)** | Hidden for carriers, suppliers, and guests. Routes redirect home. Market-rate chips / lane decision stats are not shown to customers. Do not re-expose without an explicit product decision. |
 | Insights as a paid monthly add-on | Still future. Do not build billing. |
-| Facility pickup / delivery QR (yard & receiver links) | Deferred. Nav and load QR panels removed; `/scan/pickup` and `/scan/delivery` redirect. Revisit whether facility QR makes sense before re-enabling. Carrier check-in remains. |
+| Facility / yard / driver QR | Deferred. No pickup/delivery/driver QR in product UI. `/scan/*` and `/facility/*` redirect. Carrier check-in + required signed BOL + supplier confirm-complete. |
 | Docker on this machine | Virtualization disabled. Native Postgres. |
 
 ## Internal lane / usage intel (kept)

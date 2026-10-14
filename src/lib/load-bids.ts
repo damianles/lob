@@ -1,5 +1,6 @@
-import { LoadBidStatus, LoadRateMode, LoadStatus, PostedLaneOutcome, type Prisma } from "@prisma/client";
+import { LoadBidStatus, LoadRateMode, LoadStatus, NotificationEvent, PostedLaneOutcome, type Prisma } from "@prisma/client";
 
+import { enqueueExpiredBidNotices, enqueueLoadNotification } from "@/lib/notifications/dispatch";
 import { prisma } from "@/lib/prisma";
 
 export class LoadBidError extends Error {
@@ -15,22 +16,41 @@ export class LoadBidError extends Error {
 export async function expireStaleBids(tx?: Prisma.TransactionClient) {
   const db = tx ?? prisma;
   const now = new Date();
-  await db.loadBid.updateMany({
+  const stale = await db.loadBid.findMany({
     where: {
       status: LoadBidStatus.PENDING,
       OR: [{ expiresAt: { lte: now } }, { load: { bidWindowExpiresAt: { lte: now } } }],
     },
+    select: {
+      id: true,
+      loadId: true,
+      carrierCompanyId: true,
+      kind: true,
+      amountUsd: true,
+      currency: true,
+    },
+    orderBy: { expiresAt: "asc" },
+    take: 100,
+  });
+  if (stale.length === 0) return stale;
+
+  await db.loadBid.updateMany({
+    where: { id: { in: stale.map((bid) => bid.id) }, status: LoadBidStatus.PENDING },
     data: { status: LoadBidStatus.EXPIRED },
   });
+
+  if (!tx) enqueueExpiredBidNotices(stale);
+  return stale;
 }
 
 export async function acceptLoadBid(args: {
   bidId: string;
   reviewedByUserId: string;
   shipperCompanyId: string;
+  suppressNotifications?: boolean;
 }) {
-  return prisma.$transaction(async (tx) => {
-    await expireStaleBids(tx);
+  const outcome = await prisma.$transaction(async (tx) => {
+    const expired = await expireStaleBids(tx);
 
     const bid = await tx.loadBid.findUnique({
       where: { id: args.bidId },
@@ -67,6 +87,15 @@ export async function acceptLoadBid(args: {
       },
     });
 
+    const declined = await tx.loadBid.findMany({
+      where: {
+        loadId: bid.loadId,
+        status: LoadBidStatus.PENDING,
+        id: { not: bid.id },
+      },
+      select: { id: true, carrierCompanyId: true, kind: true },
+    });
+
     await tx.loadBid.updateMany({
       where: {
         loadId: bid.loadId,
@@ -99,14 +128,65 @@ export async function acceptLoadBid(args: {
       },
     });
 
-    return { bidId: bid.id, booking };
+    return {
+      bidId: bid.id,
+      booking,
+      expired,
+      declined,
+      acceptedKind: bid.kind,
+      carrierCompanyId: bid.carrierCompanyId,
+      loadId: bid.loadId,
+      amountUsd: bid.amountUsd,
+      currency: bid.currency,
+    };
   });
+
+  const suppress = args.suppressNotifications;
+  enqueueExpiredBidNotices(outcome.expired, { suppress });
+  const acceptedEvent =
+    outcome.acceptedKind === "COUNTER" ? NotificationEvent.COUNTER_ACCEPTED : NotificationEvent.BID_ACCEPTED;
+  const amount = Number(outcome.amountUsd);
+  const money = Number.isFinite(amount) ? `${amount.toFixed(2)} ${outcome.currency}` : null;
+  enqueueLoadNotification({
+    loadId: outcome.loadId,
+    to: "carrier",
+    carrierCompanyId: outcome.carrierCompanyId,
+    event: acceptedEvent,
+    dedupeKey: `bid-accepted:${outcome.bidId}`,
+    headline: outcome.acceptedKind === "COUNTER" ? "Your counter was accepted." : "Your bid was accepted.",
+    detail: money,
+    suppress,
+  });
+  enqueueLoadNotification({
+    loadId: outcome.loadId,
+    to: "shipper",
+    event: NotificationEvent.LOAD_BOOKED,
+    dedupeKey: `load-booked:shipper:${outcome.loadId}`,
+    headline: "A carrier booked your load.",
+    detail: money,
+    excludeUserId: args.reviewedByUserId,
+    suppress,
+  });
+  for (const other of outcome.declined) {
+    enqueueLoadNotification({
+      loadId: outcome.loadId,
+      to: "carrier",
+      carrierCompanyId: other.carrierCompanyId,
+      event: other.kind === "COUNTER" ? NotificationEvent.COUNTER_DECLINED : NotificationEvent.BID_DECLINED,
+      dedupeKey: `bid-declined:${other.id}`,
+      headline: other.kind === "COUNTER" ? "Your counter was declined." : "Your bid was declined.",
+      suppress,
+    });
+  }
+
+  return { bidId: outcome.bidId, booking: outcome.booking };
 }
 
 export async function declineLoadBid(args: {
   bidId: string;
   reviewedByUserId: string;
   shipperCompanyId: string;
+  suppressNotifications?: boolean;
 }) {
   await expireStaleBids();
 
@@ -122,7 +202,7 @@ export async function declineLoadBid(args: {
     throw new LoadBidError("This bid is no longer pending.", 409);
   }
 
-  return prisma.loadBid.update({
+  const updated = await prisma.loadBid.update({
     where: { id: bid.id },
     data: {
       status: LoadBidStatus.DECLINED,
@@ -130,6 +210,20 @@ export async function declineLoadBid(args: {
       reviewedByUserId: args.reviewedByUserId,
     },
   });
+
+  const amount = Number(updated.amountUsd);
+  enqueueLoadNotification({
+    loadId: updated.loadId,
+    to: "carrier",
+    carrierCompanyId: updated.carrierCompanyId,
+    event: updated.kind === "COUNTER" ? NotificationEvent.COUNTER_DECLINED : NotificationEvent.BID_DECLINED,
+    dedupeKey: `bid-declined:${updated.id}`,
+    headline: updated.kind === "COUNTER" ? "Your counter was declined." : "Your bid was declined.",
+    detail: Number.isFinite(amount) ? `${amount.toFixed(2)} ${updated.currency}` : null,
+    suppress: args.suppressNotifications,
+  });
+
+  return updated;
 }
 
 export async function withdrawLoadBid(args: { bidId: string; carrierCompanyId: string }) {

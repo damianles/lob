@@ -1,7 +1,8 @@
-import { LoadBidKind, LoadBidStatus, LoadRateMode, LoadStatus, Prisma } from "@prisma/client";
+import { LoadBidKind, LoadBidStatus, LoadRateMode, LoadStatus, NotificationEvent, Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 
 import { queueBookedCarrierChangeNotices } from "@/lib/load-change-notices";
+import { enqueueLoadNotification } from "@/lib/notifications/dispatch";
 import { extractLumberSpec, lumberSpecToLoadColumns } from "@/lib/lumber-spec";
 import { validateRateBand } from "@/lib/market-rate-lane";
 import { parseRequestedPickupAt } from "@/lib/parse-pickup-date";
@@ -254,13 +255,41 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ loadId: strin
     return { row, noticesQueued };
   });
 
+  if (load.booking?.carrierCompanyId && load.status !== LoadStatus.POSTED) {
+    const keys = Object.keys(changes);
+    const dateKeys = keys.filter((key) => key === "requestedPickupAt" || key === "requestedDeliveryAt");
+    const otherKeys = keys.filter((key) => key !== "requestedPickupAt" && key !== "requestedDeliveryAt");
+    const stamp = Buffer.from(JSON.stringify(changes)).toString("base64url").slice(0, 40);
+    const suppress = actor.simulated;
+    if (dateKeys.length > 0) {
+      enqueueLoadNotification({
+        loadId: load.id,
+        to: "carrier",
+        event: NotificationEvent.SUPPLIER_DATES_CHANGED,
+        dedupeKey: `supplier-dates:${load.id}:${stamp}`,
+        headline: "Supplier changed the dates.",
+        suppress,
+      });
+    }
+    if (otherKeys.length > 0) {
+      enqueueLoadNotification({
+        loadId: load.id,
+        to: "carrier",
+        event: NotificationEvent.LOAD_DETAILS_CHANGED,
+        dedupeKey: `load-details:${load.id}:${stamp}`,
+        headline: "Supplier changed the load.",
+        detail: payload.changeSummary?.trim() || null,
+        suppress,
+      });
+    }
+  }
+
   return NextResponse.json({
     data: updated.row,
     noticesQueued: updated.noticesQueued,
-    emailDelivery: "deferred",
     message:
       updated.noticesQueued > 0
-        ? "Load updated. Carrier notice queued (email sending deferred — visible on carrier profile / notice log)."
+        ? "Load updated. The carrier is notified in the app, and by email if that alert is on."
         : "Load updated.",
   });
 }

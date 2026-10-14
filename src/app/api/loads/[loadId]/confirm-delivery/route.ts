@@ -25,7 +25,7 @@ export async function POST(_req: Request, ctx: { params: Promise<{ loadId: strin
   }
 
   try {
-    const updated = await confirmLoadDeliveryByLoadId(loadId);
+    const updated = await confirmLoadDeliveryByLoadId(loadId, { suppressNotifications: actor.simulated });
     return NextResponse.json({ data: updated });
   } catch (e) {
     if (e instanceof DeliveryConfirmError) {

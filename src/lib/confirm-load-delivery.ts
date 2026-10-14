@@ -1,5 +1,6 @@
-import { DispatchLinkStatus, LoadStatus, type Prisma } from "@prisma/client";
+import { DispatchLinkStatus, LoadStatus, NotificationEvent, type Prisma } from "@prisma/client";
 
+import { enqueueLoadNotification } from "@/lib/notifications/dispatch";
 import { prisma } from "@/lib/prisma";
 
 type DispatchWithLoad = Prisma.DispatchLinkGetPayload<{ include: { load: true } }>;
@@ -44,7 +45,7 @@ async function loadDispatch(loadId: string) {
 }
 
 /** Carrier check-in: marks deliveredAt and closes the load as DELIVERED. */
-export async function confirmLoadDeliveryByLoadId(loadId: string) {
+export async function confirmLoadDeliveryByLoadId(loadId: string, opts?: { suppressNotifications?: boolean }) {
   const dispatchLink = await loadDispatch(loadId);
   assertDispatchPresent(dispatchLink);
   await assertNotExpired(dispatchLink!);
@@ -52,12 +53,15 @@ export async function confirmLoadDeliveryByLoadId(loadId: string) {
   if (!dispatchLink!.pickupConfirmedAt) {
     throw new DeliveryConfirmError("Pickup must be confirmed before delivery.", 409);
   }
+  if (!dispatchLink!.signedBolFileUrl?.trim()) {
+    throw new DeliveryConfirmError("Upload the signed BOL before marking delivered.", 409);
+  }
   if (dispatchLink!.deliveredAt) {
     throw new DeliveryConfirmError("Carrier delivery is already confirmed for this load.", 409);
   }
 
   const now = new Date();
-  return prisma.$transaction(async (tx) => {
+  const updated = await prisma.$transaction(async (tx) => {
     await tx.dispatchLink.update({
       where: { id: dispatchLink!.id },
       data: {
@@ -76,23 +80,40 @@ export async function confirmLoadDeliveryByLoadId(loadId: string) {
       include: { load: true, podDocument: true },
     });
   });
+
+  enqueueLoadNotification({
+    loadId,
+    to: "shipper",
+    event: NotificationEvent.LOAD_DELIVERED,
+    dedupeKey: `carrier-delivered:${loadId}`,
+    headline: "Carrier marked the load delivered.",
+    suppress: opts?.suppressNotifications,
+  });
+
+  return updated;
 }
 
 /** Supplier check-off: records supplierDeliveredAt. Also marks load DELIVERED if carrier has not yet. */
-export async function confirmSupplierDeliveryByLoadId(loadId: string) {
+export async function confirmSupplierDeliveryByLoadId(loadId: string, opts?: { suppressNotifications?: boolean }) {
   const dispatchLink = await loadDispatch(loadId);
   assertDispatchPresent(dispatchLink);
   await assertNotExpired(dispatchLink!);
 
   if (!dispatchLink!.pickupConfirmedAt) {
-    throw new DeliveryConfirmError("Pickup must be confirmed before you can confirm delivery.", 409);
+    throw new DeliveryConfirmError("Pickup must be confirmed before you can confirm the load complete.", 409);
+  }
+  if (!dispatchLink!.deliveredAt) {
+    throw new DeliveryConfirmError(
+      "Wait until the carrier marks delivered (with signed BOL) before confirming complete.",
+      409,
+    );
   }
   if (dispatchLink!.supplierDeliveredAt) {
-    throw new DeliveryConfirmError("You already confirmed delivery for this load.", 409);
+    throw new DeliveryConfirmError("You already confirmed this load complete.", 409);
   }
 
   const now = new Date();
-  return prisma.$transaction(async (tx) => {
+  const updated = await prisma.$transaction(async (tx) => {
     await tx.dispatchLink.update({
       where: { id: dispatchLink!.id },
       data: {
@@ -113,6 +134,17 @@ export async function confirmSupplierDeliveryByLoadId(loadId: string) {
       include: { load: true, podDocument: true },
     });
   });
+
+  enqueueLoadNotification({
+    loadId,
+    to: "carrier",
+    event: NotificationEvent.DELIVERY_CONFIRMED,
+    dedupeKey: `supplier-delivered:${loadId}`,
+    headline: "Supplier confirmed delivery.",
+    suppress: opts?.suppressNotifications,
+  });
+
+  return updated;
 }
 
 export function isShipmentMutuallyComplete(dispatch: {

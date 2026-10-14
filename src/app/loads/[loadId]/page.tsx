@@ -20,6 +20,7 @@ import { Breadcrumb } from "@/components/ui/breadcrumb";
 import { LobBrandStrip } from "@/components/lob-brand-strip";
 import { LobSidebar } from "@/components/lob-sidebar";
 import { LoadTimeline } from "@/components/load-timeline";
+import { LoadNeedsRepostActions } from "@/components/load-needs-repost-actions";
 import { ShipmentLiveStages } from "@/components/shipment-live-stages";
 import { SupplierConfirmDelivery } from "@/components/supplier-confirm-delivery";
 import { isShipmentMutuallyComplete } from "@/lib/confirm-load-delivery";
@@ -353,10 +354,25 @@ async function renderLoadDetailPage({ params }: { params: Promise<{ loadId: stri
               </p>
             ) : null}
 
+            {load.status === LoadStatus.NEEDS_REPOST && isShipperOwner && (
+              <LoadNeedsRepostActions
+                loadId={load.id}
+                referenceNumber={load.referenceNumber}
+                rateMode={load.rateMode}
+                bidCycleCount={load.bidCycleCount}
+              />
+            )}
+
             <div className="mt-4 flex flex-wrap gap-4 rounded-lg border border-zinc-200 bg-white p-4 text-sm">
               <div>
                 <p className="text-xs font-semibold uppercase text-zinc-500">Status</p>
-                <p className="mt-1 font-semibold text-zinc-900">{displayLoadStatus(load.status)}</p>
+                <p
+                  className={`mt-1 font-semibold ${
+                    load.status === LoadStatus.NEEDS_REPOST ? "text-amber-950" : "text-zinc-900"
+                  }`}
+                >
+                  {displayLoadStatus(load.status)}
+                </p>
               </div>
               <div>
                 <p className="text-xs font-semibold uppercase text-zinc-500">Rate</p>
@@ -594,8 +610,11 @@ async function renderLoadDetailPage({ params }: { params: Promise<{ loadId: stri
             <div className="mt-6">
               <h2 className="text-sm font-semibold text-zinc-900">Shipment progress</h2>
               <p className="mt-1 text-xs text-zinc-500">
-                Live stages: post → book → picked up → carrier delivered → supplier confirmed. Mutual close unlocks the
-                completion invoice.
+                {load.status === LoadStatus.NEEDS_REPOST
+                  ? "This load is off the board until you repost or unlist."
+                  : !load.booking
+                    ? "Posted and waiting for a carrier to book (or for you to accept a bid)."
+                    : "Booked → picked up → signed BOL → carrier delivered → supplier confirms complete."}
               </p>
               {(isShipperOwner || isRealAdmin || isBookedCarrier) && (
                 <div className="mt-3">
@@ -606,6 +625,7 @@ async function renderLoadDetailPage({ params }: { params: Promise<{ loadId: stri
                     deliveredAt={load.dispatchLink?.deliveredAt?.toISOString() ?? null}
                     supplierDeliveredAt={load.dispatchLink?.supplierDeliveredAt?.toISOString() ?? null}
                     cancelled={load.status === LoadStatus.CANCELLED}
+                    needsRepost={load.status === LoadStatus.NEEDS_REPOST}
                   />
                 </div>
               )}

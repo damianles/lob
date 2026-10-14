@@ -1,9 +1,10 @@
-import { LoadBidKind, LoadBidStatus, LoadRateMode, LoadStatus, VerificationStatus } from "@prisma/client";
+import { LoadBidKind, LoadBidStatus, LoadRateMode, LoadStatus, NotificationEvent, VerificationStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 
 import { BID_ACCEPT_HOURS } from "@/lib/board-visibility";
 import { carrierMayViewPostedLoad } from "@/lib/carrier-load-access";
 import { expireStaleBids, LoadBidError } from "@/lib/load-bids";
+import { enqueueLoadNotification } from "@/lib/notifications/dispatch";
 import { computeBidAcceptExpiresAt } from "@/lib/load-lifecycle";
 import { validateRateBand } from "@/lib/market-rate-lane";
 import { prisma } from "@/lib/prisma";
@@ -196,6 +197,17 @@ export async function POST(req: Request, ctx: { params: Promise<{ loadId: string
             ...data,
           },
         });
+
+    const amount = Number(row.amountUsd);
+    enqueueLoadNotification({
+      loadId,
+      to: "shipper",
+      event: isCounter ? NotificationEvent.COUNTER_SUBMITTED : NotificationEvent.BID_SUBMITTED,
+      dedupeKey: `bid-submitted:${row.id}:${row.updatedAt.toISOString()}`,
+      headline: isCounter ? "A carrier submitted a counter." : "A carrier submitted a bid.",
+      detail: Number.isFinite(amount) ? `${amount.toFixed(2)} ${row.currency}` : null,
+      suppress: actor.simulated,
+    });
 
     return NextResponse.json(
       { data: { ...row, amountUsd: Number(row.amountUsd) } },

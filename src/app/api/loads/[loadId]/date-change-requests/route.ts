@@ -1,8 +1,9 @@
-import { DateChangeRequestStatus, LoadStatus } from "@prisma/client";
+import { DateChangeRequestStatus, LoadStatus, NotificationEvent } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { queueBookedCarrierChangeNotices } from "@/lib/load-change-notices";
+import { enqueueLoadNotification } from "@/lib/notifications/dispatch";
 import { parseRequestedPickupAt } from "@/lib/parse-pickup-date";
 import { prisma } from "@/lib/prisma";
 import { getActorContext } from "@/lib/request-context";
@@ -122,6 +123,16 @@ export async function POST(req: Request, ctx: { params: Promise<{ loadId: string
     },
   });
 
+  enqueueLoadNotification({
+    loadId,
+    to: "shipper",
+    event: NotificationEvent.DATE_CHANGE_REQUESTED,
+    dedupeKey: `date-request:${row.id}`,
+    headline: "A carrier requested a date change.",
+    detail: parsed.data.note?.trim() || null,
+    suppress: actor.simulated,
+  });
+
   return NextResponse.json({ data: row }, { status: 201 });
 }
 
@@ -179,6 +190,15 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ loadId: strin
         reviewNote: parsed.data.reviewNote?.trim() || null,
       },
     });
+    enqueueLoadNotification({
+      loadId,
+      to: "carrier",
+      event: NotificationEvent.DATE_CHANGE_DECLINED,
+      dedupeKey: `date-declined:${request.id}`,
+      headline: "Date change declined.",
+      detail: parsed.data.reviewNote?.trim() || null,
+      suppress: actor.simulated,
+    });
     return NextResponse.json({ data: updated });
   }
 
@@ -218,5 +238,15 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ loadId: strin
     return updatedReq;
   });
 
-  return NextResponse.json({ data: result, message: "Dates updated and carrier notice queued." });
+  enqueueLoadNotification({
+    loadId,
+    to: "carrier",
+    event: NotificationEvent.DATE_CHANGE_APPROVED,
+    dedupeKey: `date-approved:${request.id}`,
+    headline: "Date change approved.",
+    detail: parsed.data.reviewNote?.trim() || null,
+    suppress: actor.simulated,
+  });
+
+  return NextResponse.json({ data: result, message: "Dates updated. The carrier is notified in the app, and by email if that alert is on." });
 }

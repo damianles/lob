@@ -181,7 +181,7 @@ export function CompletionInvoicePrint({
               </a>
             </p>
           ) : (
-            <p className="mt-3 text-xs text-amber-900">No signed BOL on file yet. Carrier should attach it on the load.</p>
+            <p className="mt-3 text-xs text-amber-900">Signed BOL missing (should have been required before delivery).</p>
           )}
         </section>
 

@@ -14,8 +14,7 @@ function laneLabel(load: {
 }
 
 /**
- * Notify the mill and (if booked) the carrier that a load was cancelled.
- * Email copies are stored PENDING — no SMTP send.
+ * In-app notice for the mill and (if booked) the carrier that a load was cancelled.
  */
 export async function queueLoadCancellationNotices(
   db: Db,

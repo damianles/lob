@@ -1,7 +1,8 @@
-import { LoadStatus } from "@prisma/client";
+import { LoadStatus, NotificationEvent } from "@prisma/client";
 import { NextResponse } from "next/server";
 
 import { queueLoadCancellationNotices } from "@/lib/load-cancellation-notices";
+import { enqueueLoadNotification } from "@/lib/notifications/dispatch";
 import { prisma } from "@/lib/prisma";
 import { getActorContext } from "@/lib/request-context";
 import { isSupplierActor } from "@/lib/simulated-actor-company";
@@ -14,7 +15,7 @@ const CANCELLABLE: LoadStatus[] = [
 
 /**
  * Supplier cancels their own load (POSTED / BOOKED / ASSIGNED only).
- * Queues in-app notices for the mill and booked carrier; EMAIL rows stay pending.
+ * Queues in-app notices. Email follows each company's alert settings.
  */
 export async function POST(_req: Request, ctx: { params: Promise<{ loadId: string }> }) {
   const { loadId } = await ctx.params;
@@ -74,6 +75,28 @@ export async function POST(_req: Request, ctx: { params: Promise<{ loadId: strin
     await queueLoadCancellationNotices(tx, load);
     return row;
   });
+
+  const suppress = actor.simulated;
+  enqueueLoadNotification({
+    loadId: load.id,
+    to: "shipper",
+    event: NotificationEvent.LOAD_CANCELLED,
+    dedupeKey: `load-cancelled:shipper:${load.id}`,
+    headline: "A load was cancelled.",
+    excludeUserId: actor.userId,
+    suppress,
+  });
+  if (load.booking?.carrierCompanyId) {
+    enqueueLoadNotification({
+      loadId: load.id,
+      to: "carrier",
+      carrierCompanyId: load.booking.carrierCompanyId,
+      event: NotificationEvent.LOAD_CANCELLED,
+      dedupeKey: `load-cancelled:carrier:${load.id}`,
+      headline: "A booked load was cancelled.",
+      suppress,
+    });
+  }
 
   return NextResponse.json({ data: updated });
 }

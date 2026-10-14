@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { DocumentUploadField } from "@/components/document-upload-field";
 import { Button } from "@/components/ui/button";
@@ -28,8 +28,17 @@ export function CarrierShipmentCheckIn({
   const [busy, setBusy] = useState<"pickup" | "delivery" | "bol" | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [bolUrl, setBolUrl] = useState(signedBolFileUrl ?? "");
+  const bolOnFile = Boolean(signedBolFileUrl?.trim());
+
+  useEffect(() => {
+    setBolUrl(signedBolFileUrl ?? "");
+  }, [signedBolFileUrl]);
 
   async function post(path: "confirm-pickup" | "confirm-delivery", kind: "pickup" | "delivery") {
+    if (kind === "delivery" && !bolOnFile) {
+      setMessage("Upload the signed BOL before marking delivered.");
+      return;
+    }
     setBusy(kind);
     setMessage(null);
     const res = await fetch(`/api/loads/${loadId}/${path}`, { method: "POST" });
@@ -61,7 +70,7 @@ export function CarrierShipmentCheckIn({
       setMessage(typeof data.error === "string" ? data.error : "Could not save signed BOL.");
       return;
     }
-    setMessage("Signed BOL saved.");
+    setMessage("Signed BOL saved. You can mark delivered.");
     router.refresh();
   }
 
@@ -70,8 +79,8 @@ export function CarrierShipmentCheckIn({
       <div className="rounded-lg border border-stone-200 bg-white p-4">
         <h2 className="text-sm font-semibold text-zinc-900">Carrier check-in</h2>
         <p className="mt-1 text-xs text-zinc-600">
-          Mark pickup when the truck leaves origin, then delivery when the load arrives. The supplier confirms delivery
-          on their side for mutual close.
+          1) Mark picked up. 2) Upload the signed BOL. 3) Mark delivered. The supplier then confirms the load is
+          complete.
         </p>
         {message ? <p className="mt-2 text-sm text-zinc-700">{message}</p> : null}
         <div className="mt-3 flex flex-wrap gap-2">
@@ -94,25 +103,28 @@ export function CarrierShipmentCheckIn({
             <Button
               type="button"
               size="sm"
-              disabled={busy != null}
+              disabled={busy != null || !bolOnFile}
               isLoading={busy === "delivery"}
               onClick={() => void post("confirm-delivery", "delivery")}
             >
               Mark delivered
             </Button>
           ) : null}
+          {pickupConfirmedAt && !deliveredAt && !bolOnFile ? (
+            <p className="w-full text-xs text-amber-900">Signed BOL required before you can mark delivered.</p>
+          ) : null}
           {deliveredAt ? (
             <p className="w-full text-xs font-medium text-emerald-800">
               You marked delivered {deliveredAt.toLocaleString()}
               {supplierDeliveredAt
-                ? ` · Supplier confirmed ${supplierDeliveredAt.toLocaleString()}`
-                : " · Waiting on supplier confirmation"}
+                ? ` · Supplier confirmed complete ${supplierDeliveredAt.toLocaleString()}`
+                : " · Waiting on supplier to confirm complete"}
             </p>
           ) : null}
         </div>
         {mutualComplete ? (
           <p className="mt-3 text-xs">
-            Mutual close complete.{" "}
+            Load complete.{" "}
             <Link href={`/loads/${loadId}/invoice`} className="font-semibold text-lob-navy underline">
               Open completion invoice
             </Link>
@@ -122,9 +134,10 @@ export function CarrierShipmentCheckIn({
 
       {pickupConfirmedAt ? (
         <div className="rounded-lg border border-stone-200 bg-white p-4">
-          <h2 className="text-sm font-semibold text-zinc-900">Signed BOL</h2>
+          <h2 className="text-sm font-semibold text-zinc-900">Signed BOL (required)</h2>
           <p className="mt-1 text-xs text-zinc-600">
-            Attach the signed bill of lading (PDF or photo). It appears on the completion invoice after mutual close.
+            Upload the signed bill of lading (PDF or photo) before marking delivered. It stays on the completion
+            invoice.
           </p>
           <div className="mt-3">
             <DocumentUploadField
@@ -132,6 +145,7 @@ export function CarrierShipmentCheckIn({
               kind="SIGNED_BOL"
               value={bolUrl}
               onChange={setBolUrl}
+              required
               helpText="Upload if Blob storage is enabled, or paste an https link."
             />
           </div>
@@ -143,7 +157,7 @@ export function CarrierShipmentCheckIn({
             isLoading={busy === "bol"}
             onClick={() => void saveBol()}
           >
-            {signedBolFileUrl ? "Update signed BOL" : "Save signed BOL"}
+            {bolOnFile ? "Update signed BOL" : "Save signed BOL"}
           </Button>
           {signedBolFileUrl ? (
             <p className="mt-2 text-xs text-emerald-800">

@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { LoadBidStatus, LoadRateMode, LoadStatus, OfferCurrency, VerificationStatus } from "@prisma/client";
+import { LoadBidStatus, LoadRateMode, LoadStatus, NotificationEvent, OfferCurrency, VerificationStatus } from "@prisma/client";
 
 import { carrierMayViewPostedLoad } from "@/lib/carrier-load-access";
+import { enqueueLoadNotification } from "@/lib/notifications/dispatch";
 import { prisma } from "@/lib/prisma";
 import { TAKE_IT_LABEL } from "@/lib/rate-mode";
 import { getActorContext } from "@/lib/request-context";
@@ -104,6 +105,11 @@ export async function POST(
       throw new Error("LOAD_NOT_POSTED");
     }
 
+    const pendingBids = await tx.loadBid.findMany({
+      where: { loadId, status: LoadBidStatus.PENDING },
+      select: { id: true, carrierCompanyId: true, kind: true },
+    });
+
     const newBooking = await tx.booking.create({
       data: {
         loadId,
@@ -133,7 +139,7 @@ export async function POST(
       },
     });
 
-    return newBooking;
+    return { booking: newBooking, declinedBids: pendingBids };
   }).catch((e: unknown) => {
     if (e instanceof Error && e.message === "LOAD_NOT_POSTED") return null;
     throw e;
@@ -143,5 +149,41 @@ export async function POST(
     return NextResponse.json({ error: "This load is no longer posted." }, { status: 409 });
   }
 
-  return NextResponse.json({ data: booking }, { status: 201 });
+  const rate = Number(load.offeredRateUsd);
+  const money = Number.isFinite(rate) ? `${rate.toFixed(2)} ${agreedCurrency}` : null;
+  const suppress = actor.simulated;
+  enqueueLoadNotification({
+    loadId,
+    to: "shipper",
+    event: NotificationEvent.LOAD_BOOKED,
+    dedupeKey: `load-booked:shipper:${loadId}`,
+    headline: "A carrier booked your load.",
+    detail: money,
+    suppress,
+  });
+  enqueueLoadNotification({
+    loadId,
+    to: "carrier",
+    carrierCompanyId,
+    event: NotificationEvent.LOAD_BOOKED,
+    dedupeKey: `load-booked:carrier:${loadId}`,
+    headline: "Your company booked a load.",
+    detail: money,
+    excludeUserId: actor.userId,
+    suppress,
+  });
+  for (const bid of booking.declinedBids) {
+    if (bid.carrierCompanyId === carrierCompanyId) continue;
+    enqueueLoadNotification({
+      loadId,
+      to: "carrier",
+      carrierCompanyId: bid.carrierCompanyId,
+      event: bid.kind === "COUNTER" ? NotificationEvent.COUNTER_DECLINED : NotificationEvent.BID_DECLINED,
+      dedupeKey: `bid-declined:${bid.id}`,
+      headline: bid.kind === "COUNTER" ? "Your counter was declined." : "Your bid was declined.",
+      suppress,
+    });
+  }
+
+  return NextResponse.json({ data: booking.booking }, { status: 201 });
 }

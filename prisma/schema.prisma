@@ -240,6 +240,8 @@ model Company {
   legalAcceptances      LegalAcceptance[]
   creditReviewsGiven    CreditFileReview[]        @relation("CreditReviewer")
   creditReviewsReceived CreditFileReview[]        @relation("CreditSubject")
+  notificationContacts  NotificationContact[]
+  notificationDeliveries NotificationDelivery[]
 }
 
 /**
@@ -320,6 +322,7 @@ model User {
   loadBidsSubmitted   LoadBid[]               @relation("LoadBidSubmitter")
   loadBidsReviewed    LoadBid[]               @relation("LoadBidReviewer")
   shipperLoadAlerts   ShipperLoadAlert[]      @relation("ShipperAlertRecipient")
+  notificationContact NotificationContact?
   capacityInterestsCreated CapacityInterest[] @relation("CapacityInterestCreator")
   capacityInterestsReviewed CapacityInterest[] @relation("CapacityInterestReviewer")
   legalAcceptances     LegalAcceptance[]
@@ -634,8 +637,8 @@ model LoadCarrierTier {
 }
 
 /**
- * In-app / email-pending notice when a booked load changes (edit, date approve, etc.).
- * Email delivery is deferred (Outlook/manual for now); rows stay PENDING for EMAIL.
+ * In-app notice when a booked load changes (edit, date approve, etc.).
+ * Outbound email is NotificationContact, not these rows.
  */
 model LoadChangeNotice {
   id                 String            @id @default(cuid())
@@ -945,4 +948,94 @@ model CapacityInterest {
 model LoadRefCounter {
   id    String @id @default("global")
   next  Int    @default(1000)
+}
+
+enum NotificationEvent {
+  LOAD_CANCELLED
+  DATE_CHANGE_REQUESTED
+  DATE_CHANGE_APPROVED
+  DATE_CHANGE_DECLINED
+  BID_SUBMITTED
+  BID_ACCEPTED
+  BID_DECLINED
+  COUNTER_SUBMITTED
+  COUNTER_ACCEPTED
+  COUNTER_DECLINED
+  LOAD_BOOKED
+  LOAD_PICKED_UP
+  LOAD_DELIVERED
+  SUPPLIER_DATES_CHANGED
+  DELIVERY_CONFIRMED
+  FIRM_RATE_EXPIRED
+  BID_WINDOW_ENDED
+  LOAD_REMOVED
+  ACCOUNT_APPROVED
+  ACCOUNT_NEEDS_ATTENTION
+  BID_EXPIRED
+  LOAD_DETAILS_CHANGED
+  INSURANCE_EXPIRING
+}
+
+enum NotificationDeliveryStatus {
+  SENT
+  FAILED
+}
+
+/**
+ * An address that can receive load alerts for one company.
+ * Signup emails (userId set) are confirmed. Extra addresses stay unconfirmed until the link is clicked.
+ */
+model NotificationContact {
+  id               String    @id @default(cuid())
+  companyId        String
+  email            String
+  userId           String?   @unique
+  confirmedAt      DateTime?
+  confirmTokenHash String?   @unique
+  confirmExpiresAt DateTime?
+  confirmSentAt    DateTime?
+  mutedAt          DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  company      Company                  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user         User?                    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  preferences  NotificationPreference[]
+  deliveries   NotificationDelivery[]
+
+  @@unique([companyId, email])
+  @@index([companyId])
+}
+
+model NotificationPreference {
+  id        String            @id @default(cuid())
+  contactId String
+  event     NotificationEvent
+  enabled   Boolean
+
+  contact NotificationContact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([contactId, event])
+  @@index([event, enabled])
+}
+
+model NotificationDelivery {
+  id         String                     @id @default(cuid())
+  companyId  String
+  contactId  String?
+  event      NotificationEvent
+  loadId     String?
+  toEmail    String
+  subject    String
+  status     NotificationDeliveryStatus
+  providerId String?
+  error      String?
+  dedupeKey  String                     @unique
+  createdAt  DateTime                   @default(now())
+
+  company Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  contact NotificationContact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  @@index([companyId, createdAt])
+  @@index([loadId])
 }

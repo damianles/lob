@@ -29,31 +29,36 @@ export function SupplierConfirmDelivery({
     const data = await res.json().catch(() => ({}));
     setBusy(false);
     if (!res.ok) {
-      setMessage(typeof data.error === "string" ? data.error : "Could not confirm delivery.");
+      setMessage(typeof data.error === "string" ? data.error : "Could not confirm load complete.");
       return;
     }
-    setMessage("Delivery confirmed on your side.");
+    setMessage("Load marked complete on your side.");
     router.refresh();
   }
 
   if (supplierDeliveredAt) {
     return (
       <section className="mt-6 rounded-lg border border-emerald-200 bg-emerald-50/80 p-4">
-        <h2 className="text-sm font-semibold text-emerald-900">You confirmed delivery</h2>
+        <h2 className="text-sm font-semibold text-emerald-900">You confirmed load complete</h2>
         <p className="mt-1 text-xs text-emerald-800">
           {referenceNumber} · {supplierDeliveredAt.toLocaleString()}
-          {!carrierDeliveredAt ? " · Waiting on carrier check-in for mutual close" : " · Mutual close complete"}
+          {carrierDeliveredAt ? " · Mutual close complete" : ""}
         </p>
       </section>
     );
   }
 
-  if (!pickupConfirmedAt) {
+  if (!pickupConfirmedAt || !carrierDeliveredAt) {
     return (
       <section className="mt-6 rounded-lg border border-stone-200 bg-white p-4">
-        <h2 className="text-sm font-semibold text-zinc-900">Confirm delivery</h2>
+        <h2 className="text-sm font-semibold text-zinc-900">Confirm load complete</h2>
         <p className="mt-1 text-xs text-zinc-600">
-          Available after the carrier marks pickup. You and the carrier each confirm delivery for mutual close.
+          Available after the carrier marks pickup, uploads the signed BOL, and marks delivered.
+          {!pickupConfirmedAt
+            ? " Waiting on carrier pickup."
+            : !carrierDeliveredAt
+              ? " Waiting on carrier delivery + BOL."
+              : ""}
         </p>
       </section>
     );
@@ -61,17 +66,14 @@ export function SupplierConfirmDelivery({
 
   return (
     <section className="mt-6 rounded-lg border border-stone-200 bg-white p-4">
-      <h2 className="text-sm font-semibold text-zinc-900">Confirm delivery</h2>
+      <h2 className="text-sm font-semibold text-zinc-900">Confirm load complete</h2>
       <p className="mt-1 text-xs text-zinc-600">
-        Check off when this load is delivered. When both you and the carrier confirm, the carrier can open the
-        completion invoice.
-        {carrierDeliveredAt
-          ? ` Carrier checked in ${carrierDeliveredAt.toLocaleString()}.`
-          : " Carrier has not checked in yet."}
+        Carrier marked delivered {carrierDeliveredAt.toLocaleString()}. Confirm when the load is complete on your side.
+        That unlocks the completion invoice for the carrier.
       </p>
       {message ? <p className="mt-2 text-sm text-zinc-700">{message}</p> : null}
       <Button type="button" size="sm" className="mt-3" disabled={busy} isLoading={busy} onClick={() => void confirm()}>
-        Mark delivered
+        Confirm load complete
       </Button>
     </section>
   );

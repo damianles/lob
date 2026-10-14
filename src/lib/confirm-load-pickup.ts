@@ -1,5 +1,6 @@
-import { DispatchLinkStatus, LoadStatus, type Prisma } from "@prisma/client";
+import { DispatchLinkStatus, LoadStatus, NotificationEvent, type Prisma } from "@prisma/client";
 
+import { enqueueLoadNotification } from "@/lib/notifications/dispatch";
 import { prisma } from "@/lib/prisma";
 
 type DispatchWithLoad = Prisma.DispatchLinkGetPayload<{ include: { load: true } }>;
@@ -41,7 +42,7 @@ export async function confirmLoadPickupByToken(token: string) {
   return confirmLoadPickupTransaction(dispatchLink!.id);
 }
 
-export async function confirmLoadPickupByLoadId(loadId: string) {
+export async function confirmLoadPickupByLoadId(loadId: string, opts?: { suppressNotifications?: boolean }) {
   const dispatchLink = await prisma.dispatchLink.findUnique({
     where: { loadId },
     include: { load: true },
@@ -49,22 +50,33 @@ export async function confirmLoadPickupByLoadId(loadId: string) {
 
   await assertDispatchReady(dispatchLink);
 
-  return confirmLoadPickupTransaction(dispatchLink!.id);
+  return confirmLoadPickupTransaction(dispatchLink!.id, opts);
 }
 
-async function confirmLoadPickupTransaction(dispatchLinkId: string) {
-  return prisma.$transaction(async (tx) => {
-    const link = await tx.dispatchLink.update({
+async function confirmLoadPickupTransaction(dispatchLinkId: string, opts?: { suppressNotifications?: boolean }) {
+  const link = await prisma.$transaction(async (tx) => {
+    const updated = await tx.dispatchLink.update({
       where: { id: dispatchLinkId },
       data: { pickupConfirmedAt: new Date() },
       include: { load: true },
     });
 
     await tx.load.update({
-      where: { id: link.loadId },
+      where: { id: updated.loadId },
       data: { status: LoadStatus.IN_TRANSIT },
     });
 
-    return link;
+    return updated;
   });
+
+  enqueueLoadNotification({
+    loadId: link.loadId,
+    to: "shipper",
+    event: NotificationEvent.LOAD_PICKED_UP,
+    dedupeKey: `pickup:${link.loadId}`,
+    headline: "Load picked up.",
+    suppress: opts?.suppressNotifications,
+  });
+
+  return link;
 }

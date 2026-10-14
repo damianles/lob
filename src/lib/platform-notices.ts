@@ -3,7 +3,7 @@ import { LoadNoticeChannel, LoadNoticeStatus, type Prisma } from "@prisma/client
 type Db = Prisma.TransactionClient | import("@prisma/client").PrismaClient;
 
 /**
- * Supplier in-app notice (delivered) plus an EMAIL row left PENDING until outbound mail is live.
+ * Supplier in-app notice. Email is sent separately from notification preferences.
  */
 export async function queueShipperLoadAlerts(
   db: Db,
@@ -35,23 +35,11 @@ export async function queueShipperLoadAlerts(
         status: LoadNoticeStatus.DELIVERED,
       },
     });
-    await db.shipperLoadAlert.create({
-      data: {
-        loadId: args.loadId,
-        companyId: args.companyId,
-        recipientUserId,
-        kind: args.kind,
-        title: args.title,
-        body: args.body,
-        channel: LoadNoticeChannel.EMAIL,
-        status: LoadNoticeStatus.PENDING,
-      },
-    });
   }
 }
 
 /**
- * Carrier notices for a booked load: IN_APP now, EMAIL queued for later SMTP.
+ * Carrier in-app notice for a booked load. Email is sent separately from notification preferences.
  */
 export async function queueCarrierLoadNotices(
   db: Db,
@@ -75,8 +63,8 @@ export async function queueCarrierLoadNotices(
       : [{ recipientUserId: null as string | null, recipientEmail: null as string | null }];
 
   const changes = args.changes as Prisma.InputJsonValue | undefined;
-  const rows = recipients.flatMap((r) => [
-    {
+  await db.loadChangeNotice.createMany({
+    data: recipients.map((r) => ({
       loadId: args.loadId,
       carrierCompanyId: args.carrierCompanyId,
       recipientUserId: r.recipientUserId,
@@ -86,20 +74,7 @@ export async function queueCarrierLoadNotices(
       changes,
       channel: LoadNoticeChannel.IN_APP,
       status: LoadNoticeStatus.DELIVERED,
-    },
-    {
-      loadId: args.loadId,
-      carrierCompanyId: args.carrierCompanyId,
-      recipientUserId: r.recipientUserId,
-      recipientEmail: r.recipientEmail,
-      title: args.title,
-      summary: args.summary,
-      changes,
-      channel: LoadNoticeChannel.EMAIL,
-      status: LoadNoticeStatus.PENDING,
-    },
-  ]);
-
-  await db.loadChangeNotice.createMany({ data: rows });
+    })),
+  });
   return { queued: recipients.length };
 }

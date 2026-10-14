@@ -3,6 +3,7 @@ import {
   LoadNoticeStatus,
   LoadRateMode,
   LoadStatus,
+  NotificationEvent,
   PostedLaneOutcome,
   type Prisma,
 } from "@prisma/client";
@@ -10,6 +11,7 @@ import {
 import { BID_ACCEPT_HOURS, MAX_BID_WINDOW_HOURS, MAX_OPEN_BID_CYCLES, boardCutoffForRateMode } from "@/lib/board-visibility";
 import { prisma } from "@/lib/prisma";
 import { parseRequestedPickupAt } from "@/lib/parse-pickup-date";
+import { enqueueExpiredBidNotices, enqueueInsuranceExpiryNotices, enqueueLoadNotification } from "@/lib/notifications/dispatch";
 import { queueShipperLoadAlerts } from "@/lib/platform-notices";
 
 export class LoadLifecycleError extends Error {
@@ -71,6 +73,15 @@ export async function sweepExpiredFirmRates(tx?: Prisma.TransactionClient) {
       title: `Repost needed: ${load.referenceNumber}`,
       body: `${load.referenceNumber} (${load.originCity} → ${load.destinationCity}) is 7+ days past pickup and is off the board. Accept to set new future dates, or decline to unlist it.`,
     });
+    if (!tx) {
+      enqueueLoadNotification({
+        loadId: load.id,
+        to: "shipper",
+        event: NotificationEvent.FIRM_RATE_EXPIRED,
+        dedupeKey: `firm-expired:${load.id}`,
+        headline: "Firm Rate load needs a repost.",
+      });
+    }
   }
 
   return stale.length;
@@ -104,6 +115,20 @@ export async function sweepExpiredBidWindows(tx?: Prisma.TransactionClient) {
   });
 
   for (const load of expired) {
+    const pendingBids = tx
+      ? []
+      : await db.loadBid.findMany({
+          where: { loadId: load.id, status: "PENDING" },
+          select: {
+            id: true,
+            loadId: true,
+            carrierCompanyId: true,
+            kind: true,
+            amountUsd: true,
+            currency: true,
+          },
+        });
+
     if (load.bidCycleCount >= MAX_OPEN_BID_CYCLES) {
       await db.load.update({
         where: { id: load.id },
@@ -125,6 +150,16 @@ export async function sweepExpiredBidWindows(tx?: Prisma.TransactionClient) {
         title: `Removed after 2 bid cycles: ${load.referenceNumber}`,
         body: `${load.referenceNumber} ran two Open Bid windows without a book and was removed from the board. History and posted price are retained.`,
       });
+      if (!tx) {
+        enqueueLoadNotification({
+          loadId: load.id,
+          to: "shipper",
+          event: NotificationEvent.LOAD_REMOVED,
+          dedupeKey: `load-removed:${load.id}`,
+          headline: "Load removed after two bid cycles.",
+        });
+        enqueueExpiredBidNotices(pendingBids);
+      }
     } else {
       await db.load.update({
         where: { id: load.id },
@@ -142,6 +177,16 @@ export async function sweepExpiredBidWindows(tx?: Prisma.TransactionClient) {
         title: `Bid window ended: ${load.referenceNumber}`,
         body: `${load.referenceNumber} Open Bid window closed (cycle ${load.bidCycleCount} of ${MAX_OPEN_BID_CYCLES}). Repost for another ${MAX_BID_WINDOW_HOURS}h cycle, or remove the load.`,
       });
+      if (!tx) {
+        enqueueLoadNotification({
+          loadId: load.id,
+          to: "shipper",
+          event: NotificationEvent.BID_WINDOW_ENDED,
+          dedupeKey: `bid-window:${load.id}:${load.bidCycleCount}`,
+          headline: "Open bid window ended.",
+        });
+        enqueueExpiredBidNotices(pendingBids);
+      }
     }
   }
 
@@ -152,6 +197,7 @@ export async function sweepExpiredBidWindows(tx?: Prisma.TransactionClient) {
 export async function sweepLoadLifecycle() {
   const firm = await sweepExpiredFirmRates();
   const bids = await sweepExpiredBidWindows();
+  await enqueueInsuranceExpiryNotices().catch((err) => console.error("[notifications] insurance", err));
   return { firm, bids };
 }
 

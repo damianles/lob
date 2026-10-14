@@ -1,6 +1,5 @@
 "use client";
 
-import { QRCodeSVG } from "qrcode.react";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -39,7 +38,7 @@ export function DriverLinkPanel({
       <h2 className="text-sm font-semibold text-zinc-900">Driver haul sheet</h2>
       <p className="mt-1 text-xs text-zinc-600">
         Send this link to {driverName} for the haul sheet (not a bill of lading). Print / Save as PDF and attach in
-        Outlook if you are emailing it. Pickup and delivery confirmation stay on the yard/receiver links above.
+        Outlook if you are emailing it. Pickup and delivery are confirmed by the carrier on this load, not by QR.
       </p>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {driverUrl ? (
@@ -54,14 +53,6 @@ export function DriverLinkPanel({
           Open haul sheet (print / PDF)
         </a>
       </div>
-      {driverUrl ? (
-        <div className="mt-4 inline-block rounded-lg border border-stone-200 bg-white p-2 text-center">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-stone-500">Haul sheet QR</p>
-          <div className="mx-auto mt-1 flex justify-center">
-            <QRCodeSVG value={driverUrl} size={120} level="M" />
-          </div>
-        </div>
-      ) : null}
     </section>
   );
 }

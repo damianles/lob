@@ -26,8 +26,8 @@ export default async function DriverHubPage() {
               <Link className="font-medium text-lob-navy underline" href="/shipments">
                 Shipments
               </Link>
-              , choose a load, create a dispatch, share the driver haul sheet, then use carrier check-in to mark picked
-              up and delivered.
+              , choose a load, create a dispatch, share the driver haul sheet, mark picked up, upload the signed BOL,
+              then mark delivered.
             </li>
             <li>
               <strong>Drivers:</strong> open the dispatch link texted or emailed by your dispatcher (path{" "}

@@ -35,7 +35,7 @@ export async function POST(_req: Request, ctx: { params: Promise<{ loadId: strin
   }
 
   try {
-    const updated = await confirmLoadPickupByLoadId(loadId);
+    const updated = await confirmLoadPickupByLoadId(loadId, { suppressNotifications: actor.simulated });
     return NextResponse.json({ data: updated });
   } catch (e) {
     if (e instanceof PickupConfirmError) {

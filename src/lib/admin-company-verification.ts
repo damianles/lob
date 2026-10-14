@@ -1,5 +1,6 @@
-import { VerificationStatus } from "@prisma/client";
+import { NotificationEvent, VerificationStatus } from "@prisma/client";
 
+import { enqueueNotice } from "@/lib/notifications/dispatch";
 import { prisma } from "@/lib/prisma";
 
 export type AdminVerificationQueue = "carrier" | "supplier";
@@ -51,6 +52,22 @@ export async function updateCompanyVerificationStatus(
     where: { id: companyId },
     data: { verificationStatus: status },
   });
+
+  if (status === VerificationStatus.APPROVED || status === VerificationStatus.REJECTED) {
+    const approved = status === VerificationStatus.APPROVED;
+    enqueueNotice({
+      companyId,
+      event: approved ? NotificationEvent.ACCOUNT_APPROVED : NotificationEvent.ACCOUNT_NEEDS_ATTENTION,
+      dedupeKey: `account:${companyId}:${status}:${updated.updatedAt.toISOString()}`,
+      subject: approved ? "Your company is approved" : "Your company was not approved",
+      headline: approved
+        ? `${updated.legalName} is approved on Lumber One Board.`
+        : `${updated.legalName} was not approved.`,
+      lines: approved
+        ? ["You can post or book loads."]
+        : ["Sign in to see what is still missing."],
+    });
+  }
 
   return { ok: true as const, data: updated };
 }

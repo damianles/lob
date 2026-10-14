@@ -93,6 +93,20 @@ export function AppNav() {
         {/* Phone: account chrome only — product pages live in the bottom tab bar. */}
         {signedIn ? <div className="min-w-0 flex-1 lg:hidden" /> : null}
         <div className="flex shrink-0 items-center justify-end gap-2 pl-2 sm:gap-3">
+          {signedIn && (viewer.kind === "SHIPPER" || viewer.kind === "CARRIER" || viewer.kind === "ADMIN") ? (
+            <Link
+              href="/settings/notifications"
+              prefetch={false}
+              className={cn(
+                "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold",
+                isCurrentPath(pathname, "/settings/notifications")
+                  ? "bg-lob-navy text-white"
+                  : "text-stone-600 hover:bg-stone-100 hover:text-lob-navy",
+              )}
+            >
+              Alerts
+            </Link>
+          ) : null}
           {signedIn && viewer.kind !== "GUEST" && (
             <span
               className={`inline-flex max-w-[10rem] shrink-0 items-center justify-center gap-1 truncate rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] ring-1 ring-inset sm:max-w-none ${accents.pillBg} ${accents.pillText} ${accents.pillRing}`}

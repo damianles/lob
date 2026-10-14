@@ -12,6 +12,7 @@ export type LobNavId =
   | "facilityDelivery"
   | "carrierProfile"
   | "carrierPrefs"
+  | "notifications"
   | "onboarding";
 
 export type LobNavItem = {
@@ -53,7 +54,7 @@ export const LOB_NAV_ITEMS: LobNavItem[] = [
     label: "Marketplace Intel",
     hint: "Internal lane & usage analysis (admin only)",
   },
-  { id: "driver", href: "/driver", label: "Driver", hint: "Dispatch links & QR for drivers" },
+  { id: "driver", href: "/driver", label: "Driver", hint: "Driver haul-sheet links (no QR)" },
   {
     id: "carrierProfile",
     href: "/carrier/compliance",
@@ -66,6 +67,12 @@ export const LOB_NAV_ITEMS: LobNavItem[] = [
     label: "Carrier Preferences",
     hint: "Exclude carriers from capacity & your loads; use with per-load tiers when posting",
   },
+  {
+    id: "notifications",
+    href: "/settings/notifications",
+    label: "Email alerts",
+    hint: "Choose which load events email the sign-up address and any extra inboxes",
+  },
   { id: "onboarding", href: "/onboarding", label: "Account Setup", hint: "Link supplier or carrier company" },
 ];
 
@@ -76,6 +83,7 @@ const CARRIER_IDS: LobNavId[] = [
   "capacity",
   "driver",
   "carrierProfile",
+  "notifications",
   "onboarding",
 ];
 
@@ -84,6 +92,7 @@ const SHIPPER_IDS: LobNavId[] = [
   "openBids",
   "capacity",
   "carrierPrefs",
+  "notifications",
   "onboarding",
 ];
 

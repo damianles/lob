@@ -26,6 +26,7 @@ export function ShipmentLiveStages({
   deliveredAt,
   supplierDeliveredAt,
   cancelled,
+  needsRepost = false,
   compact = false,
 }: {
   postedAt: string;
@@ -34,6 +35,8 @@ export function ShipmentLiveStages({
   deliveredAt: string | null;
   supplierDeliveredAt?: string | null;
   cancelled?: boolean;
+  /** Off-board until supplier accepts new dates or unlists. */
+  needsRepost?: boolean;
   compact?: boolean;
 }) {
   if (cancelled) {
@@ -44,19 +47,47 @@ export function ShipmentLiveStages({
     );
   }
 
+  if (needsRepost) {
+    const stages: Stage[] = [
+      { key: "posted", label: "Posted", done: true, at: postedAt },
+      { key: "needsRepost", label: "Needs repost", done: false, at: null },
+    ];
+    return <StageStrip stages={stages} compact={compact} />;
+  }
+
+  const isBooked = Boolean(bookedAt);
   const mutual = Boolean(deliveredAt && supplierDeliveredAt);
+
+  // Unbooked: only Posted + Awaiting booking — do not show later stages as if in flight.
+  if (!isBooked) {
+    const stages: Stage[] = [
+      { key: "posted", label: "Posted", done: true, at: postedAt },
+      { key: "booked", label: "Awaiting booking", done: false, at: null },
+    ];
+    return <StageStrip stages={stages} compact={compact} />;
+  }
+
   const stages: Stage[] = [
     { key: "posted", label: "Posted", done: true, at: postedAt },
-    { key: "booked", label: "Booked", done: Boolean(bookedAt), at: bookedAt },
-    { key: "pickedUp", label: "Picked up", done: Boolean(pickupConfirmedAt), at: pickupConfirmedAt },
+    { key: "booked", label: "Booked", done: true, at: bookedAt },
+    {
+      key: "pickedUp",
+      label: pickupConfirmedAt ? "Picked up" : "Awaiting pickup",
+      done: Boolean(pickupConfirmedAt),
+      at: pickupConfirmedAt,
+    },
     {
       key: "delivered",
-      label: mutual ? "Complete" : "Delivered",
+      label: mutual ? "Complete" : deliveredAt ? "Delivered" : "Awaiting delivery",
       done: Boolean(deliveredAt || supplierDeliveredAt),
       at: deliveredAt ?? supplierDeliveredAt ?? null,
     },
   ];
 
+  return <StageStrip stages={stages} compact={compact} />;
+}
+
+function StageStrip({ stages, compact }: { stages: Stage[]; compact: boolean }) {
   const firstOpen = stages.findIndex((s) => !s.done);
 
   return (

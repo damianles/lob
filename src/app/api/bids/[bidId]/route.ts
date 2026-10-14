@@ -50,6 +50,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ bidId: string 
         bidId,
         reviewedByUserId: actor.userId,
         shipperCompanyId: actor.companyId,
+        suppressNotifications: actor.simulated,
       });
       return NextResponse.json({ data: result });
     }
@@ -57,6 +58,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ bidId: string 
       bidId,
       reviewedByUserId: actor.userId,
       shipperCompanyId: actor.companyId,
+      suppressNotifications: actor.simulated,
     });
     return NextResponse.json({ data: updated });
   } catch (e) {
