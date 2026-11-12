@@ -11,7 +11,7 @@ export const CAPACITY_SCORE_MIN_COMPLETIONS = 3;
 export type CapacityScoreBand = "excellent" | "good" | "caution" | "new";
 
 /**
- * Anonymous carrier performance from capacity requests.
+ * Carrier performance from capacity requests (shown with carrier identity on Capacity).
  * Never includes identity — safe to attach to the open capacity board.
  */
 export type CapacityScorecardPublic = {

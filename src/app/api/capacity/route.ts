@@ -30,7 +30,8 @@ function startOfTodayUtc(): Date {
 }
 
 /**
- * Anonymous capacity board for suppliers. Carrier identity is never returned here.
+ * Capacity board for suppliers. Carrier company name is visible; mill privacy is
+ * enforced elsewhere (loads stay anonymous to carriers until book).
  */
 export async function GET(req: Request) {
   const actor = await getActorContext();
@@ -100,10 +101,9 @@ export async function GET(req: Request) {
       availableUntil: true,
       createdAt: true,
       carrierCompanyId: true,
-      // Carrier reveal stays minimal: type + owner-op flag + verification only.
-      // Identity (name, DOT/MC) is intentionally omitted on the open board.
       carrier: {
         select: {
+          legalName: true,
           carrierType: true,
           isOwnerOperator: true,
           verificationStatus: true,
@@ -128,6 +128,8 @@ export async function GET(req: Request) {
     availableFrom: r.availableFrom.toISOString(),
     availableUntil: r.availableUntil.toISOString(),
     createdAt: r.createdAt.toISOString(),
+    carrierCompanyId: r.carrierCompanyId,
+    carrierName: r.carrier?.legalName ?? "Carrier",
     carrierType: r.carrier?.carrierType ?? null,
     isOwnerOperator: r.carrier?.isOwnerOperator ?? false,
     carrierVerified: r.carrier?.verificationStatus === "APPROVED",

@@ -10,8 +10,7 @@ export function CapacityPageIntro() {
 
   return (
     <p className="mt-2 max-w-2xl text-sm text-zinc-600">
-      Carriers publish available trucks by lane and date window. Suppliers search without seeing carrier names on the
-      open board.
+      Carriers publish available trucks by lane and date window. Suppliers see the carrier company on each post.
       {isSupplier ? (
         <>
           {" "}
@@ -24,7 +23,7 @@ export function CapacityPageIntro() {
       ) : (
         " "
       )}
-      Booked freight and dispatch stay on the{" "}
+      Your supplier name stays private until a request is accepted. Booked freight and dispatch stay on the{" "}
       <Link className="font-medium text-lob-navy underline" href="/shipments">
         Shipments
       </Link>{" "}

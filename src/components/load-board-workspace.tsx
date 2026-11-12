@@ -474,7 +474,7 @@ export function LoadBoardWorkspace({
           <div className="mb-4">
             <h1 className="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">Open Loads</h1>
             <p className="mt-1 text-sm text-zinc-600">
-              Search freight posted by mills and wholesalers. Supplier names stay private until you book a load.
+              Search freight posted by mills and wholesalers. Supplier names stay private until you Book a load.
               {isCarrierAccount && !actor.carrierApproved ? (
                 <> Your company is still pending approval — you can browse but not book yet.</>
               ) : null}

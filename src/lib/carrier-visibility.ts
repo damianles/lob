@@ -6,8 +6,9 @@ type LoadWithBooking = {
 };
 
 /**
- * Carrier legal name is hidden on the open market: only the posting supplier, the booked carrier,
- * and admins may see who booked. Others see status "Booked" only.
+ * On booked loads, carrier legal name is visible to the posting supplier, the booked carrier,
+ * and admins. Other marketplace viewers still see status only.
+ * Open Capacity is separate: suppliers see carrier company names there by design.
  */
 export function carrierCompanyNameForViewer(
   legalName: string,

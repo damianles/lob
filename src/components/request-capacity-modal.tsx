@@ -42,6 +42,7 @@ export function RequestCapacityModal({
   capacityId,
   capacityLabel,
   askingLabel,
+  carrierName,
   prefill,
   scorecard,
   open,
@@ -51,6 +52,7 @@ export function RequestCapacityModal({
   capacityId: string;
   capacityLabel: string;
   askingLabel: string;
+  carrierName?: string | null;
   prefill: CapacitySpawnPrefill;
   scorecard?: CapacityScorecardPublic | null;
   open: boolean;
@@ -172,10 +174,11 @@ export function RequestCapacityModal({
       >
         <h3 className="text-lg font-semibold text-zinc-900">Request this capacity</h3>
         <p className="mt-1 text-sm text-zinc-600">
-          Attach a posted load, or create a Firm Rate load from this lane. The carrier stays anonymous until they
+          Attach a posted load, or create a Firm Rate load from this lane. Your supplier name stays private until they
           accept.
         </p>
         <p className="mt-2 text-xs text-zinc-500">
+          {carrierName ? `${carrierName} · ` : ""}
           Capacity: {capacityLabel} · Asking {askingLabel} · Equip {prefill.equipmentType}
         </p>
         {scorecard ? <CapacityScoreChips score={scorecard} className="mt-2" /> : null}

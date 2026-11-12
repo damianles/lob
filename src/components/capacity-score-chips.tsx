@@ -29,7 +29,7 @@ function bandLabel(band: CapacityScoreBand) {
 }
 
 /**
- * Compact anonymous capacity performance chips (no carrier identity).
+ * Compact capacity performance chips (accept / reply / finish bands).
  */
 export function CapacityScoreChips({
   score,

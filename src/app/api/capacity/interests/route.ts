@@ -7,8 +7,8 @@ import { isSupplierActor } from "@/lib/simulated-actor-company";
 
 /**
  * Capacity match inbox:
- * - Carrier: pending requests on their capacity (mill name shown so they can decide).
- * - Supplier: requests they sent (carrier identity still hidden until accepted).
+ * - Carrier: pending requests on their capacity (supplier name stays private until book/accept).
+ * - Supplier: requests they sent (carrier company is visible).
  */
 export async function GET() {
   const actor = await getActorContext();
@@ -25,7 +25,6 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
       take: 50,
       include: {
-        shipper: { select: { legalName: true } },
         load: {
           select: {
             id: true,
@@ -64,7 +63,9 @@ export async function GET() {
         status: r.status,
         note: r.note,
         createdAt: r.createdAt.toISOString(),
-        shipperName: r.shipper.legalName,
+        // Keep mill identity off pending capacity requests so carriers cannot
+        // go around the board before they book / accept.
+        shipperName: null as string | null,
         load: {
           ...r.load,
           offeredRateUsd: r.load.offeredRateUsd != null ? Number(r.load.offeredRateUsd) : null,
@@ -107,7 +108,12 @@ export async function GET() {
             equipmentType: true,
             askingRateUsd: true,
             carrier: {
-              select: { carrierType: true, isOwnerOperator: true, verificationStatus: true },
+              select: {
+                legalName: true,
+                carrierType: true,
+                isOwnerOperator: true,
+                verificationStatus: true,
+              },
             },
           },
         },
@@ -121,8 +127,7 @@ export async function GET() {
         status: r.status,
         note: r.note,
         createdAt: r.createdAt.toISOString(),
-        // Identity stays hidden until accept (then they use the booked load page).
-        carrierRevealed: r.status === "ACCEPTED",
+        carrierName: r.capacity.carrier.legalName,
         load: r.load,
         capacity: {
           id: r.capacity.id,

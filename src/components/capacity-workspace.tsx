@@ -32,9 +32,10 @@ type LaneRow = {
   availableUntil: string;
 };
 
-/** Shipper-facing row — adds anonymized carrier-type signals; identity is hidden. */
+/** Shipper-facing row — carrier company is visible on Capacity. */
 type OpenRow = LaneRow & {
   createdAt: string;
+  carrierName: string;
   carrierType: "ASSET_BASED" | "BROKER" | null;
   isOwnerOperator: boolean;
   carrierVerified: boolean;
@@ -88,7 +89,8 @@ type CarrierInterestRow = {
   status: string;
   note: string | null;
   createdAt: string;
-  shipperName: string;
+  /** Always null on pending requests — mill stays private until accept/book. */
+  shipperName: string | null;
   load: {
     id: string;
     referenceNumber: string;
@@ -117,7 +119,7 @@ type ShipperInterestRow = {
   id: string;
   status: string;
   createdAt: string;
-  carrierRevealed: boolean;
+  carrierName: string;
   load: { id: string; referenceNumber: string };
   capacity: {
     equipmentType: string;
@@ -336,8 +338,8 @@ export function CapacityWorkspace() {
             <strong>Loads</strong> (sidebar) lists freight posted by mills and wholesalers.
           </li>
           <li>
-            <strong>Capacity</strong> lists trucks carriers are willing to run. Carrier names stay hidden until they
-            accept your request.
+            <strong>Capacity</strong> lists trucks carriers are willing to run. Mills see the carrier company on each
+            post. Your supplier name stays private until they accept.
           </li>
           <li>
             Carriers you <strong>exclude</strong> in Carrier Preferences never appear here (and never see your loads).
@@ -359,9 +361,9 @@ export function CapacityWorkspace() {
         <section>
           <h2 className="text-lg font-semibold text-zinc-900">Search carrier capacity</h2>
           <p className="mt-1 text-sm text-zinc-600">
-            Filter by city or postal (optional). Request a truck with an existing load or create one from the lane —
-            identity stays hidden until they accept. Score chips use 90-day accept / reply / finish rates (anonymous;
-            needs a few decisions before numbers show). Carriers you excluded in preferences never appear here.
+            Filter by city or postal (optional). Request a truck with an existing load or create one from the lane.
+            Carrier companies are shown here. Score chips use 90-day accept / reply / finish rates (needs a few
+            decisions before numbers show). Carriers you excluded in preferences never appear here.
           </p>
           <div className="mt-3 grid max-w-2xl gap-2 sm:grid-cols-2">
             <PlaceAutocomplete
@@ -411,7 +413,8 @@ export function CapacityWorkspace() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <p className="break-words font-semibold text-lob-navy">{capacityLaneLabel(r)}</p>
-                    <p className="mt-1 text-sm text-stone-600">{r.equipmentType}</p>
+                    <p className="mt-1 text-sm font-medium text-stone-800">{r.carrierName}</p>
+                    <p className="mt-0.5 text-sm text-stone-600">{r.equipmentType}</p>
                   </div>
                   <span className="shrink-0 text-sm font-semibold tabular-nums text-stone-900">
                     {capacityRateLabel(r)}
@@ -464,7 +467,7 @@ export function CapacityWorkspace() {
               <thead className="border-b bg-zinc-50 text-xs font-semibold uppercase text-zinc-600">
                 <tr>
                   <th className="px-3 py-2">Lane</th>
-                  <th className="px-3 py-2">Carrier type</th>
+                  <th className="px-3 py-2">Carrier</th>
                   <th className="px-3 py-2">Equipment</th>
                   <th className="px-3 py-2 text-right">Asking</th>
                   <th className="px-3 py-2">Available</th>
@@ -478,6 +481,7 @@ export function CapacityWorkspace() {
                     <td className="px-3 py-2">{capacityLaneLabel(r)}</td>
                     <td className="px-3 py-2">
                       <div className="flex flex-col gap-1">
+                        <p className="font-medium text-zinc-900">{r.carrierName}</p>
                         <div className="flex flex-wrap items-center gap-1">
                           {r.carrierType || r.isOwnerOperator ? (
                             <CarrierTypeTag
@@ -528,7 +532,7 @@ export function CapacityWorkspace() {
                   <li key={row.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
                     <div>
                       <p className="font-medium text-zinc-900">
-                        {row.load.referenceNumber}{" "}
+                        {row.carrierName} · {row.load.referenceNumber}{" "}
                         <span className="text-xs font-normal uppercase text-zinc-500">{row.status}</span>
                       </p>
                       <p className="text-xs text-zinc-600">
@@ -584,6 +588,7 @@ export function CapacityWorkspace() {
           capacityId={requestFor.id}
           capacityLabel={capacityLaneLabel(requestFor)}
           askingLabel={capacityRateLabel(requestFor)}
+          carrierName={requestFor.carrierName}
           scorecard={requestFor.scorecard}
           prefill={{
             originZip: requestFor.originZip,
@@ -601,8 +606,8 @@ export function CapacityWorkspace() {
           onSent={(info) => {
             setMsg(
               info?.spawned && info.referenceNumber
-                ? `Created ${info.referenceNumber} and sent request. Carrier stays anonymous until accept.`
-                : "Request sent. Carrier identity stays hidden until they accept.",
+                ? `Created ${info.referenceNumber} and sent request to ${requestFor.carrierName}.`
+                : `Request sent to ${requestFor.carrierName}.`,
             );
             void loadInterests();
           }}
@@ -613,15 +618,15 @@ export function CapacityWorkspace() {
         <section>
           <h2 className="text-lg font-semibold text-zinc-900">Capacity requests</h2>
           <p className="mt-1 text-sm text-zinc-600">
-            Mills requesting your posted trucks. Accept books their load at their posted rate (or your asking rate if
-            none).
+            Suppliers requesting your posted trucks. Supplier names stay private until you accept. Accept books their
+            load at their posted rate (or your asking rate if none).
           </p>
           <ul className="mt-3 divide-y divide-stone-100 rounded-lg border border-stone-200 bg-white">
             {carrierInterests.map((row) => (
               <li key={row.id} className="flex flex-wrap items-center justify-between gap-3 px-3 py-3">
                 <div>
                   <p className="text-sm font-semibold text-zinc-900">
-                    {row.shipperName} · {row.load.referenceNumber}
+                    {row.shipperName ?? "Supplier (private until booked)"} · {row.load.referenceNumber}
                   </p>
                   <p className="text-xs text-zinc-600">
                     {row.load.originCity}, {row.load.originState} → {row.load.destinationCity},{" "}

@@ -43,9 +43,9 @@ const bodySchema = z
   });
 
 /**
- * Supplier requests anonymous capacity for a posted load, or spawns a Firm Rate
- * load from the capacity lane then attaches the request. Carrier identity stays
- * hidden until Accept.
+ * Supplier requests capacity for a posted load, or spawns a Firm Rate load from
+ * the capacity lane then attaches the request. Carrier company is visible on the
+ * board; supplier identity stays private until the carrier accepts / books.
  */
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const actor = await getActorContext();

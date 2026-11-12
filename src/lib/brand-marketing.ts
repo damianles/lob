@@ -5,7 +5,7 @@ export const BRAND_PRODUCT_NAME = "Lumber One Board";
 
 /** Short lines for hero / marketing (lumber-industry specific). */
 export const BRAND_PUNCH_LINES = [
-  "Suppliers Post loads. Carriers Book a Firm Rate or Bid. Company names stay private until someone commits.",
+  "Suppliers Post loads. Carriers Book a Firm Rate or Bid. Supplier names stay private until someone commits. Carriers are visible to mills.",
 ] as const;
 
 export const BRAND_EYEBROW = "Forest products logistics";
@@ -17,9 +17,9 @@ export const BRAND_VALUE_PROPS = [
       "Lumber needs the right trailers. Post and book with Super B, tri-axle, maxi, and curtain wall. This board is for forest products, not dry van freight.",
   },
   {
-    title: "PRIVACY UNTIL YOU BOOK",
+    title: "SUPPLIER PRIVACY, CARRIER VISIBILITY",
     body:
-      "Supplier names stay off the open board. When a Carrier Books a Firm Rate or a Bid is accepted, both companies see who they are working with. The freight stays visible. The relationship stays protected.",
+      "Supplier names stay off the open board until a Carrier Books a Firm Rate or a Bid is accepted. Carriers are not hidden from mills. You see who is offering Capacity and who is booking your freight.",
   },
   {
     title: "FIRM RATE OR BID",
@@ -29,7 +29,7 @@ export const BRAND_VALUE_PROPS = [
   {
     title: "CAPACITY WHEN TRUCKS ARE OPEN",
     body:
-      "Carriers Post Capacity by lane and dates when they have trucks available. Mills can request that Capacity without putting company names on the open board.",
+      "Carriers Post Capacity by lane and dates when they have trucks available. Mills see the carrier company and can request that Capacity.",
   },
 ] as const;
 
