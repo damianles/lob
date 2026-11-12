@@ -7,16 +7,21 @@ export function CarrierReviewActions({
   companyId,
   analyticsEnabled,
   docsVerified,
+  insuranceVerified,
   queue = "carriers",
 }: {
   companyId: string;
   analyticsEnabled: boolean;
   docsVerified: boolean;
+  /** Carriers only — COI limits matched to entered cargo/auto amounts. */
+  insuranceVerified?: boolean;
   /** API segment — carriers queue vs suppliers queue. */
   queue?: "carriers" | "suppliers";
 }) {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+  const isCarrierQueue = queue === "carriers";
+  const insuranceOk = !isCarrierQueue || insuranceVerified === true;
 
   function run(path: string) {
     startTransition(async () => {
@@ -46,13 +51,28 @@ export function CarrierReviewActions({
 
   return (
     <div className="flex flex-wrap gap-2">
+      {isCarrierQueue && !insuranceVerified ? (
+        <button
+          className="rounded bg-sky-800 px-3 py-1 text-xs text-white disabled:opacity-60"
+          onClick={() => run(`/api/admin/carriers/${companyId}/verify-insurance`)}
+          type="button"
+          disabled={isPending}
+          title="Open the COI link, confirm cargo and auto liability match what the carrier typed, then click"
+        >
+          Confirm insurance matches input
+        </button>
+      ) : null}
       {!docsVerified && (
         <button
           className="rounded bg-amber-700 px-3 py-1 text-xs text-white disabled:opacity-60"
           onClick={() => run(`/api/admin/${queue}/${companyId}/verify-docs`)}
           type="button"
-          disabled={isPending}
-          title="Confirm you opened W-9 and credit reference links (and insurance for carriers)"
+          disabled={isPending || !insuranceOk}
+          title={
+            !insuranceOk
+              ? "Confirm insurance coverage against the COI first"
+              : "Confirm you opened W-9 and credit reference links (and insurance for carriers)"
+          }
         >
           Mark docs verified
         </button>
@@ -61,8 +81,14 @@ export function CarrierReviewActions({
         className="rounded bg-emerald-600 px-3 py-1 text-xs text-white disabled:opacity-60"
         onClick={() => run(`/api/admin/${queue}/${companyId}/approve`)}
         type="button"
-        disabled={isPending || !docsVerified}
-        title={!docsVerified ? "Verify credit documents first" : "Approve company"}
+        disabled={isPending || !docsVerified || !insuranceOk}
+        title={
+          !insuranceOk
+            ? "Confirm insurance coverage first"
+            : !docsVerified
+              ? "Verify credit documents first"
+              : "Approve company"
+        }
       >
         Approve
       </button>

@@ -11,6 +11,8 @@ export function CreditFileForm({ showInsurance }: { showInsurance: boolean }) {
   const [creditReferenceUrl, setCreditReferenceUrl] = useState("");
   const [insuranceUrl, setInsuranceUrl] = useState("");
   const [insuranceExpiresAt, setInsuranceExpiresAt] = useState("");
+  const [insuranceCargoCoverageUsd, setInsuranceCargoCoverageUsd] = useState("");
+  const [insuranceAutoLiabilityCoverageUsd, setInsuranceAutoLiabilityCoverageUsd] = useState("");
   const [file, setFile] = useState<CreditFileView | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -40,6 +42,9 @@ export function CreditFileForm({ showInsurance }: { showInsurance: boolean }) {
               insuranceExpiresAt: insuranceExpiresAt
                 ? new Date(`${insuranceExpiresAt}T12:00:00.000Z`).toISOString()
                 : undefined,
+              insuranceCargoCoverageUsd: Number(insuranceCargoCoverageUsd.replace(/[,$]/g, "")) || undefined,
+              insuranceAutoLiabilityCoverageUsd:
+                Number(insuranceAutoLiabilityCoverageUsd.replace(/[,$]/g, "")) || undefined,
             }
           : {}),
       }),
@@ -115,6 +120,28 @@ export function CreditFileForm({ showInsurance }: { showInsurance: boolean }) {
                 onChange={(e) => setInsuranceExpiresAt(e.target.value)}
               />
             </label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block text-xs font-medium text-zinc-600">
+                Cargo coverage (USD)
+                <input
+                  className="mt-1 w-full rounded border px-3 py-2 text-sm font-normal"
+                  inputMode="numeric"
+                  placeholder="100000"
+                  value={insuranceCargoCoverageUsd}
+                  onChange={(e) => setInsuranceCargoCoverageUsd(e.target.value)}
+                />
+              </label>
+              <label className="block text-xs font-medium text-zinc-600">
+                Auto liability (USD)
+                <input
+                  className="mt-1 w-full rounded border px-3 py-2 text-sm font-normal"
+                  inputMode="numeric"
+                  placeholder="1000000"
+                  value={insuranceAutoLiabilityCoverageUsd}
+                  onChange={(e) => setInsuranceAutoLiabilityCoverageUsd(e.target.value)}
+                />
+              </label>
+            </div>
           </>
         ) : null}
         <button

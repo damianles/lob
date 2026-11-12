@@ -40,6 +40,8 @@ type FormState = {
   creditReviewAuthorized: boolean;
   insuranceUrl: string;
   insuranceExpiresAt: string;
+  insuranceCargoCoverageUsd: string;
+  insuranceAutoLiabilityCoverageUsd: string;
 };
 
 type ShipperFormState = FormState & {
@@ -69,6 +71,8 @@ const emptyState: FormState = {
   creditReviewAuthorized: false,
   insuranceUrl: "",
   insuranceExpiresAt: "",
+  insuranceCargoCoverageUsd: "",
+  insuranceAutoLiabilityCoverageUsd: "",
 };
 
 const emptyShipper: ShipperFormState = {
@@ -119,6 +123,10 @@ function creditPacketReady(
     if (!form.insuranceUrl.trim()) return "A certificate of insurance upload is required.";
     if (!isHttpsLink(form.insuranceUrl)) return "Insurance must be a full https:// link.";
     if (!form.insuranceExpiresAt) return "Insurance expiry is required.";
+    const cargo = Number(form.insuranceCargoCoverageUsd.replace(/[,$]/g, ""));
+    const auto = Number(form.insuranceAutoLiabilityCoverageUsd.replace(/[,$]/g, ""));
+    if (!Number.isFinite(cargo) || cargo <= 0) return "Cargo coverage amount (USD) is required.";
+    if (!Number.isFinite(auto) || auto <= 0) return "Auto liability coverage amount (USD) is required.";
   }
   return null;
 }
@@ -189,6 +197,30 @@ function CreditDocuments({
               required
             />
           </label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block text-xs font-medium text-zinc-600">
+              Cargo coverage (USD) *
+              <input
+                className="mt-1 w-full rounded border bg-white px-3 py-2 text-sm font-normal"
+                inputMode="numeric"
+                placeholder="100000"
+                value={form.insuranceCargoCoverageUsd}
+                onChange={(e) => onChange({ insuranceCargoCoverageUsd: e.target.value })}
+                required
+              />
+            </label>
+            <label className="block text-xs font-medium text-zinc-600">
+              Auto liability (USD) *
+              <input
+                className="mt-1 w-full rounded border bg-white px-3 py-2 text-sm font-normal"
+                inputMode="numeric"
+                placeholder="1000000"
+                value={form.insuranceAutoLiabilityCoverageUsd}
+                onChange={(e) => onChange({ insuranceAutoLiabilityCoverageUsd: e.target.value })}
+                required
+              />
+            </label>
+          </div>
         </>
       ) : null}
       <label className="flex cursor-pointer items-start gap-2 text-sm text-zinc-700">
@@ -455,6 +487,10 @@ export function OnboardingForms() {
         creditReviewAuthorized: true,
         insuranceUrl: carrier.insuranceUrl.trim(),
         insuranceExpiresAt: new Date(`${carrier.insuranceExpiresAt}T12:00:00.000Z`).toISOString(),
+        insuranceCargoCoverageUsd: Number(carrier.insuranceCargoCoverageUsd.replace(/[,$]/g, "")),
+        insuranceAutoLiabilityCoverageUsd: Number(
+          carrier.insuranceAutoLiabilityCoverageUsd.replace(/[,$]/g, ""),
+        ),
         legalAcceptances: carrierLegal,
       }),
     });

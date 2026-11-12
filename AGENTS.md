@@ -12,7 +12,7 @@ Read this at the start of a feature chat. Do **not** re-explore the entire repo 
 
 B2B load board for forest products: **suppliers** post loads, **carriers** book them, ops track **dispatch → pickup check-in → delivery check-in**.
 
-**Core lifecycle:** post load → book → dispatch link → carrier marks picked up → carrier uploads signed BOL → carrier marks delivered → supplier confirms complete → completion invoice. QR deferred.
+**Core lifecycle:** post load → book → dispatch link → carrier marks picked up → carrier uploads signed BOL → carrier marks delivered → supplier confirms delivery. LOB tracks status only (no settlement / completion invoice in product). QR deferred.
 
 ---
 

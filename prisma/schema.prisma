@@ -191,6 +191,11 @@ model Company {
    */
   creditDocsVerifiedAt  DateTime?
   /**
+   * Admin opened the COI and confirmed cargo / auto liability amounts match carrier input.
+   * Cleared when the carrier uploads a new insurance filing.
+   */
+  insuranceCoverageVerifiedAt DateTime?
+  /**
    * Primary business phone for ops and post-book counterparty contact.
    */
   businessPhone         String?
@@ -842,6 +847,14 @@ model Document {
   kind           String
   fileUrl        String
   expiresAt      DateTime?
+  /**
+   * INSURANCE only: cargo limit in whole USD (e.g. 100000 = $100,000).
+   */
+  cargoCoverageUsd         Int?
+  /**
+   * INSURANCE only: auto liability limit in whole USD.
+   */
+  autoLiabilityCoverageUsd Int?
   createdAt      DateTime  @default(now())
 
   company      Company?      @relation(fields: [companyId], references: [id], onDelete: SetNull)

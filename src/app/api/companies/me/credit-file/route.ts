@@ -15,6 +15,8 @@ const packetSchema = z
     creditReferenceUrl: httpsUrl,
     insuranceUrl: httpsUrl.optional(),
     insuranceExpiresAt: z.string().datetime().optional(),
+    insuranceCargoCoverageUsd: z.number().int().positive().max(100_000_000).optional(),
+    insuranceAutoLiabilityCoverageUsd: z.number().int().positive().max(100_000_000).optional(),
   })
   .refine((d) => Boolean(d.w9Url || d.businessRegistrationUrl), {
     message: "Provide a W-9 and/or business registration upload.",
@@ -42,8 +44,17 @@ export async function POST(req: Request) {
   }
 
   const isCarrier = actor.role === "DISPATCHER";
-  if (isCarrier && (!parsed.data.insuranceUrl || !parsed.data.insuranceExpiresAt)) {
-    return NextResponse.json({ error: "Carriers must file insurance and an expiry date." }, { status: 400 });
+  if (
+    isCarrier &&
+    (!parsed.data.insuranceUrl ||
+      !parsed.data.insuranceExpiresAt ||
+      !parsed.data.insuranceCargoCoverageUsd ||
+      !parsed.data.insuranceAutoLiabilityCoverageUsd)
+  ) {
+    return NextResponse.json(
+      { error: "Carriers must file insurance, expiry, cargo coverage, and auto liability coverage." },
+      { status: 400 },
+    );
   }
 
   await prisma.$transaction(async (tx) => {
@@ -52,6 +63,7 @@ export async function POST(req: Request) {
       data: {
         creditReviewAuthorized: true,
         creditDocsVerifiedAt: null,
+        insuranceCoverageVerifiedAt: null,
       },
     });
     await tx.document.deleteMany({
@@ -61,7 +73,14 @@ export async function POST(req: Request) {
         kind: { in: [...CREDIT_FILE_KINDS] },
       },
     });
-    const rows: { companyId: string; kind: string; fileUrl: string; expiresAt?: Date }[] = [
+    const rows: {
+      companyId: string;
+      kind: string;
+      fileUrl: string;
+      expiresAt?: Date;
+      cargoCoverageUsd?: number;
+      autoLiabilityCoverageUsd?: number;
+    }[] = [
       { companyId: actor.companyId!, kind: "CREDIT_REFERENCE", fileUrl: parsed.data.creditReferenceUrl },
     ];
     if (parsed.data.w9Url) {
@@ -80,6 +99,8 @@ export async function POST(req: Request) {
         kind: "INSURANCE",
         fileUrl: parsed.data.insuranceUrl,
         expiresAt: new Date(parsed.data.insuranceExpiresAt),
+        cargoCoverageUsd: parsed.data.insuranceCargoCoverageUsd,
+        autoLiabilityCoverageUsd: parsed.data.insuranceAutoLiabilityCoverageUsd,
       });
     }
     await tx.document.createMany({ data: rows });

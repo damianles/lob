@@ -6,6 +6,7 @@ export type LobNavId =
   | "capacity"
   | "insights"
   | "shipments"
+  | "postLoad"
   | "openBids"
   | "facilityPickup"
   | "facilityDelivery"
@@ -30,9 +31,15 @@ export const LOB_NAV_ITEMS: LobNavItem[] = [
     hint: "Track your shipments — sortable, filterable, exportable",
   },
   {
+    id: "postLoad",
+    href: "/post",
+    label: "Post a Load",
+    hint: "Post Firm Rate or Open Bid freight for carriers",
+  },
+  {
     id: "openBids",
     href: "/bids",
-    label: "Open Bids",
+    label: "Carrier requests",
     hint: `${TAKE_IT_LABEL} take requests and open-bid loads waiting on a decision`,
   },
   {
@@ -86,6 +93,7 @@ const CARRIER_IDS: LobNavId[] = [
 
 const SHIPPER_IDS: LobNavId[] = [
   "shipments",
+  "postLoad",
   "openBids",
   "capacity",
   "carrierPrefs",
@@ -128,16 +136,23 @@ export function lobNavItemsForViewer(
       };
     }
     if (item.id === "shipments" && kind === "SHIPPER") {
-      return { ...item, hint: "Your company's shipments only — post, track, and export" };
+      return { ...item, hint: "Track your company's loads — booked through delivered" };
     }
     if (item.id === "shipments" && kind === "CARRIER") {
       return { ...item, hint: "Your booked shipments — dispatch, pickup, and delivery history" };
     }
+    if (item.id === "postLoad") {
+      return { ...item, hint: "Create a new Firm Rate or Open Bid load" };
+    }
     if (item.id === "openBids" && kind === "SHIPPER") {
-      return { ...item, hint: `Review carrier bids and ${TAKE_IT_LABEL} take requests on your posted loads` };
+      return {
+        ...item,
+        label: "Carrier requests",
+        hint: `Pending bids and ${TAKE_IT_LABEL} takes waiting for your Accept or Decline`,
+      };
     }
     if (item.id === "openBids" && kind === "CARRIER") {
-      return { ...item, hint: "Open-bid freight and your pending bids or counters" };
+      return { ...item, label: "Open Bids", hint: "Open-bid freight and your pending bids or counters" };
     }
     return item;
   });

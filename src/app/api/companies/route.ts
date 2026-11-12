@@ -14,6 +14,7 @@ import {
   autoApproveCarriersEnabled,
   autoApproveSuppliersEnabled,
 } from "@/lib/marketplace-gates";
+import { enqueueAdminCompanySignupNotice } from "@/lib/notifications/admin-alerts";
 import { prisma } from "@/lib/prisma";
 import { companyOnboardingSchema } from "@/lib/validation";
 
@@ -160,7 +161,14 @@ export async function POST(req: Request) {
       },
     });
 
-    const docs: { companyId: string; kind: string; fileUrl: string; expiresAt?: Date }[] = [
+    const docs: {
+      companyId: string;
+      kind: string;
+      fileUrl: string;
+      expiresAt?: Date;
+      cargoCoverageUsd?: number;
+      autoLiabilityCoverageUsd?: number;
+    }[] = [
       {
         companyId: company.id,
         kind: "CREDIT_REFERENCE",
@@ -183,6 +191,8 @@ export async function POST(req: Request) {
         kind: "INSURANCE",
         fileUrl: payload.insuranceUrl,
         expiresAt: new Date(payload.insuranceExpiresAt),
+        cargoCoverageUsd: payload.insuranceCargoCoverageUsd,
+        autoLiabilityCoverageUsd: payload.insuranceAutoLiabilityCoverageUsd,
       });
     }
 
@@ -226,6 +236,22 @@ export async function POST(req: Request) {
       include: { users: true },
     });
   });
+
+  if (companyWithUsers) {
+    const contact = companyWithUsers.users[0];
+    enqueueAdminCompanySignupNotice({
+      companyId: companyWithUsers.id,
+      legalName: companyWithUsers.legalName,
+      role: payload.role,
+      verificationStatus: companyWithUsers.verificationStatus,
+      contactName: contact?.name ?? payload.userName ?? null,
+      contactEmail: contact?.email ?? payload.userEmail ?? null,
+      businessPhone: companyWithUsers.businessPhone,
+      carrierType: companyWithUsers.carrierType,
+      supplierKind: companyWithUsers.supplierKind,
+      authorityRegion: companyWithUsers.authorityRegion,
+    });
+  }
 
   return NextResponse.json({ data: companyWithUsers }, { status: 201 });
 }

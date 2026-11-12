@@ -39,13 +39,26 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
   }
 
-  const created = await prisma.document.create({
-    data: {
-      companyId: actor.companyId,
-      kind: "INSURANCE",
-      fileUrl: parsed.data.fileUrl,
-      expiresAt: new Date(parsed.data.expiresAt),
-    },
+  const created = await prisma.$transaction(async (tx) => {
+    const doc = await tx.document.create({
+      data: {
+        companyId: actor.companyId!,
+        kind: "INSURANCE",
+        fileUrl: parsed.data.fileUrl,
+        expiresAt: new Date(parsed.data.expiresAt),
+        cargoCoverageUsd: parsed.data.cargoCoverageUsd,
+        autoLiabilityCoverageUsd: parsed.data.autoLiabilityCoverageUsd,
+      },
+    });
+    // New COI requires admin to re-confirm entered limits match the file.
+    await tx.company.update({
+      where: { id: actor.companyId! },
+      data: {
+        insuranceCoverageVerifiedAt: null,
+        creditDocsVerifiedAt: null,
+      },
+    });
+    return doc;
   });
 
   return NextResponse.json({ data: created }, { status: 201 });

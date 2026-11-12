@@ -11,6 +11,8 @@ export type CarrierInsuranceStatus = {
   daysUntilExpiry: number | null;
   /** Unexpired but within the warn window. */
   expiringSoon: boolean;
+  cargoCoverageUsd: number | null;
+  autoLiabilityCoverageUsd: number | null;
 };
 
 /** End of the given UTC calendar day (23:59:59.999Z). */
@@ -40,7 +42,12 @@ export async function getCarrierInsuranceStatus(
   const latest = await prisma.document.findFirst({
     where: { companyId, kind: "INSURANCE", dispatchLinkId: null },
     orderBy: { createdAt: "desc" },
-    select: { id: true, expiresAt: true },
+    select: {
+      id: true,
+      expiresAt: true,
+      cargoCoverageUsd: true,
+      autoLiabilityCoverageUsd: true,
+    },
   });
 
   if (!latest?.expiresAt) {
@@ -50,6 +57,8 @@ export async function getCarrierInsuranceStatus(
       current: false,
       daysUntilExpiry: null,
       expiringSoon: false,
+      cargoCoverageUsd: latest?.cargoCoverageUsd ?? null,
+      autoLiabilityCoverageUsd: latest?.autoLiabilityCoverageUsd ?? null,
     };
   }
 
@@ -66,6 +75,8 @@ export async function getCarrierInsuranceStatus(
     current,
     daysUntilExpiry,
     expiringSoon,
+    cargoCoverageUsd: latest.cargoCoverageUsd,
+    autoLiabilityCoverageUsd: latest.autoLiabilityCoverageUsd,
   };
 }
 

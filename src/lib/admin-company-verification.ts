@@ -27,6 +27,7 @@ export async function updateCompanyVerificationStatus(
       supplierKind: true,
       carrierType: true,
       creditDocsVerifiedAt: true,
+      insuranceCoverageVerifiedAt: true,
     },
   });
   if (!company) {
@@ -45,6 +46,18 @@ export async function updateCompanyVerificationStatus(
       ok: false as const,
       status: 400,
       error: "Mark credit documents verified after opening the W-9 and credit links (and insurance for carriers).",
+    };
+  }
+  if (
+    status === VerificationStatus.APPROVED &&
+    queue === "carrier" &&
+    !company.insuranceCoverageVerifiedAt
+  ) {
+    return {
+      ok: false as const,
+      status: 400,
+      error:
+        "Confirm insurance coverage first: open the COI and verify cargo and auto liability match what the carrier entered.",
     };
   }
 
@@ -78,7 +91,12 @@ export async function markCompanyCreditDocsVerified(
 ) {
   const company = await prisma.company.findUnique({
     where: { id: companyId },
-    select: { id: true, supplierKind: true, carrierType: true },
+    select: {
+      id: true,
+      supplierKind: true,
+      carrierType: true,
+      insuranceCoverageVerifiedAt: true,
+    },
   });
   if (!company) {
     return { ok: false as const, status: 404, error: "Company not found." };
@@ -91,10 +109,62 @@ export async function markCompanyCreditDocsVerified(
     };
   }
 
+  if (queue === "carrier" && !company.insuranceCoverageVerifiedAt) {
+    return {
+      ok: false as const,
+      status: 400,
+      error:
+        "Confirm insurance coverage first (open COI, match cargo and auto liability to carrier input), then mark docs verified.",
+    };
+  }
+
   const updated = await prisma.company.update({
     where: { id: companyId },
     data: { creditDocsVerifiedAt: new Date() },
   });
 
   return { ok: true as const, data: updated };
+}
+
+/** Admin opened the COI and confirmed entered cargo / auto liability match the file. */
+export async function markCompanyInsuranceCoverageVerified(companyId: string) {
+  const company = await prisma.company.findUnique({
+    where: { id: companyId },
+    select: { id: true, carrierType: true },
+  });
+  if (!company) {
+    return { ok: false as const, status: 404, error: "Company not found." };
+  }
+  if (company.carrierType == null) {
+    return { ok: false as const, status: 404, error: "Not a carrier company." };
+  }
+
+  const latest = await prisma.document.findFirst({
+    where: { companyId, kind: "INSURANCE", dispatchLinkId: null },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      fileUrl: true,
+      expiresAt: true,
+      cargoCoverageUsd: true,
+      autoLiabilityCoverageUsd: true,
+    },
+  });
+  if (!latest) {
+    return { ok: false as const, status: 400, error: "No insurance document on file." };
+  }
+  if (!latest.expiresAt || !latest.cargoCoverageUsd || !latest.autoLiabilityCoverageUsd) {
+    return {
+      ok: false as const,
+      status: 400,
+      error: "Carrier must file expiry, cargo coverage, and auto liability before you can confirm.",
+    };
+  }
+
+  const updated = await prisma.company.update({
+    where: { id: companyId },
+    data: { insuranceCoverageVerifiedAt: new Date() },
+  });
+
+  return { ok: true as const, data: updated, insurance: latest };
 }

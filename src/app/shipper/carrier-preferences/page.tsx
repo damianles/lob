@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 
 import { LobBrandStrip } from "@/components/lob-brand-strip";
 import { LobSidebar } from "@/components/lob-sidebar";
 import { DistanceUnitProfilePreference } from "@/components/distance-unit-profile-preference";
 import { DisplayCurrencyPreference } from "@/components/display-currency-preference";
+import { ShipperCarrierDiligencePanel } from "@/components/shipper-carrier-diligence-panel";
 
 type Carrier = { id: string; legalName: string; dotNumber: string | null };
 
@@ -19,6 +20,7 @@ export default function ShipperCarrierPreferencesPage() {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [detailsId, setDetailsId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -161,8 +163,9 @@ export default function ShipperCarrierPreferencesPage() {
           <div className="p-6 lg:p-8">
             <h1 className="text-2xl font-bold text-zinc-900">Carrier Preferences</h1>
             <p className="mt-2 max-w-2xl text-sm text-zinc-600">
-              Exclude carriers you never want, and assign the rest to T1 / T2 / T3 groups. When posting a load, pick Open
-              or which groups can see it — you do not re-assign carriers on every load.
+              Exclude carriers you never want, and assign the rest to T1 / T2 / T3 groups. Open Details for the scorecard
+              (compliance, coverage, performance) before you decide. When posting, pick Open or which groups can see the
+              load.
             </p>
 
             <div className="mt-5 max-w-2xl space-y-4">
@@ -185,6 +188,7 @@ export default function ShipperCarrierPreferencesPage() {
                       <thead className="bg-zinc-100 text-[10px] font-semibold uppercase text-zinc-600">
                         <tr>
                           <th className="px-3 py-2">Carrier</th>
+                          <th className="px-2 py-2 text-center">Details</th>
                           <th className="px-2 py-2 text-center">Exclude</th>
                           <th className="px-2 py-2 text-center">T1</th>
                           <th className="px-2 py-2 text-center">T2</th>
@@ -196,44 +200,63 @@ export default function ShipperCarrierPreferencesPage() {
                         {picklist.map((c) => {
                           const blocked = blockedIds.has(c.id);
                           const tier = tierByCarrier.get(c.id);
+                          const open = detailsId === c.id;
                           return (
-                            <tr key={c.id} className="border-t border-zinc-200/80">
-                              <td className="px-3 py-2">
-                                <span className="font-medium text-zinc-900">{c.legalName}</span>
-                                {c.dotNumber && (
-                                  <span className="ml-2 text-xs text-zinc-500">DOT {c.dotNumber}</span>
-                                )}
-                              </td>
-                              <td className="px-2 py-2 text-center">
-                                <input
-                                  type="checkbox"
-                                  checked={blocked}
-                                  onChange={() => toggleBlock(c.id)}
-                                  title="Exclude company-wide"
-                                />
-                              </td>
-                              {([1, 2, 3] as const).map((t) => (
-                                <td key={t} className="px-2 py-2 text-center">
+                            <Fragment key={c.id}>
+                              <tr className="border-t border-zinc-200/80">
+                                <td className="px-3 py-2">
+                                  <span className="font-medium text-zinc-900">{c.legalName}</span>
+                                  {c.dotNumber && (
+                                    <span className="ml-2 text-xs text-zinc-500">DOT {c.dotNumber}</span>
+                                  )}
+                                </td>
+                                <td className="px-2 py-2 text-center">
+                                  <button
+                                    type="button"
+                                    className="text-xs font-medium text-lob-navy underline"
+                                    onClick={() => setDetailsId(open ? null : c.id)}
+                                  >
+                                    {open ? "Hide" : "Open"}
+                                  </button>
+                                </td>
+                                <td className="px-2 py-2 text-center">
+                                  <input
+                                    type="checkbox"
+                                    checked={blocked}
+                                    onChange={() => toggleBlock(c.id)}
+                                    title="Exclude company-wide"
+                                  />
+                                </td>
+                                {([1, 2, 3] as const).map((t) => (
+                                  <td key={t} className="px-2 py-2 text-center">
+                                    <input
+                                      type="radio"
+                                      name={`tier-${c.id}`}
+                                      disabled={blocked}
+                                      checked={!blocked && tier === t}
+                                      onChange={() => setTier(c.id, t)}
+                                    />
+                                  </td>
+                                ))}
+                                <td className="px-2 py-2 text-center">
                                   <input
                                     type="radio"
                                     name={`tier-${c.id}`}
                                     disabled={blocked}
-                                    checked={!blocked && tier === t}
-                                    onChange={() => setTier(c.id, t)}
+                                    checked={!blocked && tier == null}
+                                    onChange={() => setTier(c.id, null)}
+                                    title="Not in a tier"
                                   />
                                 </td>
-                              ))}
-                              <td className="px-2 py-2 text-center">
-                                <input
-                                  type="radio"
-                                  name={`tier-${c.id}`}
-                                  disabled={blocked}
-                                  checked={!blocked && tier == null}
-                                  onChange={() => setTier(c.id, null)}
-                                  title="Not in a tier"
-                                />
-                              </td>
-                            </tr>
+                              </tr>
+                              {open ? (
+                                <tr className="border-t border-zinc-100 bg-white">
+                                  <td colSpan={7} className="px-3 py-3">
+                                    <ShipperCarrierDiligencePanel carrierCompanyId={c.id} />
+                                  </td>
+                                </tr>
+                              ) : null}
+                            </Fragment>
                           );
                         })}
                       </tbody>

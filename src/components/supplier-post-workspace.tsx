@@ -49,7 +49,7 @@ export function SupplierPostWorkspace({ companyName }: { companyName: string | n
 
   return (
     <div className="mx-auto flex max-w-[1680px] gap-0 overflow-hidden rounded-[1.25rem] border border-stone-200/35 bg-white shadow-[0_2px_40px_-12px_rgba(0,18,51,0.07)]">
-      <LobSidebar active="shipments" />
+      <LobSidebar active="postLoad" />
       <div className="min-w-0 flex-1 overflow-x-hidden bg-stone-50/40">
         <LobBrandStrip />
         <div className="px-4 py-6 sm:px-8 sm:py-8">

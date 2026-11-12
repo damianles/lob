@@ -8,7 +8,7 @@ import { CancelLoadButton } from "@/components/cancel-load-button";
 import { ConvertToFirmRate } from "@/components/convert-to-firm-rate";
 import { RateModeBadge } from "@/components/rate-mode-badge";
 import { ShipperBidReviewList } from "@/components/shipper-bid-review-list";
-import { CarrierScorecard } from "@/components/carrier-scorecard";
+import { buildCompliancePassport, CarrierScorecard } from "@/components/carrier-scorecard";
 import { CreditFilePanel } from "@/components/credit-file-panel";
 import { CarrierTypeTag } from "@/components/carrier-type-tag";
 import { CreateDispatchForm } from "@/components/create-dispatch-form";
@@ -40,6 +40,8 @@ import {
   supplierKindLabel,
 } from "@/lib/shipper-visibility";
 import { carrierMayViewPostedLoad } from "@/lib/carrier-load-access";
+import { getCarrierInsuranceStatus } from "@/lib/carrier-insurance";
+import { getCarrierPerformanceStats } from "@/lib/carrier-performance";
 import { getCreditFileView } from "@/lib/credit-file";
 import { syncClerkUserToDatabase } from "@/lib/sync-clerk-user";
 import { getActorContext } from "@/lib/request-context";
@@ -111,6 +113,9 @@ async function renderLoadDetailPage({ params }: { params: Promise<{ loadId: stri
               carrierProfileBlurb: true,
               isOwnerOperator: true,
               verificationStatus: true,
+              reliabilityScore: true,
+              authorityRegion: true,
+              insuranceCoverageVerifiedAt: true,
             },
           },
         },
@@ -206,13 +211,27 @@ async function renderLoadDetailPage({ params }: { params: Promise<{ loadId: stri
     );
   }
 
-  const carrierDocs =
-    load.booking && (isShipperOwner || isRealAdmin)
-      ? await prisma.document.findMany({
-          where: { companyId: load.booking.carrierCompanyId, dispatchLinkId: null },
-          orderBy: { createdAt: "desc" },
-          take: 20,
-          select: { kind: true, expiresAt: true },
+  const showCarrierScorecard = Boolean(load.booking && (isShipperOwner || isRealAdmin));
+  const carrierDocs = showCarrierScorecard
+    ? await prisma.document.findMany({
+        where: { companyId: load.booking!.carrierCompanyId, dispatchLinkId: null },
+        orderBy: { createdAt: "desc" },
+        take: 40,
+        select: { kind: true, expiresAt: true },
+      })
+    : [];
+  const carrierInsurance = showCarrierScorecard
+    ? await getCarrierInsuranceStatus(load.booking!.carrierCompanyId)
+    : null;
+  const carrierPerformance = showCarrierScorecard
+    ? await getCarrierPerformanceStats(load.booking!.carrierCompanyId)
+    : null;
+  const carrierPassport =
+    showCarrierScorecard && load.booking
+      ? buildCompliancePassport({
+          docs: carrierDocs,
+          insurance: carrierInsurance,
+          authorityRegion: load.booking.carrierCompany.authorityRegion,
         })
       : [];
 
@@ -486,8 +505,8 @@ async function renderLoadDetailPage({ params }: { params: Promise<{ loadId: stri
               <div className="mt-4 rounded-lg border border-stone-200 bg-white p-4">
                 <h3 className="text-sm font-semibold text-zinc-900">Pending carrier requests</h3>
                 <p className="mt-1 text-xs text-zinc-500">
-                  Review who wants this load. Accept books that carrier at the shown rate and closes the others.
-                  Decline leaves the load open.
+                  Open carrier details before you decide. Accept books that carrier and closes the others. Decline can
+                  leave them alone, exclude them, or set a tier.
                 </p>
                 <div className="mt-3">
                   <ShipperBidReviewList
@@ -551,18 +570,6 @@ async function renderLoadDetailPage({ params }: { params: Promise<{ loadId: stri
                     Driver haul sheet
                   </Link>
                 )}
-                {load.dispatchLink &&
-                  isShipmentMutuallyComplete({
-                    deliveredAt: load.dispatchLink.deliveredAt,
-                    supplierDeliveredAt: load.dispatchLink.supplierDeliveredAt,
-                  }) && (
-                    <Link
-                      href={`/loads/${load.id}/invoice`}
-                      className="rounded-lg bg-emerald-800 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-900"
-                    >
-                      Completion invoice
-                    </Link>
-                  )}
                 <CancelLoadButton
                   loadId={load.id}
                   referenceNumber={load.referenceNumber}
@@ -609,9 +616,24 @@ async function renderLoadDetailPage({ params }: { params: Promise<{ loadId: stri
                     trailerEquipmentTypes: load.booking.carrierCompany.trailerEquipmentTypes,
                     carrierProfileBlurb: load.booking.carrierCompany.carrierProfileBlurb,
                     verificationStatus: load.booking.carrierCompany.verificationStatus,
-                    reliabilityScore: null,
+                    reliabilityScore: load.booking.carrierCompany.reliabilityScore,
                   }}
-                  documents={carrierDocs}
+                  passport={carrierPassport}
+                  insurance={
+                    carrierInsurance
+                      ? {
+                          current: carrierInsurance.current,
+                          expiringSoon: carrierInsurance.expiringSoon,
+                          expiresAt: carrierInsurance.expiresAt?.toISOString() ?? null,
+                          cargoCoverageUsd: carrierInsurance.cargoCoverageUsd,
+                          autoLiabilityCoverageUsd: carrierInsurance.autoLiabilityCoverageUsd,
+                          coverageVerified: Boolean(
+                            load.booking.carrierCompany.insuranceCoverageVerifiedAt,
+                          ),
+                        }
+                      : null
+                  }
+                  performance={carrierPerformance}
                 />
               </div>
             )}
@@ -649,7 +671,7 @@ async function renderLoadDetailPage({ params }: { params: Promise<{ loadId: stri
                   ? "This load is off the board until you repost or unlist."
                   : !load.booking
                     ? "Posted and waiting for a carrier to book (or for you to accept a bid)."
-                    : "Booked → picked up → signed BOL → carrier delivered → supplier confirms complete."}
+                    : "Booked → picked up → signed BOL → carrier delivered → supplier confirms delivery."}
               </p>
               {(isShipperOwner || isRealAdmin || isBookedCarrier) && (
                 <div className="mt-3">
@@ -718,22 +740,6 @@ async function renderLoadDetailPage({ params }: { params: Promise<{ loadId: stri
                 supplierDeliveredAt={load.dispatchLink.supplierDeliveredAt}
               />
             )}
-
-            {load.dispatchLink &&
-              isBookedCarrier &&
-              isShipmentMutuallyComplete({
-                deliveredAt: load.dispatchLink.deliveredAt,
-                supplierDeliveredAt: load.dispatchLink.supplierDeliveredAt,
-              }) && (
-                <div className="mt-4">
-                  <Link
-                    href={`/loads/${load.id}/invoice`}
-                    className="inline-flex rounded-lg bg-emerald-800 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-900"
-                  >
-                    Open completion invoice
-                  </Link>
-                </div>
-              )}
 
             {load.dispatchLink && (isBookedCarrier || isRealAdmin) && (
               <DriverLinkPanel

@@ -91,20 +91,22 @@ const ICONS: Record<string, (props: IconProps) => ReactElement> = {
   loads: LoadsIcon,
   capacity: CapacityIcon,
   post: PostIcon,
+  postLoad: PostIcon,
 };
 
 const SHORT_LABEL: Partial<Record<MobileTabId, string>> = {
   loads: "Loads",
-  openBids: "Bids",
+  openBids: "Requests",
   shipments: "Shipments",
   capacity: "Capacity",
   post: "Post",
+  postLoad: "Post",
 };
 
 const CARRIER_MOBILE_IDS: LobNavId[] = ["shipments", "openBids", "loads", "capacity"];
 const SHIPPER_MOBILE_IDS: LobNavId[] = ["shipments", "openBids", "capacity"];
 const GUEST_MOBILE_IDS: LobNavId[] = ["loads", "capacity", "shipments"];
-const ADMIN_MOBILE_IDS: LobNavId[] = ["shipments", "openBids", "loads", "capacity"];
+const ADMIN_MOBILE_IDS: LobNavId[] = ["shipments", "postLoad", "openBids", "loads", "capacity"];
 
 function shortLabel(item: Pick<MobileTab, "id" | "label">): string {
   return SHORT_LABEL[item.id] ?? item.label;

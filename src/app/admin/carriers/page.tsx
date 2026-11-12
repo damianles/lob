@@ -2,6 +2,7 @@ import { VerificationStatus } from "@prisma/client";
 
 import { CarrierTypeTag } from "@/components/carrier-type-tag";
 import { LobBrandStrip } from "@/components/lob-brand-strip";
+import { formatCoverageUsd } from "@/lib/carrier-performance";
 import { CREDIT_FILE_LABELS, type CreditFileKind } from "@/lib/credit-file";
 import { prisma } from "@/lib/prisma";
 import { CarrierReviewActions } from "./review-actions";
@@ -35,7 +36,14 @@ export default async function AdminCarriersPage() {
           kind: { in: ["W9", "CREDIT_REFERENCE", "INSURANCE", "BUSINESS_REGISTRATION"] },
         },
         orderBy: { createdAt: "desc" },
-        select: { id: true, kind: true, fileUrl: true, expiresAt: true },
+        select: {
+          id: true,
+          kind: true,
+          fileUrl: true,
+          expiresAt: true,
+          cargoCoverageUsd: true,
+          autoLiabilityCoverageUsd: true,
+        },
       },
     },
     orderBy: [{ verificationStatus: "asc" }, { createdAt: "desc" }],
@@ -47,13 +55,13 @@ export default async function AdminCarriersPage() {
         <LobBrandStrip />
         <h1 className="mt-4 text-3xl font-bold">Carrier Verification Queue</h1>
         <p className="mt-2 text-sm text-zinc-600">
-          Asset fleets and brokers must be approved before they can book loads. Before Approve: open each credit link,
-          confirm the legal name matches the documents, then Mark docs verified.
+          Asset fleets and brokers must be approved before they can book loads. Open each credit link, confirm the
+          legal name, and confirm the COI cargo/auto amounts match what the carrier typed before Approve.
         </p>
         <ol className="mt-3 list-decimal space-y-1 pl-5 text-xs text-zinc-600">
-          <li>Open the W-9, credit reference, and certificate of insurance https links.</li>
-          <li>Confirm company legal name on the docs matches the registration.</li>
-          <li>Call or note the business phone if anything looks off.</li>
+          <li>Open the certificate of insurance. Compare cargo and auto liability to the amounts shown.</li>
+          <li>Click Confirm insurance matches input when the file matches the carrier entry.</li>
+          <li>Open W-9 and credit reference; confirm legal name matches registration.</li>
           <li>Mark docs verified, then Approve (or Reject).</li>
         </ol>
 
@@ -65,6 +73,7 @@ export default async function AdminCarriersPage() {
                 <th className="p-3">Type / DOT·MC</th>
                 <th className="p-3">Contact</th>
                 <th className="p-3">Credit file</th>
+                <th className="p-3">Insurance input</th>
                 <th className="p-3">Docs</th>
                 <th className="p-3">Status</th>
                 <th className="p-3">Actions</th>
@@ -79,6 +88,8 @@ export default async function AdminCarriersPage() {
                   return true;
                 });
                 const docsVerified = Boolean(carrier.creditDocsVerifiedAt);
+                const insuranceVerified = Boolean(carrier.insuranceCoverageVerifiedAt);
+                const insuranceDoc = docs.find((d) => d.kind === "INSURANCE");
                 return (
                   <tr key={carrier.id} className="border-b align-top">
                     <td className="p-3">
@@ -134,12 +145,59 @@ export default async function AdminCarriersPage() {
                         {docs.length === 0 ? <li className="text-zinc-500">No credit links filed</li> : null}
                       </ul>
                     </td>
-                    <td className="p-3">
-                      {docsVerified ? (
-                        <span className="rounded bg-emerald-100 px-2 py-1 text-xs text-emerald-900">Verified</span>
+                    <td className="p-3 text-xs text-zinc-700">
+                      {insuranceDoc ? (
+                        <div className="space-y-1">
+                          <p>
+                            Cargo{" "}
+                            <span className="font-semibold tabular-nums">
+                              {formatCoverageUsd(insuranceDoc.cargoCoverageUsd)}
+                            </span>
+                          </p>
+                          <p>
+                            Auto{" "}
+                            <span className="font-semibold tabular-nums">
+                              {formatCoverageUsd(insuranceDoc.autoLiabilityCoverageUsd)}
+                            </span>
+                          </p>
+                          <p className="text-[10px] text-zinc-500">
+                            Carrier-entered · compare to open COI link
+                          </p>
+                          {insuranceVerified ? (
+                            <span className="inline-block rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] text-emerald-900">
+                              Limits confirmed
+                            </span>
+                          ) : (
+                            <span className="inline-block rounded bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-900">
+                              Needs COI match
+                            </span>
+                          )}
+                        </div>
                       ) : (
-                        <span className="rounded bg-amber-100 px-2 py-1 text-xs text-amber-900">Review required</span>
+                        <span className="text-zinc-500">No COI filed</span>
                       )}
+                    </td>
+                    <td className="p-3">
+                      <div className="flex flex-col gap-1">
+                        {insuranceVerified ? (
+                          <span className="rounded bg-emerald-100 px-2 py-1 text-xs text-emerald-900">
+                            Insurance OK
+                          </span>
+                        ) : (
+                          <span className="rounded bg-amber-100 px-2 py-1 text-xs text-amber-900">
+                            Insurance review
+                          </span>
+                        )}
+                        {docsVerified ? (
+                          <span className="rounded bg-emerald-100 px-2 py-1 text-xs text-emerald-900">
+                            Docs verified
+                          </span>
+                        ) : (
+                          <span className="rounded bg-amber-100 px-2 py-1 text-xs text-amber-900">
+                            Docs review
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="p-3">
                       <span className={`rounded px-2 py-1 text-xs ${statusClass(carrier.verificationStatus)}`}>
@@ -151,6 +209,7 @@ export default async function AdminCarriersPage() {
                         companyId={carrier.id}
                         analyticsEnabled={carrier.analyticsSubscriber}
                         docsVerified={docsVerified}
+                        insuranceVerified={insuranceVerified}
                         queue="carriers"
                       />
                     </td>
@@ -159,7 +218,7 @@ export default async function AdminCarriersPage() {
               })}
               {carriers.length === 0 && (
                 <tr>
-                  <td className="p-4 text-center text-zinc-500" colSpan={7}>
+                  <td className="p-4 text-center text-zinc-500" colSpan={8}>
                     No carrier applications yet.
                   </td>
                 </tr>

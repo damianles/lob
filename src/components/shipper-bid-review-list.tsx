@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { ShipperCarrierDiligencePanel } from "@/components/shipper-carrier-diligence-panel";
 import { Button } from "@/components/ui/button";
 import { formatMoney } from "@/lib/money";
 import { bidKindLabel, formatTimeRemaining } from "@/lib/rate-mode";
@@ -37,6 +38,8 @@ function carrierIdentityLine(b: OpenBidRow): string {
   return bits.join(" · ");
 }
 
+type DeclineMode = "LEAVE" | "EXCLUDE" | "TIER";
+
 export function ShipperBidReviewList({
   loadId,
   bids,
@@ -53,25 +56,48 @@ export function ShipperBidReviewList({
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [declineFor, setDeclineFor] = useState<string | null>(null);
+  const [declineMode, setDeclineMode] = useState<DeclineMode>("LEAVE");
+  const [declineTier, setDeclineTier] = useState<1 | 2 | 3>(2);
 
-  async function review(bidId: string, decision: "ACCEPT" | "DECLINE") {
+  async function accept(bidId: string) {
     setBusyId(bidId);
     setMessage(null);
     const res = await fetch(`/api/bids/${bidId}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ decision }),
+      body: JSON.stringify({ decision: "ACCEPT" }),
     });
     const data = await res.json().catch(() => ({}));
     setBusyId(null);
     if (!res.ok) {
-      setMessage(typeof data.error === "string" ? data.error : "Could not update bid.");
+      setMessage(typeof data.error === "string" ? data.error : "Could not accept.");
       return;
     }
-    if (decision === "ACCEPT") {
-      router.push(`/loads/${loadId}/rate-con`);
+    router.push(`/loads/${loadId}/rate-con`);
+  }
+
+  async function decline(bidId: string) {
+    setBusyId(bidId);
+    setMessage(null);
+    const res = await fetch(`/api/bids/${bidId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        decision: "DECLINE",
+        afterDecline: declineMode,
+        tier: declineMode === "TIER" ? declineTier : undefined,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    setBusyId(null);
+    if (!res.ok) {
+      setMessage(typeof data.error === "string" ? data.error : "Could not decline.");
       return;
     }
+    setDeclineFor(null);
+    setDeclineMode("LEAVE");
     router.refresh();
   }
 
@@ -80,7 +106,6 @@ export function ShipperBidReviewList({
   }
 
   const sorted = [...bids].sort((a, b) => {
-    // Firm takes first (posted rate), then lowest amount
     if (a.kind === "TAKE" && b.kind !== "TAKE") return -1;
     if (b.kind === "TAKE" && a.kind !== "TAKE") return 1;
     return a.amountUsd - b.amountUsd;
@@ -95,61 +120,148 @@ export function ShipperBidReviewList({
           const vsPosted =
             postedRate != null && postedRate > 0 ? b.amountUsd - postedRate : null;
           const vsAvg = marketAvg != null && marketAvg > 0 ? b.amountUsd - marketAvg : null;
-          const perMile =
-            miles != null && miles > 0 ? b.amountUsd / miles : null;
+          const perMile = miles != null && miles > 0 ? b.amountUsd / miles : null;
+          const openDecline = declineFor === b.id;
+          const openDiligence = expandedId === b.id;
           return (
-            <li key={b.id} className="flex flex-wrap items-center justify-between gap-3 px-3 py-3">
-              <div>
-                <p className="text-sm font-semibold text-zinc-900">
-                  {formatMoney(b.amountUsd, b.currency)}{" "}
-                  <span className="text-[11px] font-medium uppercase text-zinc-500">{bidKindLabel(b.kind)}</span>
-                  {b.id === lowest ? (
-                    <span className="ml-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-emerald-800">
-                      Lowest
+            <li key={b.id} className="px-3 py-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-zinc-900">
+                    {formatMoney(b.amountUsd, b.currency)}{" "}
+                    <span className="text-[11px] font-medium uppercase text-zinc-500">
+                      {bidKindLabel(b.kind)}
                     </span>
-                  ) : null}
-                </p>
-                <p className="text-xs text-zinc-600">{carrierIdentityLine(b)}</p>
-                <p className="mt-0.5 text-xs font-medium text-amber-900">
-                  {formatTimeRemaining(b.expiresAt)
-                    ? `You have ${formatTimeRemaining(b.expiresAt)} to accept (24h from request)`
-                    : `Accept by ${new Date(b.expiresAt).toLocaleString()}`}
-                </p>
-                {b.kind !== "TAKE" ? (
-                  <p className="mt-0.5 text-[11px] tabular-nums text-zinc-500">
-                    {vsPosted != null
-                      ? `vs posted ${vsPosted >= 0 ? "+" : ""}${formatMoney(vsPosted, b.currency)}`
-                      : "vs posted —"}
-                    {vsAvg != null
-                      ? ` · vs avg ${vsAvg >= 0 ? "+" : ""}${formatMoney(vsAvg, b.currency)}`
-                      : ""}
-                    {perMile != null ? ` · ${formatMoney(perMile, b.currency)}/mi` : ""}
+                    {b.id === lowest ? (
+                      <span className="ml-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-emerald-800">
+                        Lowest
+                      </span>
+                    ) : null}
                   </p>
-                ) : (
-                  <p className="mt-0.5 text-[11px] text-zinc-500">Posted rate — confirm this carrier to book.</p>
-                )}
-                {b.note ? <p className="mt-1 text-xs text-zinc-500">{b.note}</p> : null}
+                  <p className="text-xs text-zinc-600">{carrierIdentityLine(b)}</p>
+                  <p className="mt-0.5 text-xs font-medium text-amber-900">
+                    {formatTimeRemaining(b.expiresAt)
+                      ? `You have ${formatTimeRemaining(b.expiresAt)} to accept (24h from request)`
+                      : `Accept by ${new Date(b.expiresAt).toLocaleString()}`}
+                  </p>
+                  {b.kind !== "TAKE" ? (
+                    <p className="mt-0.5 text-[11px] tabular-nums text-zinc-500">
+                      {vsPosted != null
+                        ? `vs posted ${vsPosted >= 0 ? "+" : ""}${formatMoney(vsPosted, b.currency)}`
+                        : "vs posted —"}
+                      {vsAvg != null
+                        ? ` · vs avg ${vsAvg >= 0 ? "+" : ""}${formatMoney(vsAvg, b.currency)}`
+                        : ""}
+                      {perMile != null ? ` · ${formatMoney(perMile, b.currency)}/mi` : ""}
+                    </p>
+                  ) : (
+                    <p className="mt-0.5 text-[11px] text-zinc-500">
+                      Posted rate — confirm this carrier to book.
+                    </p>
+                  )}
+                  {b.note ? <p className="mt-1 text-xs text-zinc-500">{b.note}</p> : null}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={busyId != null}
+                    onClick={() => setExpandedId(openDiligence ? null : b.id)}
+                  >
+                    {openDiligence ? "Hide details" : "Carrier details"}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={busyId != null}
+                    isLoading={busyId === b.id && !openDecline}
+                    onClick={() => void accept(b.id)}
+                  >
+                    Accept
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={busyId != null}
+                    onClick={() => {
+                      setDeclineFor(openDecline ? null : b.id);
+                      setDeclineMode("LEAVE");
+                    }}
+                  >
+                    Decline
+                  </Button>
+                </div>
               </div>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  disabled={busyId != null}
-                  isLoading={busyId === b.id}
-                  onClick={() => void review(b.id, "ACCEPT")}
-                >
-                  Accept
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  disabled={busyId != null}
-                  onClick={() => void review(b.id, "DECLINE")}
-                >
-                  Decline
-                </Button>
-              </div>
+
+              {openDiligence ? <ShipperCarrierDiligencePanel carrierCompanyId={b.carrierCompanyId} compact /> : null}
+
+              {openDecline ? (
+                <div className="mt-3 rounded-md border border-stone-200 bg-stone-50 px-3 py-2">
+                  <p className="text-xs font-medium text-zinc-800">After decline</p>
+                  <div className="mt-2 flex flex-wrap gap-3 text-xs text-zinc-700">
+                    <label className="inline-flex items-center gap-1.5">
+                      <input
+                        type="radio"
+                        name={`decline-${b.id}`}
+                        checked={declineMode === "LEAVE"}
+                        onChange={() => setDeclineMode("LEAVE")}
+                      />
+                      Leave alone
+                    </label>
+                    <label className="inline-flex items-center gap-1.5">
+                      <input
+                        type="radio"
+                        name={`decline-${b.id}`}
+                        checked={declineMode === "EXCLUDE"}
+                        onChange={() => setDeclineMode("EXCLUDE")}
+                      />
+                      Exclude going forward
+                    </label>
+                    <label className="inline-flex items-center gap-1.5">
+                      <input
+                        type="radio"
+                        name={`decline-${b.id}`}
+                        checked={declineMode === "TIER"}
+                        onChange={() => setDeclineMode("TIER")}
+                      />
+                      Set tier
+                    </label>
+                    {declineMode === "TIER" ? (
+                      <select
+                        className="rounded border border-stone-300 bg-white px-2 py-0.5"
+                        value={declineTier}
+                        onChange={(e) => setDeclineTier(Number(e.target.value) as 1 | 2 | 3)}
+                      >
+                        <option value={1}>T1</option>
+                        <option value={2}>T2</option>
+                        <option value={3}>T3</option>
+                      </select>
+                    ) : null}
+                  </div>
+                  <div className="mt-2 flex gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={busyId != null}
+                      isLoading={busyId === b.id}
+                      onClick={() => void decline(b.id)}
+                    >
+                      Confirm decline
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={busyId != null}
+                      onClick={() => setDeclineFor(null)}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
             </li>
           );
         })}

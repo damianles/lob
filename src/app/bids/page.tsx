@@ -45,10 +45,12 @@ export default async function OpenBidsPage() {
         <div className="min-w-0 flex-1">
           <LobBrandStrip />
           <div className="p-6 lg:p-8">
-            <h1 className="text-2xl font-bold text-zinc-900">Open Bids</h1>
+            <h1 className="text-2xl font-bold text-zinc-900">
+              {isShipper ? "Carrier requests" : "Open Bids"}
+            </h1>
             <p className="mt-1 max-w-2xl text-sm text-zinc-600">
               {isShipper
-                ? `${OPEN_BID_LABEL} bids and ${TAKE_IT_LABEL} take requests waiting on you. Accept to book that carrier at the shown rate.`
+                ? `Pending ${OPEN_BID_LABEL} bids and ${TAKE_IT_LABEL} takes. Open carrier details, then Accept or Decline. On Decline you can exclude, set a tier, or leave alone.`
                 : `${OPEN_BID_LABEL} freight and any bids, counters, or Firm Rate requests you have in play.`}
             </p>
             {isShipper ? <ShipperOpenBids companyId={actor.companyId!} /> : null}
@@ -96,7 +98,7 @@ async function ShipperOpenBids({ companyId }: { companyId: string }) {
     return (
       <p className="mt-6 text-sm text-zinc-600">
         No pending carrier requests right now.{" "}
-        <Link href="/shipments" className="font-medium text-lob-navy underline">
+        <Link href="/post" className="font-medium text-lob-navy underline">
           Post a Load
         </Link>{" "}
         as {OPEN_BID_LABEL} or {TAKE_IT_LABEL}.

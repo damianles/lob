@@ -205,9 +205,29 @@ export const createLoadBidSchema = z.object({
   expiresInHours: z.number().int().min(1).max(24).optional(),
 });
 
-export const reviewLoadBidSchema = z.object({
-  decision: z.enum(["ACCEPT", "DECLINE"]),
-});
+export const reviewLoadBidSchema = z
+  .object({
+    decision: z.enum(["ACCEPT", "DECLINE"]),
+    /** After DECLINE only: leave alone, exclude company-wide, or place in a tier. */
+    afterDecline: z.enum(["LEAVE", "EXCLUDE", "TIER"]).optional(),
+    tier: z.number().int().min(1).max(3).optional(),
+  })
+  .superRefine((d, ctx) => {
+    if (d.decision === "ACCEPT" && d.afterDecline) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "afterDecline only applies when declining.",
+        path: ["afterDecline"],
+      });
+    }
+    if (d.afterDecline === "TIER" && (d.tier == null || d.tier < 1 || d.tier > 3)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Choose tier 1, 2, or 3 when setting a tier after decline.",
+        path: ["tier"],
+      });
+    }
+  });
 
 export const createDispatchSchema = z.object({
   assignedByUserId: z.string().min(1).optional(),
@@ -299,6 +319,10 @@ export const companyOnboardingSchema = z
     creditReviewAuthorized: z.literal(true),
     insuranceUrl: httpsUrl.optional(),
     insuranceExpiresAt: z.string().datetime().optional(),
+    /** Whole USD cargo limit from the COI (carriers). */
+    insuranceCargoCoverageUsd: z.number().int().positive().max(100_000_000).optional(),
+    /** Whole USD auto liability limit from the COI (carriers). */
+    insuranceAutoLiabilityCoverageUsd: z.number().int().positive().max(100_000_000).optional(),
     legalAcceptances: z
       .array(
         z.object({
@@ -436,12 +460,28 @@ export const companyOnboardingSchema = z
           path: ["insuranceExpiresAt"],
         });
       }
+      if (!d.insuranceCargoCoverageUsd) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Cargo coverage amount (USD) is required for carriers.",
+          path: ["insuranceCargoCoverageUsd"],
+        });
+      }
+      if (!d.insuranceAutoLiabilityCoverageUsd) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Auto liability coverage amount (USD) is required for carriers.",
+          path: ["insuranceAutoLiabilityCoverageUsd"],
+        });
+      }
     }
   });
 
 export const insuranceUploadSchema = z.object({
   fileUrl: httpsUrl,
   expiresAt: z.string().datetime(),
+  cargoCoverageUsd: z.number().int().positive().max(100_000_000),
+  autoLiabilityCoverageUsd: z.number().int().positive().max(100_000_000),
 });
 
 /** Carrier attaches signed BOL (HTTPS Blob URL or external hosted file). */

@@ -8,6 +8,7 @@ import {
 } from "@/lib/load-bids";
 import { prisma } from "@/lib/prisma";
 import { getActorContext } from "@/lib/request-context";
+import { applyShipperCarrierAfterDecline } from "@/lib/shipper-carrier-preference";
 import { isSupplierActor } from "@/lib/simulated-actor-company";
 import { reviewLoadBidSchema } from "@/lib/validation";
 
@@ -60,7 +61,17 @@ export async function POST(req: Request, ctx: { params: Promise<{ bidId: string 
       shipperCompanyId: actor.companyId,
       suppressNotifications: actor.simulated,
     });
-    return NextResponse.json({ data: updated });
+    const after = parsed.data.afterDecline ?? "LEAVE";
+    let preference: { applied: string; tier?: number } | null = null;
+    if (after !== "LEAVE") {
+      preference = await applyShipperCarrierAfterDecline({
+        shipperCompanyId: actor.companyId,
+        carrierCompanyId: updated.carrierCompanyId,
+        action: after,
+        tier: parsed.data.tier as 1 | 2 | 3 | undefined,
+      });
+    }
+    return NextResponse.json({ data: updated, preference });
   } catch (e) {
     if (e instanceof LoadBidError) {
       return NextResponse.json({ error: e.message }, { status: e.status });

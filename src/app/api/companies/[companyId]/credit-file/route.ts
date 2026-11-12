@@ -3,13 +3,16 @@ import { NextResponse } from "next/server";
 import { companiesShareBooking, getCreditFileView } from "@/lib/credit-file";
 import { prisma } from "@/lib/prisma";
 import { getActorContext } from "@/lib/request-context";
+import { shipperMayOpenCarrierCreditFile } from "@/lib/shipper-carrier-diligence";
 
 type Params = { params: Promise<{ companyId: string }> };
 
 async function viewerMayOpen(subjectCompanyId: string, actorCompanyId: string, isAdmin: boolean) {
   if (isAdmin) return true;
   if (actorCompanyId === subjectCompanyId) return false;
-  return companiesShareBooking(actorCompanyId, subjectCompanyId);
+  if (await companiesShareBooking(actorCompanyId, subjectCompanyId)) return true;
+  // Mill reviewing a carrier with a live take/bid on their load.
+  return shipperMayOpenCarrierCreditFile(actorCompanyId, subjectCompanyId);
 }
 
 export async function GET(_req: Request, { params }: Params) {
@@ -20,7 +23,10 @@ export async function GET(_req: Request, { params }: Params) {
   }
   const isAdmin = actor.role === "ADMIN";
   if (!(await viewerMayOpen(companyId, actor.companyId, isAdmin))) {
-    return NextResponse.json({ error: "Credit files open after you book with this company." }, { status: 403 });
+    return NextResponse.json(
+      { error: "Credit files open after a booking or while a take/bid from this carrier is pending on your load." },
+      { status: 403 },
+    );
   }
   const file = await getCreditFileView(companyId, actor.companyId);
   if (!file) return NextResponse.json({ error: "Company not found." }, { status: 404 });
@@ -34,7 +40,10 @@ export async function POST(_req: Request, { params }: Params) {
     return NextResponse.json({ error: "Sign in as the mill or carrier reviewing this file." }, { status: 401 });
   }
   if (!(await viewerMayOpen(companyId, actor.companyId, false))) {
-    return NextResponse.json({ error: "Credit files open after you book with this company." }, { status: 403 });
+    return NextResponse.json(
+      { error: "Credit files open after a booking or while a take/bid from this carrier is pending on your load." },
+      { status: 403 },
+    );
   }
 
   const subject = await prisma.company.findUnique({

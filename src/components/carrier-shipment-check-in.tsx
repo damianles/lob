@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -113,22 +112,17 @@ export function CarrierShipmentCheckIn({
           {pickupConfirmedAt && !deliveredAt && !bolOnFile ? (
             <p className="w-full text-xs text-amber-900">Signed BOL required before you can mark delivered.</p>
           ) : null}
-          {deliveredAt ? (
+              {deliveredAt ? (
             <p className="w-full text-xs font-medium text-emerald-800">
               You marked delivered {deliveredAt.toLocaleString()}
               {supplierDeliveredAt
-                ? ` · Supplier confirmed complete ${supplierDeliveredAt.toLocaleString()}`
-                : " · Waiting on supplier to confirm complete"}
+                ? ` · Supplier confirmed delivery ${supplierDeliveredAt.toLocaleString()}`
+                : " · Waiting on supplier to confirm delivery"}
             </p>
           ) : null}
         </div>
         {mutualComplete ? (
-          <p className="mt-3 text-xs">
-            Load complete.{" "}
-            <Link href={`/loads/${loadId}/invoice`} className="font-semibold text-lob-navy underline">
-              Open completion invoice
-            </Link>
-          </p>
+          <p className="mt-3 text-xs text-emerald-800">Shipment complete — both sides confirmed delivery.</p>
         ) : null}
       </div>
 
@@ -136,8 +130,8 @@ export function CarrierShipmentCheckIn({
         <div className="rounded-lg border border-stone-200 bg-white p-4">
           <h2 className="text-sm font-semibold text-zinc-900">Signed BOL (required)</h2>
           <p className="mt-1 text-xs text-zinc-600">
-            Upload the signed bill of lading (PDF or photo) before marking delivered. It stays on the completion
-            invoice.
+            Upload the signed bill of lading (PDF or photo) before marking delivered. It stays on the shipment
+            record for both parties.
           </p>
           <div className="mt-3">
             <DocumentUploadField

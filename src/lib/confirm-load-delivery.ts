@@ -100,7 +100,7 @@ export async function confirmSupplierDeliveryByLoadId(loadId: string, opts?: { s
   await assertNotExpired(dispatchLink!);
 
   if (!dispatchLink!.pickupConfirmedAt) {
-    throw new DeliveryConfirmError("Pickup must be confirmed before you can confirm the load complete.", 409);
+    throw new DeliveryConfirmError("Pickup must be confirmed before you can confirm delivery.", 409);
   }
   if (!dispatchLink!.deliveredAt) {
     throw new DeliveryConfirmError(
@@ -109,7 +109,7 @@ export async function confirmSupplierDeliveryByLoadId(loadId: string, opts?: { s
     );
   }
   if (dispatchLink!.supplierDeliveredAt) {
-    throw new DeliveryConfirmError("You already confirmed this load complete.", 409);
+    throw new DeliveryConfirmError("You already confirmed delivery.", 409);
   }
 
   const now = new Date();

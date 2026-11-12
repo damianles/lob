@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { LobBrandStrip } from "@/components/lob-brand-strip";
 import { LobSidebar } from "@/components/lob-sidebar";
 import { getCarrierInsuranceStatus } from "@/lib/carrier-insurance";
+import { formatCoverageUsd } from "@/lib/carrier-performance";
 import { formatDisplayDate } from "@/lib/format-display-date";
 import { prisma } from "@/lib/prisma";
 import { signInUrlForAppPath } from "@/lib/guest-auth-routes";
@@ -121,6 +122,9 @@ export default async function CarrierCompliancePage() {
               ) : insurance.expiresAt ? (
                 <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-950">
                   Insurance on file is current through {formatDisplayDate(insurance.expiresAt)}.
+                  {" "}
+                  Cargo {formatCoverageUsd(insurance.cargoCoverageUsd)} · Auto liability{" "}
+                  {formatCoverageUsd(insurance.autoLiabilityCoverageUsd)}.
                 </div>
               ) : null}
 
