@@ -12,7 +12,6 @@ type Props = {
   initialBlurb: string | null;
   initialOwnerOp: boolean;
   initialCarrierType: "ASSET_BASED" | "BROKER" | null;
-  factoringEligible: boolean;
 };
 
 export function CarrierProfileForm({
@@ -22,7 +21,6 @@ export function CarrierProfileForm({
   initialBlurb,
   initialOwnerOp,
   initialCarrierType,
-  factoringEligible,
 }: Props) {
   const [fleetTruckCount, setFleetTruckCount] = useState(initialTruckCount?.toString() ?? "");
   const [fleetTrailerCount, setFleetTrailerCount] = useState(initialTrailerCount?.toString() ?? "");
@@ -169,13 +167,6 @@ export function CarrierProfileForm({
           </span>
         </span>
       </label>
-
-      {factoringEligible && (
-        <p className="mt-4 rounded border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
-          <strong>Freight factoring:</strong> your account is marked factoring-eligible. Talk to your LOB admin about
-          quick-pay options—especially helpful for owner-operators who need cash flow right after delivery.
-        </p>
-      )}
 
       <button
         type="button"

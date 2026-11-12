@@ -1,13 +1,29 @@
 import { NextResponse } from "next/server";
-import { LoadBidStatus, LoadRateMode, LoadStatus, NotificationEvent, OfferCurrency, VerificationStatus } from "@prisma/client";
+import {
+  LoadBidKind,
+  LoadBidStatus,
+  LoadRateMode,
+  LoadStatus,
+  NotificationEvent,
+  OfferCurrency,
+  VerificationStatus,
+} from "@prisma/client";
 
+import { BID_ACCEPT_HOURS } from "@/lib/board-visibility";
+import { assertCarrierInsuranceCurrent } from "@/lib/carrier-insurance";
 import { carrierMayViewPostedLoad } from "@/lib/carrier-load-access";
+import { expireStaleBids, LoadBidError } from "@/lib/load-bids";
+import { computeBidAcceptExpiresAt } from "@/lib/load-lifecycle";
 import { enqueueLoadNotification } from "@/lib/notifications/dispatch";
 import { prisma } from "@/lib/prisma";
 import { TAKE_IT_LABEL } from "@/lib/rate-mode";
 import { getActorContext } from "@/lib/request-context";
 import { createBookingSchema } from "@/lib/validation";
 
+/**
+ * Firm Rate "book" no longer creates a Booking immediately.
+ * It creates a pending TAKE bid at the posted rate; the supplier Accept/Declines.
+ */
 export async function POST(
   req: Request,
   ctx: { params: Promise<{ loadId: string }> },
@@ -26,6 +42,11 @@ export async function POST(
   });
   if (!carrier || carrier.verificationStatus !== VerificationStatus.APPROVED) {
     return NextResponse.json({ error: "Your carrier must be approved before booking." }, { status: 403 });
+  }
+
+  const insuranceError = await assertCarrierInsuranceCurrent(actor.companyId);
+  if (insuranceError) {
+    return NextResponse.json({ error: insuranceError }, { status: 403 });
   }
 
   const { loadId } = await ctx.params;
@@ -62,7 +83,7 @@ export async function POST(
   }
   if (load.rateMode === LoadRateMode.OPEN_BID) {
     return NextResponse.json(
-      { error: "This load is Open Bid — submit a Bid instead of booking instantly." },
+      { error: "This load is Open Bid — submit a Bid instead of requesting the Firm Rate." },
       { status: 409 },
     );
   }
@@ -84,106 +105,84 @@ export async function POST(
   ) {
     if (load.allowCounterOffers) {
       return NextResponse.json(
-        { error: `To change the ${TAKE_IT_LABEL}, submit a counter from Open Bids — or book the posted rate.` },
+        {
+          error: `To change the ${TAKE_IT_LABEL}, submit a counter from Open Bids — or request the posted rate.`,
+        },
         { status: 409 },
       );
     }
     return NextResponse.json(
-      { error: `${TAKE_IT_LABEL} loads book at the posted rate only.` },
+      { error: `${TAKE_IT_LABEL} requests must use the posted rate.` },
       { status: 409 },
     );
   }
 
+  await expireStaleBids();
+
   const agreedCurrency: OfferCurrency = load.offerCurrency ?? OfferCurrency.CAD;
+  const now = new Date();
+  const expiresAt = computeBidAcceptExpiresAt({
+    now,
+    bidWindowExpiresAt: new Date(now.getTime() + BID_ACCEPT_HOURS * 60 * 60 * 1000),
+  });
 
-  const booking = await prisma.$transaction(async (tx) => {
-    const stillOpen = await tx.load.findFirst({
-      where: { id: loadId, status: LoadStatus.POSTED },
-      select: { id: true },
-    });
-    if (!stillOpen) {
-      throw new Error("LOAD_NOT_POSTED");
-    }
-
-    const pendingBids = await tx.loadBid.findMany({
-      where: { loadId, status: LoadBidStatus.PENDING },
-      select: { id: true, carrierCompanyId: true, kind: true },
-    });
-
-    const newBooking = await tx.booking.create({
-      data: {
+  try {
+    const existing = await prisma.loadBid.findFirst({
+      where: {
         loadId,
         carrierCompanyId,
-        agreedCurrency,
-        agreedRateUsd: load.offeredRateUsd!,
+        status: LoadBidStatus.PENDING,
       },
     });
 
-    await tx.load.update({
-      where: { id: loadId },
-      data: { status: LoadStatus.BOOKED },
-    });
+    const data = {
+      amountUsd: load.offeredRateUsd!,
+      currency: agreedCurrency,
+      note: null as string | null,
+      expiresAt,
+      kind: LoadBidKind.TAKE,
+      submittedByUserId: actor.userId,
+    };
 
-    await tx.loadBid.updateMany({
-      where: { loadId, status: LoadBidStatus.PENDING },
-      data: { status: LoadBidStatus.DECLINED },
-    });
+    const row = existing
+      ? await prisma.loadBid.update({
+          where: { id: existing.id },
+          data,
+        })
+      : await prisma.loadBid.create({
+          data: {
+            loadId,
+            carrierCompanyId,
+            ...data,
+          },
+        });
 
-    const now = new Date();
-    await tx.laneRateObservation.updateMany({
-      where: { loadId },
-      data: {
-        bookedRateUsd: load.offeredRateUsd!,
-        bookedAt: now,
-        outcome: "BOOKED",
-      },
-    });
-
-    return { booking: newBooking, declinedBids: pendingBids };
-  }).catch((e: unknown) => {
-    if (e instanceof Error && e.message === "LOAD_NOT_POSTED") return null;
-    throw e;
-  });
-
-  if (!booking) {
-    return NextResponse.json({ error: "This load is no longer posted." }, { status: 409 });
-  }
-
-  const rate = Number(load.offeredRateUsd);
-  const money = Number.isFinite(rate) ? `${rate.toFixed(2)} ${agreedCurrency}` : null;
-  const suppress = actor.simulated;
-  enqueueLoadNotification({
-    loadId,
-    to: "shipper",
-    event: NotificationEvent.LOAD_BOOKED,
-    dedupeKey: `load-booked:shipper:${loadId}`,
-    headline: "A carrier booked your load.",
-    detail: money,
-    suppress,
-  });
-  enqueueLoadNotification({
-    loadId,
-    to: "carrier",
-    carrierCompanyId,
-    event: NotificationEvent.LOAD_BOOKED,
-    dedupeKey: `load-booked:carrier:${loadId}`,
-    headline: "Your company booked a load.",
-    detail: money,
-    excludeUserId: actor.userId,
-    suppress,
-  });
-  for (const bid of booking.declinedBids) {
-    if (bid.carrierCompanyId === carrierCompanyId) continue;
+    const amount = Number(row.amountUsd);
+    const money = Number.isFinite(amount) ? `${amount.toFixed(2)} ${row.currency}` : null;
     enqueueLoadNotification({
       loadId,
-      to: "carrier",
-      carrierCompanyId: bid.carrierCompanyId,
-      event: bid.kind === "COUNTER" ? NotificationEvent.COUNTER_DECLINED : NotificationEvent.BID_DECLINED,
-      dedupeKey: `bid-declined:${bid.id}`,
-      headline: bid.kind === "COUNTER" ? "Your counter was declined." : "Your bid was declined.",
-      suppress,
+      to: "shipper",
+      event: NotificationEvent.BID_SUBMITTED,
+      dedupeKey: `take-submitted:${row.id}:${row.updatedAt.toISOString()}`,
+      headline: `A carrier requested your ${TAKE_IT_LABEL}.`,
+      detail: money,
+      suppress: actor.simulated,
     });
-  }
 
-  return NextResponse.json({ data: booking.booking }, { status: 201 });
+    return NextResponse.json(
+      {
+        data: {
+          ...row,
+          amountUsd: Number(row.amountUsd),
+          pendingSupplierConfirm: true,
+        },
+      },
+      { status: existing ? 200 : 201 },
+    );
+  } catch (e) {
+    if (e instanceof LoadBidError) {
+      return NextResponse.json({ error: e.message }, { status: e.status });
+    }
+    throw e;
+  }
 }

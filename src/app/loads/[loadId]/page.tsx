@@ -109,7 +109,6 @@ async function renderLoadDetailPage({ params }: { params: Promise<{ loadId: stri
               fleetTrailerCount: true,
               trailerEquipmentTypes: true,
               carrierProfileBlurb: true,
-              factoringEligible: true,
               isOwnerOperator: true,
               verificationStatus: true,
             },
@@ -121,7 +120,18 @@ async function renderLoadDetailPage({ params }: { params: Promise<{ loadId: stri
       bids: {
         where: { status: LoadBidStatus.PENDING },
         orderBy: { createdAt: "desc" },
-        include: { carrierCompany: { select: { id: true, legalName: true } } },
+        include: {
+          carrierCompany: {
+            select: {
+              id: true,
+              legalName: true,
+              dotNumber: true,
+              mcNumber: true,
+              carrierType: true,
+              isOwnerOperator: true,
+            },
+          },
+        },
       },
     },
   });
@@ -131,12 +141,18 @@ async function renderLoadDetailPage({ params }: { params: Promise<{ loadId: stri
   }
 
   let carrierApproved = false;
+  let insuranceCurrent = true;
   if (actor.role === "DISPATCHER" && actor.companyId) {
     const co = await prisma.company.findUnique({
       where: { id: actor.companyId },
       select: { verificationStatus: true },
     });
     carrierApproved = co?.verificationStatus === VerificationStatus.APPROVED;
+    if (carrierApproved) {
+      const { getCarrierInsuranceStatus } = await import("@/lib/carrier-insurance");
+      const ins = await getCarrierInsuranceStatus(actor.companyId);
+      insuranceCurrent = ins.current;
+    }
   }
 
   // Use effective actor company/role (respects admin view-as). Never gate on
@@ -433,29 +449,45 @@ async function renderLoadDetailPage({ params }: { params: Promise<{ loadId: stri
               <div className="mt-4 rounded-lg border border-stone-200 bg-white p-4">
                 <h3 className="text-sm font-semibold text-zinc-900">Book or bid</h3>
                 <div className="mt-3">
-                  <CarrierRateActions
-                    loadId={load.id}
-                    offerCurrency={load.offerCurrency}
-                    offeredRateUsd={load.offeredRateUsd != null ? Number(load.offeredRateUsd) : null}
-                    rateMode={load.rateMode}
-                    allowCounterOffers={load.allowCounterOffers}
-                    bidWindowExpiresAt={load.bidWindowExpiresAt?.toISOString() ?? null}
-                    myPendingAmount={
-                      load.bids.find((b) => b.carrierCompanyId === effectiveCompanyId)
-                        ? Number(load.bids.find((b) => b.carrierCompanyId === effectiveCompanyId)!.amountUsd)
-                        : null
-                    }
-                    decision={isShipperOwner || isRealAdmin ? null : decision}
-                  />
+                  {!carrierApproved ? (
+                    <p className="text-sm text-zinc-600">Your carrier must be approved before booking.</p>
+                  ) : !insuranceCurrent ? (
+                    <p className="text-sm text-rose-900">
+                      Upload a current certificate of insurance on{" "}
+                      <Link href="/carrier/compliance" className="font-medium underline">
+                        Carrier Profile
+                      </Link>{" "}
+                      before booking or bidding.
+                    </p>
+                  ) : (
+                    <CarrierRateActions
+                      loadId={load.id}
+                      offerCurrency={load.offerCurrency}
+                      offeredRateUsd={load.offeredRateUsd != null ? Number(load.offeredRateUsd) : null}
+                      rateMode={load.rateMode}
+                      allowCounterOffers={load.allowCounterOffers}
+                      bidWindowExpiresAt={load.bidWindowExpiresAt?.toISOString() ?? null}
+                      myPendingAmount={
+                        load.bids.find((b) => b.carrierCompanyId === effectiveCompanyId)
+                          ? Number(load.bids.find((b) => b.carrierCompanyId === effectiveCompanyId)!.amountUsd)
+                          : null
+                      }
+                      myPendingKind={
+                        load.bids.find((b) => b.carrierCompanyId === effectiveCompanyId)?.kind ?? null
+                      }
+                      decision={isShipperOwner || isRealAdmin ? null : decision}
+                    />
+                  )}
                 </div>
               </div>
             )}
 
             {load.status === LoadStatus.POSTED && (isShipperOwner || isRealAdmin) && (
               <div className="mt-4 rounded-lg border border-stone-200 bg-white p-4">
-                <h3 className="text-sm font-semibold text-zinc-900">Pending bids &amp; counters</h3>
+                <h3 className="text-sm font-semibold text-zinc-900">Pending carrier requests</h3>
                 <p className="mt-1 text-xs text-zinc-500">
-                  Accepting a bid books the load at that amount and closes the others.
+                  Review who wants this load. Accept books that carrier at the shown rate and closes the others.
+                  Decline leaves the load open.
                 </p>
                 <div className="mt-3">
                   <ShipperBidReviewList
@@ -474,6 +506,10 @@ async function renderLoadDetailPage({ params }: { params: Promise<{ loadId: stri
                       carrierName: b.carrierCompany.legalName,
                       carrierCompanyId: b.carrierCompany.id,
                       priorMovesWithYou: repeats[b.carrierCompanyId] ?? 0,
+                      dotNumber: b.carrierCompany.dotNumber,
+                      mcNumber: b.carrierCompany.mcNumber,
+                      carrierType: b.carrierCompany.carrierType,
+                      isOwnerOperator: b.carrierCompany.isOwnerOperator,
                     }))}
                   />
                 </div>
@@ -572,7 +608,6 @@ async function renderLoadDetailPage({ params }: { params: Promise<{ loadId: stri
                     fleetTrailerCount: load.booking.carrierCompany.fleetTrailerCount,
                     trailerEquipmentTypes: load.booking.carrierCompany.trailerEquipmentTypes,
                     carrierProfileBlurb: load.booking.carrierCompany.carrierProfileBlurb,
-                    factoringEligible: load.booking.carrierCompany.factoringEligible,
                     verificationStatus: load.booking.carrierCompany.verificationStatus,
                     reliabilityScore: null,
                   }}
@@ -705,6 +740,10 @@ async function renderLoadDetailPage({ params }: { params: Promise<{ loadId: stri
                 token={load.dispatchLink.token}
                 bolStripHref={`/loads/${load.id}/bol-strip`}
                 driverName={load.dispatchLink.driverName}
+                driverPhone={load.dispatchLink.driverPhone}
+                driverEmail={load.dispatchLink.driverEmail}
+                loadReference={load.referenceNumber}
+                laneLabel={`${load.originCity}, ${load.originState} → ${load.destinationCity}, ${load.destinationState}`}
               />
             )}
           </div>

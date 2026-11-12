@@ -212,8 +212,14 @@ export const reviewLoadBidSchema = z.object({
 export const createDispatchSchema = z.object({
   assignedByUserId: z.string().min(1).optional(),
   driverName: z.string().min(2),
-  driverPhone: z.string().optional(),
-  driverEmail: z.string().email().optional(),
+  driverPhone: z.preprocess(
+    (v) => (typeof v === "string" && !v.trim() ? undefined : v),
+    z.string().optional(),
+  ),
+  driverEmail: z.preprocess(
+    (v) => (typeof v === "string" && !v.trim() ? undefined : v),
+    z.string().email().optional(),
+  ),
   expiresInHours: z.number().int().positive().max(72).default(48),
   notes: z.string().trim().max(800).optional(),
   include: z

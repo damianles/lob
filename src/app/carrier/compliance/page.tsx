@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 
 import { LobBrandStrip } from "@/components/lob-brand-strip";
 import { LobSidebar } from "@/components/lob-sidebar";
+import { getCarrierInsuranceStatus } from "@/lib/carrier-insurance";
+import { formatDisplayDate } from "@/lib/format-display-date";
 import { prisma } from "@/lib/prisma";
 import { signInUrlForAppPath } from "@/lib/guest-auth-routes";
 import { getActorContext } from "@/lib/request-context";
@@ -64,7 +66,6 @@ export default async function CarrierCompliancePage() {
       trailerEquipmentTypes: true,
       carrierProfileBlurb: true,
       isOwnerOperator: true,
-      factoringEligible: true,
       carrierType: true,
       dotNumber: true,
       mcNumber: true,
@@ -77,6 +78,7 @@ export default async function CarrierCompliancePage() {
   }
 
   const equipmentCodes = parseTrailerJson(company.trailerEquipmentTypes);
+  const insurance = await getCarrierInsuranceStatus(actor.companyId);
 
   return (
     <main className="min-h-[calc(100vh-3.5rem)] bg-zinc-100 p-3 text-zinc-900 sm:p-4">
@@ -89,8 +91,38 @@ export default async function CarrierCompliancePage() {
               <h1 className="text-2xl font-bold sm:text-3xl">Carrier Profile</h1>
               <p className="mt-2 text-sm text-zinc-600">
                 Store proof of your organization and fleet details. Shippers can review this after they book a load with
-                you—before the truck arrives.
+                you—before the truck arrives. A current certificate of insurance is required to book, bid, or post
+                capacity.
               </p>
+
+              {!insurance.current ? (
+                <div className="mt-4 rounded-lg border border-rose-300 bg-rose-50 px-4 py-3 text-sm text-rose-950">
+                  <p className="font-semibold">Insurance missing or expired</p>
+                  <p className="mt-1">
+                    Upload a current COI with an expiry date below. Until then you cannot book loads, bid, or post
+                    capacity.
+                    {insurance.expiresAt ? (
+                      <>
+                        {" "}
+                        Last filing expired {formatDisplayDate(insurance.expiresAt)}.
+                      </>
+                    ) : null}
+                  </p>
+                </div>
+              ) : insurance.expiringSoon ? (
+                <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+                  <p className="font-semibold">Insurance expiring soon</p>
+                  <p className="mt-1">
+                    Your COI expires {insurance.expiresAt ? formatDisplayDate(insurance.expiresAt) : "soon"}
+                    {insurance.daysUntilExpiry != null ? ` (${insurance.daysUntilExpiry} days)` : ""}. Renew it before
+                    it lapses so booking is not interrupted.
+                  </p>
+                </div>
+              ) : insurance.expiresAt ? (
+                <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-950">
+                  Insurance on file is current through {formatDisplayDate(insurance.expiresAt)}.
+                </div>
+              ) : null}
 
               <div className="mt-5 space-y-4">
                 <DistanceUnitProfilePreference persona="carrier" />
@@ -125,7 +157,6 @@ export default async function CarrierCompliancePage() {
                 initialBlurb={company.carrierProfileBlurb}
                 initialOwnerOp={company.isOwnerOperator}
                 initialCarrierType={company.carrierType}
-                factoringEligible={company.factoringEligible}
               />
             </div>
           </div>

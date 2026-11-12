@@ -2,6 +2,11 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
   "installCommand": "npm install",
-  "buildCommand": "NODE_OPTIONS=--max-old-space-size=4096 npm run build"
+  "buildCommand": "NODE_OPTIONS=--max-old-space-size=4096 npm run build",
+  "crons": [
+    {
+      "path": "/api/cron/insurance-expiry",
+      "schedule": "0 14 * * *"
+    }
+  ]
 }
-

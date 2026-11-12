@@ -162,7 +162,7 @@ export const NOTICE_EVENTS: NoticeEventDef[] = [
     event: NotificationEvent.INSURANCE_EXPIRING,
     audience: "carrier",
     group: "Account",
-    defaultOn: false,
+    defaultOn: true,
     label: ONE("carrier", "Insurance on file is expiring"),
   },
   {

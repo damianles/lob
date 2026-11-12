@@ -1,4 +1,12 @@
-import { LoadBidStatus, LoadRateMode, LoadStatus, NotificationEvent, PostedLaneOutcome, type Prisma } from "@prisma/client";
+import {
+  LoadBidKind,
+  LoadBidStatus,
+  LoadRateMode,
+  LoadStatus,
+  NotificationEvent,
+  PostedLaneOutcome,
+  type Prisma,
+} from "@prisma/client";
 
 import { enqueueExpiredBidNotices, enqueueLoadNotification } from "@/lib/notifications/dispatch";
 import { prisma } from "@/lib/prisma";
@@ -11,6 +19,26 @@ export class LoadBidError extends Error {
     super(message);
     this.name = "LoadBidError";
   }
+}
+
+function acceptedHeadline(kind: LoadBidKind): string {
+  if (kind === LoadBidKind.COUNTER) return "Your counter was accepted.";
+  if (kind === LoadBidKind.TAKE) return "Your Firm Rate request was accepted.";
+  return "Your bid was accepted.";
+}
+
+function declinedHeadline(kind: LoadBidKind): string {
+  if (kind === LoadBidKind.COUNTER) return "Your counter was declined.";
+  if (kind === LoadBidKind.TAKE) return "Your Firm Rate request was declined.";
+  return "Your bid was declined.";
+}
+
+function acceptedEvent(kind: LoadBidKind): NotificationEvent {
+  return kind === LoadBidKind.COUNTER ? NotificationEvent.COUNTER_ACCEPTED : NotificationEvent.BID_ACCEPTED;
+}
+
+function declinedEvent(kind: LoadBidKind): NotificationEvent {
+  return kind === LoadBidKind.COUNTER ? NotificationEvent.COUNTER_DECLINED : NotificationEvent.BID_DECLINED;
 }
 
 export async function expireStaleBids(tx?: Prisma.TransactionClient) {
@@ -143,17 +171,15 @@ export async function acceptLoadBid(args: {
 
   const suppress = args.suppressNotifications;
   enqueueExpiredBidNotices(outcome.expired, { suppress });
-  const acceptedEvent =
-    outcome.acceptedKind === "COUNTER" ? NotificationEvent.COUNTER_ACCEPTED : NotificationEvent.BID_ACCEPTED;
   const amount = Number(outcome.amountUsd);
   const money = Number.isFinite(amount) ? `${amount.toFixed(2)} ${outcome.currency}` : null;
   enqueueLoadNotification({
     loadId: outcome.loadId,
     to: "carrier",
     carrierCompanyId: outcome.carrierCompanyId,
-    event: acceptedEvent,
+    event: acceptedEvent(outcome.acceptedKind),
     dedupeKey: `bid-accepted:${outcome.bidId}`,
-    headline: outcome.acceptedKind === "COUNTER" ? "Your counter was accepted." : "Your bid was accepted.",
+    headline: acceptedHeadline(outcome.acceptedKind),
     detail: money,
     suppress,
   });
@@ -162,7 +188,10 @@ export async function acceptLoadBid(args: {
     to: "shipper",
     event: NotificationEvent.LOAD_BOOKED,
     dedupeKey: `load-booked:shipper:${outcome.loadId}`,
-    headline: "A carrier booked your load.",
+    headline:
+      outcome.acceptedKind === LoadBidKind.TAKE
+        ? "You confirmed a Firm Rate carrier."
+        : "A carrier booked your load.",
     detail: money,
     excludeUserId: args.reviewedByUserId,
     suppress,
@@ -172,9 +201,9 @@ export async function acceptLoadBid(args: {
       loadId: outcome.loadId,
       to: "carrier",
       carrierCompanyId: other.carrierCompanyId,
-      event: other.kind === "COUNTER" ? NotificationEvent.COUNTER_DECLINED : NotificationEvent.BID_DECLINED,
+      event: declinedEvent(other.kind),
       dedupeKey: `bid-declined:${other.id}`,
-      headline: other.kind === "COUNTER" ? "Your counter was declined." : "Your bid was declined.",
+      headline: declinedHeadline(other.kind),
       suppress,
     });
   }
@@ -216,9 +245,9 @@ export async function declineLoadBid(args: {
     loadId: updated.loadId,
     to: "carrier",
     carrierCompanyId: updated.carrierCompanyId,
-    event: updated.kind === "COUNTER" ? NotificationEvent.COUNTER_DECLINED : NotificationEvent.BID_DECLINED,
+    event: declinedEvent(updated.kind),
     dedupeKey: `bid-declined:${updated.id}`,
-    headline: updated.kind === "COUNTER" ? "Your counter was declined." : "Your bid was declined.",
+    headline: declinedHeadline(updated.kind),
     detail: Number.isFinite(amount) ? `${amount.toFixed(2)} ${updated.currency}` : null,
     suppress: args.suppressNotifications,
   });
@@ -256,7 +285,10 @@ export async function countPendingBidInbox(args: { companyId: string; asShipper:
         load: {
           shipperCompanyId: args.companyId,
           status: LoadStatus.POSTED,
-          OR: [{ rateMode: LoadRateMode.OPEN_BID }, { rateMode: LoadRateMode.TAKE_IT, allowCounterOffers: true }],
+          OR: [
+            { rateMode: LoadRateMode.OPEN_BID },
+            { rateMode: LoadRateMode.TAKE_IT },
+          ],
         },
       },
     });

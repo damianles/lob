@@ -1289,12 +1289,12 @@ export function SupplierPostLoadForm({
                 {
                   value: "TAKE_IT",
                   label: TAKE_IT_LABEL,
-                  description: "Book this number instantly",
+                  description: "Carriers request this rate; you confirm the carrier",
                 },
                 {
                   value: "OPEN_BID",
                   label: OPEN_BID_LABEL,
-                  description: "Carriers bid",
+                  description: "Carriers bid; you pick one",
                 },
               ]}
             />
@@ -1318,8 +1318,8 @@ export function SupplierPostLoadForm({
               <span>
                 <span className="font-medium">Allow counters</span>
                 <span className="mt-0.5 block text-xs text-zinc-500">
-                  Carriers can still book the {TAKE_IT_LABEL} instantly, or propose a different number for you to
-                  accept or decline.
+                  Carriers can request the {TAKE_IT_LABEL} or propose a different number. You Accept or Decline
+                  each carrier either way.
                 </span>
               </span>
             </label>

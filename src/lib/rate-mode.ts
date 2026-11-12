@@ -1,7 +1,7 @@
 import { MAX_BID_WINDOW_HOURS } from "@/lib/board-visibility";
 
 export type LoadRateMode = "TAKE_IT" | "OPEN_BID";
-export type LoadBidKind = "BID" | "COUNTER";
+export type LoadBidKind = "BID" | "COUNTER" | "TAKE";
 
 export const RATE_MODE_TAKE_IT = "TAKE_IT" as const;
 export const RATE_MODE_OPEN_BID = "OPEN_BID" as const;
@@ -17,16 +17,18 @@ export function rateModeLabel(mode: LoadRateMode | string | null | undefined): s
 
 export function rateModeHint(mode: LoadRateMode, allowCounters: boolean): string {
   if (mode === "OPEN_BID") {
-    return `Carriers submit bids for up to ${MAX_BID_WINDOW_HOURS}h. You accept one before the window closes — no instant book.`;
+    return `Carriers submit bids for up to ${MAX_BID_WINDOW_HOURS}h. You accept one before the window closes.`;
   }
   if (allowCounters) {
-    return `Posted ${TAKE_IT_LABEL}. Carriers can book it as-is or send a counter.`;
+    return `Posted ${TAKE_IT_LABEL}. Carriers request the rate or send a counter — you confirm the carrier before it books.`;
   }
-  return `Posted ${TAKE_IT_LABEL}. This is the pay rate — no negotiations.`;
+  return `Posted ${TAKE_IT_LABEL}. Carriers request this rate; you Accept or Decline the carrier before it books.`;
 }
 
 export function bidKindLabel(kind: LoadBidKind | string): string {
-  return kind === "COUNTER" ? "Counter" : "Bid";
+  if (kind === "COUNTER") return "Counter";
+  if (kind === "TAKE") return "Firm take";
+  return "Bid";
 }
 
 export function bidStatusLabel(status: string): string {

@@ -2,6 +2,7 @@ import { LoadBidKind, LoadBidStatus, LoadRateMode, LoadStatus, NotificationEvent
 import { NextResponse } from "next/server";
 
 import { BID_ACCEPT_HOURS } from "@/lib/board-visibility";
+import { assertCarrierInsuranceCurrent } from "@/lib/carrier-insurance";
 import { carrierMayViewPostedLoad } from "@/lib/carrier-load-access";
 import { expireStaleBids, LoadBidError } from "@/lib/load-bids";
 import { enqueueLoadNotification } from "@/lib/notifications/dispatch";
@@ -78,6 +79,11 @@ export async function POST(req: Request, ctx: { params: Promise<{ loadId: string
     return NextResponse.json({ error: "Your carrier must be approved before bidding." }, { status: 403 });
   }
 
+  const insuranceError = await assertCarrierInsuranceCurrent(actor.companyId);
+  if (insuranceError) {
+    return NextResponse.json({ error: insuranceError }, { status: 403 });
+  }
+
   const { loadId } = await ctx.params;
   const body = await req.json().catch(() => null);
   const parsed = createLoadBidSchema.safeParse(body);
@@ -121,7 +127,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ loadId: string
   const isCounter = load.rateMode === LoadRateMode.TAKE_IT && load.allowCounterOffers;
   if (!isOpenBid && !isCounter) {
     return NextResponse.json(
-      { error: `${TAKE_IT_LABEL} loads with counters off cannot be bid — book the posted rate.` },
+      { error: `${TAKE_IT_LABEL} loads with counters off cannot be bid — request the posted rate instead.` },
       { status: 409 },
     );
   }

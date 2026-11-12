@@ -48,8 +48,8 @@ export default async function OpenBidsPage() {
             <h1 className="text-2xl font-bold text-zinc-900">Open Bids</h1>
             <p className="mt-1 max-w-2xl text-sm text-zinc-600">
               {isShipper
-                ? `${OPEN_BID_LABEL} loads and ${TAKE_IT_LABEL} counters waiting on you. Accept a bid to book at that amount.`
-                : `${OPEN_BID_LABEL} freight and any bids or counters you have in play.`}
+                ? `${OPEN_BID_LABEL} bids and ${TAKE_IT_LABEL} take requests waiting on you. Accept to book that carrier at the shown rate.`
+                : `${OPEN_BID_LABEL} freight and any bids, counters, or Firm Rate requests you have in play.`}
             </p>
             {isShipper ? <ShipperOpenBids companyId={actor.companyId!} /> : null}
             {isCarrier && actor.companyId ? <CarrierOpenBids companyId={actor.companyId} /> : null}
@@ -65,14 +65,28 @@ async function ShipperOpenBids({ companyId }: { companyId: string }) {
     where: {
       shipperCompanyId: companyId,
       status: LoadStatus.POSTED,
-      OR: [{ rateMode: LoadRateMode.OPEN_BID }, { rateMode: LoadRateMode.TAKE_IT, allowCounterOffers: true }],
+      OR: [
+        { rateMode: LoadRateMode.OPEN_BID },
+        { rateMode: LoadRateMode.TAKE_IT, bids: { some: { status: LoadBidStatus.PENDING } } },
+      ],
     },
     orderBy: [{ bidWindowExpiresAt: "asc" }, { createdAt: "desc" }],
     include: {
       bids: {
         where: { status: LoadBidStatus.PENDING },
         orderBy: { createdAt: "desc" },
-        include: { carrierCompany: { select: { id: true, legalName: true } } },
+        include: {
+          carrierCompany: {
+            select: {
+              id: true,
+              legalName: true,
+              dotNumber: true,
+              mcNumber: true,
+              carrierType: true,
+              isOwnerOperator: true,
+            },
+          },
+        },
       },
     },
     take: 80,
@@ -81,11 +95,11 @@ async function ShipperOpenBids({ companyId }: { companyId: string }) {
   if (loads.length === 0) {
     return (
       <p className="mt-6 text-sm text-zinc-600">
-        No open-bid or counter-enabled loads right now.{" "}
+        No pending carrier requests right now.{" "}
         <Link href="/shipments" className="font-medium text-lob-navy underline">
           Post a Load
         </Link>{" "}
-        and choose {OPEN_BID_LABEL} or {TAKE_IT_LABEL} with counters.
+        as {OPEN_BID_LABEL} or {TAKE_IT_LABEL}.
       </p>
     );
   }
@@ -153,6 +167,10 @@ async function ShipperOpenBids({ companyId }: { companyId: string }) {
                 carrierName: b.carrierCompany.legalName,
                 carrierCompanyId: b.carrierCompany.id,
                 priorMovesWithYou: repeats[b.carrierCompanyId] ?? 0,
+                dotNumber: b.carrierCompany.dotNumber,
+                mcNumber: b.carrierCompany.mcNumber,
+                carrierType: b.carrierCompany.carrierType,
+                isOwnerOperator: b.carrierCompany.isOwnerOperator,
               }))}
             />
           </div>

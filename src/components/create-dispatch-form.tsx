@@ -1,18 +1,51 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 
+type SavedDriver = {
+  id: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+};
+
 export function CreateDispatchForm({ loadId }: { loadId: string }) {
   const router = useRouter();
+  const [savedDrivers, setSavedDrivers] = useState<SavedDriver[]>([]);
+  const [selectedId, setSelectedId] = useState("");
   const [driverName, setDriverName] = useState("");
   const [driverPhone, setDriverPhone] = useState("");
+  const [driverEmail, setDriverEmail] = useState("");
   const [hours, setHours] = useState("48");
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const res = await fetch("/api/carriers/me/drivers");
+      if (!res.ok || cancelled) return;
+      const json = (await res.json().catch(() => ({}))) as { data?: SavedDriver[] };
+      if (!cancelled && Array.isArray(json.data)) setSavedDrivers(json.data);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  function applySaved(id: string) {
+    setSelectedId(id);
+    if (!id) return;
+    const d = savedDrivers.find((x) => x.id === id);
+    if (!d) return;
+    setDriverName(d.name);
+    setDriverPhone(d.phone ?? "");
+    setDriverEmail(d.email ?? "");
+  }
 
   async function submit() {
     if (!driverName.trim()) {
@@ -27,6 +60,7 @@ export function CreateDispatchForm({ loadId }: { loadId: string }) {
       body: JSON.stringify({
         driverName: driverName.trim(),
         driverPhone: driverPhone.trim() || undefined,
+        driverEmail: driverEmail.trim() || undefined,
         expiresInHours: Number(hours) || 48,
         notes: notes.trim() || undefined,
       }),
@@ -34,7 +68,7 @@ export function CreateDispatchForm({ loadId }: { loadId: string }) {
     const data = await res.json().catch(() => ({}));
     setBusy(false);
     if (!res.ok) {
-      setError(typeof data.error === "string" ? data.error : "Could not create driver link.");
+      setError(typeof data.error === "string" ? data.error : "Could not create dispatch.");
       return;
     }
     router.refresh();
@@ -42,24 +76,54 @@ export function CreateDispatchForm({ loadId }: { loadId: string }) {
 
   return (
     <div className="mt-6 max-w-lg space-y-3 rounded-lg border border-sky-200 bg-sky-50/70 p-4">
-      <h2 className="text-sm font-semibold text-zinc-900">Create driver dispatch</h2>
+      <h2 className="text-sm font-semibold text-zinc-900">Assign driver &amp; prepare paperwork</h2>
       <p className="text-xs text-zinc-600">
-        The haul sheet (not a bill of lading) includes the mill load number, lane, pickup/delivery addresses and phones,
-        dates, equipment, weight, product, and booking. No rates. Add the driver, then print or save as PDF. Use the
-        mill&apos;s signed BOL at the yard.
+        Pick a saved driver or enter a new one. After create, email or text the haul sheet from this page. No QR codes.
+        Use the mill&apos;s signed BOL at the yard.
       </p>
       {error ? <p className="text-sm text-red-700">{error}</p> : null}
+
+      {savedDrivers.length > 0 ? (
+        <label className="block text-xs text-zinc-600">
+          Saved drivers
+          <select
+            className="mt-1 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-zinc-900"
+            value={selectedId}
+            onChange={(e) => applySaved(e.target.value)}
+          >
+            <option value="">New driver…</option>
+            {savedDrivers.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name}
+                {d.phone ? ` · ${d.phone}` : ""}
+                {d.email ? ` · ${d.email}` : ""}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
+
       <input
         className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm"
         placeholder="Driver name *"
         value={driverName}
-        onChange={(e) => setDriverName(e.target.value)}
+        onChange={(e) => {
+          setSelectedId("");
+          setDriverName(e.target.value);
+        }}
       />
       <input
         className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm"
-        placeholder="Driver phone"
+        placeholder="Driver phone (for text)"
         value={driverPhone}
         onChange={(e) => setDriverPhone(e.target.value)}
+      />
+      <input
+        type="email"
+        className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm"
+        placeholder="Driver email (for email)"
+        value={driverEmail}
+        onChange={(e) => setDriverEmail(e.target.value)}
       />
       <textarea
         className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm"

@@ -15,7 +15,6 @@ type Props = {
     fleetTrailerCount: number | null;
     trailerEquipmentTypes: string | null;
     carrierProfileBlurb: string | null;
-    factoringEligible: boolean;
     verificationStatus: "PENDING" | "APPROVED" | "REJECTED";
     reliabilityScore?: number | null;
   };
@@ -88,11 +87,6 @@ export function CarrierScorecard({ carrier, documents = [], className }: Props) 
               {carrier.verificationStatus === "APPROVED" ? "✓ Verified" : carrier.verificationStatus}
             </span>
             {reliabilityChip(carrier.reliabilityScore ?? null)}
-            {carrier.factoringEligible && (
-              <span className={`${LOB_PILL_COMPACT} gap-1 bg-indigo-50 text-[11px] text-indigo-900 ring-indigo-200`}>
-                Factoring
-              </span>
-            )}
           </div>
         </div>
         {isBroker && (

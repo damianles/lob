@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { assertCarrierInsuranceCurrent } from "@/lib/carrier-insurance";
 import { parseDateInputToUtc, validateCapacityAvailabilityWindow } from "@/lib/capacity-window";
 import { prisma } from "@/lib/prisma";
 import { getActorContext } from "@/lib/request-context";
@@ -21,6 +22,11 @@ export async function POST(
   }
   if (actor.role !== "DISPATCHER" && actor.role !== "ADMIN") {
     return NextResponse.json({ error: "Carriers only." }, { status: 403 });
+  }
+
+  const insuranceError = await assertCarrierInsuranceCurrent(actor.companyId);
+  if (insuranceError) {
+    return NextResponse.json({ error: insuranceError }, { status: 403 });
   }
 
   const { id } = await ctx.params;

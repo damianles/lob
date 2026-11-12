@@ -137,6 +137,8 @@ enum LoadRateMode {
 enum LoadBidKind {
   BID
   COUNTER
+  /** Carrier requested the posted Firm Rate; supplier must Accept/Decline before booking. */
+  TAKE
 }
 
 enum LoadBidStatus {
@@ -242,6 +244,27 @@ model Company {
   creditReviewsReceived CreditFileReview[]        @relation("CreditSubject")
   notificationContacts  NotificationContact[]
   notificationDeliveries NotificationDelivery[]
+  carrierDrivers        CarrierDriver[]
+}
+
+/**
+ * Carrier-company driver contacts saved when paperwork is sent,
+ * so dispatchers can reuse name / phone / email on later loads.
+ */
+model CarrierDriver {
+  id         String   @id @default(cuid())
+  companyId  String
+  name       String
+  phone      String?
+  email      String?
+  lastUsedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId, lastUsedAt])
+  @@index([companyId, name])
 }
 
 /**
@@ -494,8 +517,8 @@ model Load {
 }
 
 /**
- * Carrier bid (open-bid loads) or counter on a Firm Rate load.
- * Accepting a pending bid books the load at this amount.
+ * Carrier bid (Open Bid), counter, or Firm Rate take request.
+ * Accepting a pending row books the load at this amount — supplier always confirms the carrier.
  */
 model LoadBid {
   id                String        @id @default(cuid())

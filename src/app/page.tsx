@@ -92,6 +92,9 @@ export default async function Home() {
   let profileSyncDbError: string | null = null;
   let appUser: { id: string; companyId: string | null; role: string } | null = null;
   let carrierApproved = false;
+  let insuranceCurrent = true;
+  let insuranceExpiresAt: string | null = null;
+  let insuranceExpiringSoon = false;
   let boardCompanyName: string | null = null;
   let clerkSyncError: "missing_email" | null = null;
 
@@ -135,6 +138,13 @@ export default async function Home() {
       boardCompanyName = co?.legalName ?? null;
       if (boardRole === "DISPATCHER") {
         carrierApproved = co?.verificationStatus === VerificationStatus.APPROVED;
+        if (carrierApproved) {
+          const { getCarrierInsuranceStatus } = await import("@/lib/carrier-insurance");
+          const ins = await getCarrierInsuranceStatus(boardCompanyId);
+          insuranceCurrent = ins.current;
+          insuranceExpiresAt = ins.expiresAt?.toISOString() ?? null;
+          insuranceExpiringSoon = ins.expiringSoon;
+        }
       }
     }
 
@@ -205,6 +215,9 @@ export default async function Home() {
     companyName: boardCompanyName,
     role: boardRole,
     carrierApproved,
+    insuranceCurrent,
+    insuranceExpiresAt,
+    insuranceExpiringSoon,
   };
 
   const active = loads.length;
@@ -294,6 +307,51 @@ export default async function Home() {
                   .
                 </p>
               )}
+            </section>
+          )}
+
+        {userId &&
+          boardRole === "DISPATCHER" &&
+          boardCompanyId &&
+          carrierApproved &&
+          !insuranceCurrent && (
+            <section className="mb-4 rounded-lg border border-rose-300 bg-rose-50 p-4">
+              <h2 className="font-semibold text-rose-950">Insurance required to book</h2>
+              <p className="mt-1 text-sm text-rose-900">
+                Your certificate of insurance is missing or expired. Upload a current COI on{" "}
+                <Link className="font-medium underline" href="/carrier/compliance">
+                  Carrier Profile
+                </Link>{" "}
+                before booking, bidding, or posting capacity.
+              </p>
+            </section>
+          )}
+
+        {userId &&
+          boardRole === "DISPATCHER" &&
+          boardCompanyId &&
+          carrierApproved &&
+          insuranceCurrent &&
+          insuranceExpiringSoon && (
+            <section className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-4">
+              <h2 className="font-semibold text-amber-900">Insurance expiring soon</h2>
+              <p className="mt-1 text-sm text-amber-800">
+                Your COI
+                {insuranceExpiresAt ? (
+                  <>
+                    {" "}
+                    expires{" "}
+                    <span className="font-medium tabular-nums">
+                      {new Date(insuranceExpiresAt).toISOString().slice(0, 10)}
+                    </span>
+                  </>
+                ) : null}
+                . Renew it on{" "}
+                <Link className="font-medium underline" href="/carrier/compliance">
+                  Carrier Profile
+                </Link>{" "}
+                so booking is not interrupted.
+              </p>
             </section>
           )}
 

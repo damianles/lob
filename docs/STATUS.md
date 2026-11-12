@@ -1,6 +1,6 @@
 # LOB — where we are
 
-**As of:** 2 Oct 2026 (no facility/driver QR; BOL required before carrier delivery)  
+**As of:** 12 Nov 2026 (supplier confirms carrier on Firm Rate takes; no facility/driver QR; BOL before delivery)  
 **This file is the product snapshot.** `AGENTS.md` is the code map. Do not treat chat history as current.
 
 Update this file when something **material** changes (shipped feature, explicit deferral, launch blocker). Skip drive-by session notes.
@@ -13,7 +13,9 @@ Update this file when something **material** changes (shipped feature, explicit 
 
 Signup collects a W-9 and credit reference (insurance for carriers), business phone, optional billing address, and clickwrap legal acceptances. After a booking, each side can open the other’s credit file. LOB does not score credit. Admin must mark credit docs verified before Approve.
 
-**Core lifecycle:** post load → book (or accept a bid) → dispatch packet → carrier marks picked up → carrier uploads signed BOL → carrier marks delivered → supplier confirms load complete (unlocks completion invoice).
+**Core lifecycle:** post load → carrier requests Firm Rate or bids → **supplier Accept/Decline that carrier** → dispatch packet → carrier marks picked up → carrier uploads signed BOL → carrier marks delivered → supplier confirms load complete (unlocks completion invoice).
+
+Firm Rate is no longer an instant book. `POST /api/loads/:id/book` creates a pending `LoadBid` (`kind: TAKE`) at the posted rate; Accept creates the `Booking`. Open Bid and counters already used the same Accept/Decline path. Decline leaves the load open (does not auto-exclude the carrier). Credit file access remains post-booking only.
 
 ---
 
@@ -45,6 +47,7 @@ Platform Terms, Privacy Policy, Supplier Agreement, and Carrier Agreement ship a
 | Auto-approve | `LOB_AUTO_APPROVE_*` ignored on Vercel Production (unless preview-admin tools explicitly allowed). Prod project currently has these vars unset. |
 | Admin approve | Requires `creditDocsVerifiedAt` after opening W-9 / credit (and insurance for carriers). |
 | Post / book | Company `verificationStatus === APPROVED`. |
+| Carrier insurance | Latest `INSURANCE` COI must be unexpired (UTC) to book, bid, or post capacity. Email at ≤30 days via daily cron `/api/cron/insurance-expiry` (`CRON_SECRET`). |
 | Credit file | Counterparty only after a shared booking; HTTPS links required. |
 | Unsigned create | Blocked outside local/dev (`allowUnsignedCompanyCreate`). |
 

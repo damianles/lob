@@ -2,6 +2,7 @@ import { VerificationStatus } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { assertCarrierInsuranceCurrent } from "@/lib/carrier-insurance";
 import { capacityScorecardsForCarriers } from "@/lib/capacity-scorecard";
 import { parseDateInputToUtc, validateCapacityAvailabilityWindow } from "@/lib/capacity-window";
 import { normalizeStoredPostal } from "@/lib/postal";
@@ -154,6 +155,11 @@ export async function POST(req: Request) {
       { error: "Your carrier company must be approved before posting capacity on the board." },
       { status: 403 },
     );
+  }
+
+  const insuranceError = await assertCarrierInsuranceCurrent(actor.companyId);
+  if (insuranceError) {
+    return NextResponse.json({ error: insuranceError }, { status: 403 });
   }
 
   const body = await req.json();

@@ -95,12 +95,12 @@ export function LoadTimeline({ load, booking, dispatch }: Props) {
     },
     {
       key: "dispatch",
-      label: "Driver link created",
-      detail: dispatch ? fmt(dispatch.createdAt) : "Carrier creates the driver link",
+      label: "Driver assigned",
+      detail: dispatch ? fmt(dispatch.createdAt) : "Carrier assigns a driver and sends the haul sheet",
       stepDone: s3,
       extra: dispatch ? (
         <Link href={`/driver/${dispatch.token}`} className="font-medium text-lob-navy underline">
-          Open driver page
+          Open haul sheet
         </Link>
       ) : null,
     },

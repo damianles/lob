@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { LoadStatus } from "@prisma/client";
 
+import { rememberCarrierDriver } from "@/lib/carrier-drivers";
 import { normalizeDriverPacketInput } from "@/lib/driver-packet";
 import { prisma } from "@/lib/prisma";
 import { getActorContext } from "@/lib/request-context";
@@ -70,6 +71,15 @@ export async function POST(
 
     return created;
   });
+
+  if (actor.companyId) {
+    await rememberCarrierDriver({
+      companyId: actor.companyId,
+      name: parsed.data.driverName,
+      phone: parsed.data.driverPhone,
+      email: parsed.data.driverEmail,
+    }).catch(() => null);
+  }
 
   return NextResponse.json(
     {

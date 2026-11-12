@@ -184,12 +184,6 @@ export default async function ShipmentsPage({
               {perspective === "carrier" && (
                 <div className="flex flex-wrap gap-2">
                   <Link
-                    href="/driver"
-                    className={`${lobWoodOutlineButtonClass} min-h-10 px-4 py-2`}
-                  >
-                    Driver Dispatch
-                  </Link>
-                  <Link
                     href="/carrier/compliance"
                     className={`${lobWoodPrimaryButtonClass} min-h-10 px-4 py-2`}
                   >

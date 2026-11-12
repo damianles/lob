@@ -30,7 +30,7 @@ export async function GET() {
         status: LoadStatus.POSTED,
         OR: [
           { rateMode: LoadRateMode.OPEN_BID },
-          { rateMode: LoadRateMode.TAKE_IT, allowCounterOffers: true, bids: { some: { status: LoadBidStatus.PENDING } } },
+          { rateMode: LoadRateMode.TAKE_IT, bids: { some: { status: LoadBidStatus.PENDING } } },
         ],
       },
       orderBy: [{ bidWindowExpiresAt: "asc" }, { createdAt: "desc" }],
@@ -38,7 +38,17 @@ export async function GET() {
         bids: {
           where: { status: LoadBidStatus.PENDING },
           orderBy: { createdAt: "desc" },
-          include: { carrierCompany: { select: { legalName: true } } },
+          include: {
+            carrierCompany: {
+              select: {
+                legalName: true,
+                dotNumber: true,
+                mcNumber: true,
+                carrierType: true,
+                isOwnerOperator: true,
+              },
+            },
+          },
         },
         _count: { select: { bids: { where: { status: LoadBidStatus.PENDING } } } },
       },
@@ -72,6 +82,10 @@ export async function GET() {
           expiresAt: b.expiresAt.toISOString(),
           createdAt: b.createdAt.toISOString(),
           carrierName: b.carrierCompany.legalName,
+          dotNumber: b.carrierCompany.dotNumber,
+          mcNumber: b.carrierCompany.mcNumber,
+          carrierType: b.carrierCompany.carrierType,
+          isOwnerOperator: b.carrierCompany.isOwnerOperator,
         })),
       })),
     });

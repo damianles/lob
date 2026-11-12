@@ -18,6 +18,7 @@ export function CarrierRateActions({
   allowCounterOffers,
   bidWindowExpiresAt,
   myPendingAmount,
+  myPendingKind,
   decision,
 }: {
   loadId: string;
@@ -27,6 +28,7 @@ export function CarrierRateActions({
   allowCounterOffers: boolean;
   bidWindowExpiresAt: string | null;
   myPendingAmount?: number | null;
+  myPendingKind?: "BID" | "COUNTER" | "TAKE" | null;
   decision?: LaneDecisionContext | null;
 }) {
   const router = useRouter();
@@ -76,10 +78,11 @@ export function CarrierRateActions({
     const data = await res.json().catch(() => ({}));
     setBusy(null);
     if (!res.ok) {
-      setMessage(typeof data.error === "string" ? data.error : "Could not book.");
+      setMessage(typeof data.error === "string" ? data.error : "Could not submit request.");
       return;
     }
-    router.push(`/loads/${loadId}/rate-con`);
+    setMessage(`Request sent — waiting on the mill to Accept or Decline.`);
+    router.refresh();
   }
 
   async function submitBid() {
@@ -156,16 +159,19 @@ export function CarrierRateActions({
     );
   }
 
+  const hasPendingTake = myPendingKind === "TAKE";
+
   return (
     <div className="space-y-2">
       <p className="text-[11px] text-zinc-600">
         {TAKE_IT_LABEL}
         {offeredRateUsd != null ? ` ${formatMoney(offeredRateUsd, offerCurrency)}` : ""}
         {allowCounterOffers ? " · counters allowed" : " · no negotiations"}
+        {hasPendingTake ? " · waiting on mill" : ""}
       </p>
       <div className="flex flex-wrap items-center gap-1.5">
         <Button type="button" size="sm" disabled={busy != null} isLoading={busy === "book"} onClick={() => void bookTakeIt()}>
-          Book {TAKE_IT_LABEL}
+          {hasPendingTake ? `Resubmit ${TAKE_IT_LABEL} request` : `Request ${TAKE_IT_LABEL}`}
         </Button>
       </div>
       {allowCounterOffers && (

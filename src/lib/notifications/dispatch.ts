@@ -1,6 +1,7 @@
-import { NotificationDeliveryStatus, NotificationEvent } from "@prisma/client";
+import { NotificationDeliveryStatus, NotificationEvent, VerificationStatus } from "@prisma/client";
 import { after } from "next/server";
 
+import { getCarrierInsuranceStatus } from "@/lib/carrier-insurance";
 import { prisma } from "@/lib/prisma";
 
 import { ensureAccountContacts } from "./contacts";
@@ -184,46 +185,40 @@ async function deliverLoadNotification(args: {
   });
 }
 
-/** Opted-in carriers whose insurance expires within 30 days. One email per expiry date. */
+/**
+ * Approved carriers whose latest COI expires within 30 days.
+ * Uses latest INSURANCE document only. One email per company/expiry day (deduped).
+ * Delivery still respects contact mute + preference (default on for this event).
+ */
 export async function enqueueInsuranceExpiryNotices() {
-  const prefs = await prisma.notificationPreference.findMany({
+  const carriers = await prisma.company.findMany({
     where: {
-      event: NotificationEvent.INSURANCE_EXPIRING,
-      enabled: true,
-      contact: { mutedAt: null, confirmedAt: { not: null } },
+      verificationStatus: VerificationStatus.APPROVED,
+      carrierType: { not: null },
     },
-    select: { contact: { select: { companyId: true } } },
-    take: 200,
-  });
-  const companyIds = [
-    ...new Set(prefs.map((row) => row.contact.companyId).filter((id): id is string => typeof id === "string")),
-  ];
-  if (companyIds.length === 0) return;
-
-  const now = new Date();
-  const until = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-  const docs = await prisma.document.findMany({
-    where: {
-      kind: "INSURANCE",
-      companyId: { in: companyIds },
-      expiresAt: { gte: now, lte: until },
-    },
-    select: { companyId: true, expiresAt: true },
-    take: 100,
+    select: { id: true },
+    take: 500,
   });
 
-  for (const doc of docs) {
-    if (!doc.companyId || !doc.expiresAt) continue;
-    const day = doc.expiresAt.toISOString().slice(0, 10);
+  let queued = 0;
+  for (const carrier of carriers) {
+    const status = await getCarrierInsuranceStatus(carrier.id);
+    if (!status.expiringSoon || !status.expiresAt) continue;
+    const day = status.expiresAt.toISOString().slice(0, 10);
     enqueueNotice({
-      companyId: doc.companyId,
+      companyId: carrier.id,
       event: NotificationEvent.INSURANCE_EXPIRING,
-      dedupeKey: `insurance:${doc.companyId}:${day}`,
+      dedupeKey: `insurance:${carrier.id}:${day}`,
       subject: `Insurance on file expires ${day}`,
       headline: `Insurance on file expires on ${day}.`,
-      lines: ["Update the certificate in Carrier Profile before it lapses."],
+      lines: [
+        "Update the certificate in Carrier Profile before it lapses.",
+        "Expired insurance blocks booking, bidding, and capacity posts.",
+      ],
     });
+    queued += 1;
   }
+  return { scanned: carriers.length, queued };
 }
 
 export function enqueueExpiredBidNotices(
@@ -240,7 +235,12 @@ export function enqueueExpiredBidNotices(
       carrierCompanyId: bid.carrierCompanyId,
       event: NotificationEvent.BID_EXPIRED,
       dedupeKey: `bid-expired:${bid.id}`,
-      headline: bid.kind === "COUNTER" ? "Your counter offer expired." : "Your bid expired.",
+      headline:
+        bid.kind === "COUNTER"
+          ? "Your counter offer expired."
+          : bid.kind === "TAKE"
+            ? "Your Firm Rate request expired."
+            : "Your bid expired.",
       detail: money,
     });
   }

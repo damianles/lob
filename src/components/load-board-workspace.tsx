@@ -125,6 +125,12 @@ export type BoardActor = {
   companyName: string | null;
   role: string | null;
   carrierApproved: boolean;
+  /** Latest COI is present and not expired (UTC). */
+  insuranceCurrent?: boolean;
+  /** ISO expiry of latest COI, if any. */
+  insuranceExpiresAt?: string | null;
+  /** True when current but within 30 days of expiry. */
+  insuranceExpiringSoon?: boolean;
 };
 
 function toUsdEquivalentForSummary(l: SerializableLoad): number {
@@ -219,6 +225,8 @@ export function LoadBoardWorkspace({
   const isShipper = actor.role === "SHIPPER" && Boolean(actor.companyId);
   const isCarrierAccount = actor.role === "DISPATCHER" && Boolean(actor.companyId);
   const isDispatcher = isCarrierAccount && actor.carrierApproved;
+  const insuranceOk = actor.insuranceCurrent !== false;
+  const canTransact = isDispatcher && insuranceOk;
   /** Open-board dump is proprietary — carriers (and guests) cannot export CSV. */
   const canExportBoardCsv = isShipper || actor.role === "ADMIN";
 
@@ -469,6 +477,33 @@ export function LoadBoardWorkspace({
               Search freight posted by mills and wholesalers. Supplier names stay private until you book a load.
               {isCarrierAccount && !actor.carrierApproved ? (
                 <> Your company is still pending approval — you can browse but not book yet.</>
+              ) : null}
+              {isCarrierAccount && actor.carrierApproved && actor.insuranceCurrent === false ? (
+                <>
+                  {" "}
+                  Your certificate of insurance is missing or expired —{" "}
+                  <Link href="/carrier/compliance" className="font-medium text-lob-navy underline">
+                    renew on Carrier Profile
+                  </Link>{" "}
+                  before booking.
+                </>
+              ) : null}
+              {isCarrierAccount &&
+              actor.carrierApproved &&
+              actor.insuranceCurrent &&
+              actor.insuranceExpiringSoon ? (
+                <>
+                  {" "}
+                  Insurance on file expires soon
+                  {actor.insuranceExpiresAt
+                    ? ` (${formatDisplayDate(actor.insuranceExpiresAt)})`
+                    : ""}
+                  .{" "}
+                  <Link href="/carrier/compliance" className="font-medium text-lob-navy underline">
+                    Update COI
+                  </Link>
+                  .
+                </>
               ) : null}
             </p>
           </div>
@@ -991,7 +1026,7 @@ export function LoadBoardWorkspace({
                   </div>
                   {isDispatcher ? (
                     <div className="mt-3 min-w-0 border-t border-stone-100 pt-3">
-                      {canBook && actor.carrierApproved ? (
+                      {canBook && canTransact ? (
                         <CarrierRateActions
                           loadId={load.id}
                           offerCurrency={load.offerCurrency}
@@ -1003,6 +1038,13 @@ export function LoadBoardWorkspace({
                         />
                       ) : canBook && !actor.carrierApproved ? (
                         <p className="text-xs text-zinc-500">Pending approval</p>
+                      ) : canBook && !insuranceOk ? (
+                        <p className="text-xs text-amber-800">
+                          <Link href="/carrier/compliance" className="underline">
+                            Renew insurance
+                          </Link>{" "}
+                          to book
+                        </p>
                       ) : null}
                     </div>
                   ) : null}
@@ -1023,7 +1065,7 @@ export function LoadBoardWorkspace({
                     onClick={toggleSort}
                     className={pinHeadLeft}
                   />
-                  <th className="border-b border-zinc-200 bg-zinc-50 px-3 py-2">Equipment</th>
+                  <th className="border-b border-zinc-300 bg-zinc-50 px-3 py-2">Equipment</th>
                   <BoardSortableTh label="Pickup" k="pickupAt" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
                   <BoardSortableTh
                     label="Delivery"
@@ -1051,7 +1093,9 @@ export function LoadBoardWorkspace({
                     align="right"
                     className={isDispatcher ? pinHeadRate : pinHeadRight}
                   />
-                  {isDispatcher ? <th className={`px-3 py-2 ${pinHeadRight}`}>Actions</th> : null}
+                  {isDispatcher ? (
+                    <th className={`border-b border-zinc-300 bg-zinc-50 px-3 py-2 ${pinHeadRight}`}>Actions</th>
+                  ) : null}
                 </tr>
               </thead>
               <tbody>
@@ -1061,8 +1105,11 @@ export function LoadBoardWorkspace({
                   const canBook = isDispatcher && load.status === "POSTED";
                   const specHint = lumberBoardHint(load.lumberSpec);
                   return (
-                    <tr key={load.id} className="group align-top">
-                      <td className={`px-3 py-2 text-zinc-700 ${pinCellLeft}`}>
+                    <tr
+                      key={load.id}
+                      className="group align-top odd:bg-white even:bg-stone-50/80"
+                    >
+                      <td className={`px-3 py-2.5 text-zinc-800 ${pinCellLeft}`}>
                         <Link href={`/loads/${load.id}`} className="font-medium text-lob-navy underline">
                           {load.originCity}, {load.originState} → {load.destinationCity}, {load.destinationState}
                         </Link>
@@ -1072,7 +1119,7 @@ export function LoadBoardWorkspace({
                           </span>
                         )}
                       </td>
-                      <td className="border-b border-zinc-100 px-3 py-2 text-zinc-700 group-hover:bg-zinc-50/50">
+                      <td className={`${boardCell}`}>
                         <div className="flex flex-col">
                           <span>{load.equipmentType}</span>
                           <span className="text-[11px] text-zinc-500 tabular-nums">
@@ -1081,24 +1128,24 @@ export function LoadBoardWorkspace({
                           {specHint ? <span className="text-[11px] text-zinc-500">{specHint}</span> : null}
                         </div>
                       </td>
-                      <td className="border-b border-zinc-100 px-3 py-2 text-zinc-700 tabular-nums group-hover:bg-zinc-50/50">
+                      <td className={`${boardCell} tabular-nums`}>
                         {formatDisplayDate(load.requestedPickupAt)}
                       </td>
-                      <td className="border-b border-zinc-100 px-3 py-2 text-zinc-700 tabular-nums group-hover:bg-zinc-50/50">
+                      <td className={`${boardCell} tabular-nums`}>
                         {load.requestedDeliveryAt ? formatDisplayDate(load.requestedDeliveryAt) : "—"}
                       </td>
-                      <td className="min-w-[8.5rem] border-b border-zinc-100 px-3 py-2 group-hover:bg-zinc-50/50">
+                      <td className={`min-w-[8.5rem] ${boardCell}`}>
                         <LoadStatusBadge status={load.status} />
                       </td>
-                      <td className="border-b border-zinc-100 px-3 py-2 text-zinc-700 tabular-nums group-hover:bg-zinc-50/50">
+                      <td className={`${boardCell} tabular-nums`}>
                         {formatDisplayDate(load.createdAt)}
                       </td>
-                      <td className="border-b border-zinc-100 px-3 py-2 font-medium group-hover:bg-zinc-50/50">
+                      <td className={`${boardCell} font-medium`}>
                         <Link href={`/loads/${load.id}`} className="text-lob-navy underline">
                           {load.referenceNumber}
                         </Link>
                       </td>
-                      <td className={`px-3 py-2 text-right ${isDispatcher ? pinCellRate : pinCellRight}`}>
+                      <td className={`px-3 py-2.5 text-right ${isDispatcher ? pinCellRate : pinCellRight}`}>
                         <div className="inline-flex flex-col items-end gap-1">
                           <RateModeBadge
                             rateMode={load.rateMode}
@@ -1118,8 +1165,8 @@ export function LoadBoardWorkspace({
                         </div>
                       </td>
                       {isDispatcher ? (
-                        <td className={`px-3 py-2 ${pinCellRight}`}>
-                          {canBook && actor.carrierApproved ? (
+                        <td className={`px-3 py-2.5 ${pinCellRight}`}>
+                          {canBook && canTransact ? (
                             <CarrierRateActions
                               loadId={load.id}
                               offerCurrency={load.offerCurrency}
@@ -1131,6 +1178,10 @@ export function LoadBoardWorkspace({
                             />
                           ) : canBook && !actor.carrierApproved ? (
                             <span className="text-xs text-zinc-400">Pending approval</span>
+                          ) : canBook && !insuranceOk ? (
+                            <Link href="/carrier/compliance" className="text-xs text-amber-800 underline">
+                              Renew insurance
+                            </Link>
                           ) : (
                             <span className="text-xs text-zinc-400">—</span>
                           )}
@@ -1185,7 +1236,7 @@ function BoardSortableTh({
 }) {
   const active = sortKey === k;
   return (
-    <th className={`border-b border-zinc-200 bg-zinc-50 px-3 py-2 ${align === "right" ? "text-right" : ""} ${className}`}>
+    <th className={`border-b border-zinc-300 bg-zinc-50 px-3 py-2 ${align === "right" ? "text-right" : ""} ${className}`}>
       <button
         type="button"
         onClick={() => onClick(k)}
@@ -1198,12 +1249,14 @@ function BoardSortableTh({
   );
 }
 
-const pinHeadLeft = "sticky left-0 z-20 min-w-[14rem] border-r border-zinc-200";
-const pinHeadRight = "sticky right-0 z-20 min-w-[11rem] border-l border-zinc-200";
-const pinHeadRate = "sticky right-[11rem] z-20 min-w-[8.5rem] border-l border-zinc-200";
+const boardCell =
+  "border-b border-zinc-300 px-3 py-2.5 text-zinc-800 group-hover:bg-amber-50/40 group-odd:bg-white group-even:bg-stone-50/80";
+const pinHeadLeft = "sticky left-0 z-20 min-w-[14rem] border-r border-zinc-300";
+const pinHeadRight = "sticky right-0 z-20 min-w-[11rem] border-l border-zinc-300";
+const pinHeadRate = "sticky right-[11rem] z-20 min-w-[8.5rem] border-l border-zinc-300";
 const pinCellLeft =
-  "sticky left-0 z-10 min-w-[14rem] border-b border-r border-zinc-200 bg-white group-hover:bg-zinc-50";
+  "sticky left-0 z-10 min-w-[14rem] border-b border-r border-zinc-300 bg-white group-odd:bg-white group-even:bg-stone-50/80 group-hover:bg-amber-50/40";
 const pinCellRight =
-  "sticky right-0 z-10 min-w-[11rem] border-b border-l border-zinc-200 bg-white group-hover:bg-zinc-50";
+  "sticky right-0 z-10 min-w-[11rem] border-b border-l border-zinc-300 bg-white group-odd:bg-white group-even:bg-stone-50/80 group-hover:bg-amber-50/40";
 const pinCellRate =
-  "sticky right-[11rem] z-10 min-w-[8.5rem] border-b border-l border-zinc-200 bg-white group-hover:bg-zinc-50";
+  "sticky right-[11rem] z-10 min-w-[8.5rem] border-b border-l border-zinc-300 bg-white group-odd:bg-white group-even:bg-stone-50/80 group-hover:bg-amber-50/40";

@@ -7,7 +7,6 @@ export type LobNavId =
   | "insights"
   | "shipments"
   | "openBids"
-  | "driver"
   | "facilityPickup"
   | "facilityDelivery"
   | "carrierProfile"
@@ -34,7 +33,7 @@ export const LOB_NAV_ITEMS: LobNavItem[] = [
     id: "openBids",
     href: "/bids",
     label: "Open Bids",
-    hint: `${TAKE_IT_LABEL} counters and open-bid loads waiting on a decision`,
+    hint: `${TAKE_IT_LABEL} take requests and open-bid loads waiting on a decision`,
   },
   {
     id: "loads",
@@ -54,7 +53,6 @@ export const LOB_NAV_ITEMS: LobNavItem[] = [
     label: "Marketplace Intel",
     hint: "Internal lane & usage analysis (admin only)",
   },
-  { id: "driver", href: "/driver", label: "Driver", hint: "Driver haul-sheet links (no QR)" },
   {
     id: "carrierProfile",
     href: "/carrier/compliance",
@@ -81,7 +79,6 @@ const CARRIER_IDS: LobNavId[] = [
   "loads",
   "openBids",
   "capacity",
-  "driver",
   "carrierProfile",
   "notifications",
   "onboarding",
@@ -137,7 +134,7 @@ export function lobNavItemsForViewer(
       return { ...item, hint: "Your booked shipments — dispatch, pickup, and delivery history" };
     }
     if (item.id === "openBids" && kind === "SHIPPER") {
-      return { ...item, hint: `Review carrier bids and ${TAKE_IT_LABEL} counters on your posted loads` };
+      return { ...item, hint: `Review carrier bids and ${TAKE_IT_LABEL} take requests on your posted loads` };
     }
     if (item.id === "openBids" && kind === "CARRIER") {
       return { ...item, hint: "Open-bid freight and your pending bids or counters" };
