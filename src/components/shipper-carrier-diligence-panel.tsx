@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 
 import { CarrierScorecard, type ScorecardDocChip } from "@/components/carrier-scorecard";
 import { CreditFilePanel } from "@/components/credit-file-panel";
-import type { CreditFileView } from "@/lib/credit-file";
-import type { CarrierPerformanceStats } from "@/lib/carrier-performance";
+import type { CreditFileView } from "@/lib/credit-file-shared";
+import type { CarrierPerformanceStats } from "@/lib/carrier-performance-shared";
 
 type DiligencePayload = {
   carrier: {

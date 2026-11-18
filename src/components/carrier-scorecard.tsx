@@ -1,10 +1,10 @@
 import { CarrierTypeTag } from "@/components/carrier-type-tag";
-import { CREDIT_FILE_LABELS, type CreditFileKind } from "@/lib/credit-file";
+import { CREDIT_FILE_LABELS, type CreditFileKind } from "@/lib/credit-file-shared";
 import {
   CARRIER_PERF_MIN_SAMPLE,
   formatCoverageUsd,
   type CarrierPerformanceStats,
-} from "@/lib/carrier-performance";
+} from "@/lib/carrier-performance-shared";
 import { formatDisplayDate } from "@/lib/format-display-date";
 import { LOB_PILL_COMPACT } from "@/lib/lob-pill";
 

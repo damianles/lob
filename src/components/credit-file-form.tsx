@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { DocumentUploadField } from "@/components/document-upload-field";
-import type { CreditFileView } from "@/lib/credit-file";
+import type { CreditFileView } from "@/lib/credit-file-shared";
 
 export function CreditFileForm({ showInsurance }: { showInsurance: boolean }) {
   const [w9Url, setW9Url] = useState("");

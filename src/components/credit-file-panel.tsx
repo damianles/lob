@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import type { CreditFileView } from "@/lib/credit-file";
+import type { CreditFileView } from "@/lib/credit-file-shared";
 import { formatDisplayDate } from "@/lib/format-display-date";
 
 type Props = {

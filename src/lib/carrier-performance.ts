@@ -1,21 +1,17 @@
 import { LoadStatus } from "@prisma/client";
 
 import { endOfUtcDay } from "@/lib/carrier-insurance";
+import {
+  CARRIER_PERF_MIN_SAMPLE,
+  type CarrierPerformanceStats,
+} from "@/lib/carrier-performance-shared";
 import { prisma } from "@/lib/prisma";
 
-/** Hide rate % until this many completed observations. */
-export const CARRIER_PERF_MIN_SAMPLE = 3;
-
-export type CarrierPerformanceStats = {
-  bookedCount: number;
-  deliveredCount: number;
-  /** delivered / booked when booked >= min sample; else null. */
-  deliveryRatePct: number | null;
-  onTimePickupSample: number;
-  onTimePickupPct: number | null;
-  onTimeDeliverySample: number;
-  onTimeDeliveryPct: number | null;
-};
+export {
+  CARRIER_PERF_MIN_SAMPLE,
+  formatCoverageUsd,
+  type CarrierPerformanceStats,
+} from "@/lib/carrier-performance-shared";
 
 function sameOrBeforeUtcDay(eventAt: Date, dueAt: Date): boolean {
   return eventAt.getTime() <= endOfUtcDay(dueAt).getTime();
@@ -93,13 +89,4 @@ export async function getCarrierPerformanceStats(
     onTimeDeliverySample: deliverySample,
     onTimeDeliveryPct: pct(deliveryOk, deliverySample),
   };
-}
-
-export function formatCoverageUsd(amount: number | null | undefined): string {
-  if (amount == null || !Number.isFinite(amount) || amount <= 0) return "—";
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(amount);
 }
